@@ -78,7 +78,7 @@ class DeepSeekProvider extends AbstractAIProvider {
     public function analyze_image(string $image_data, string $prompt, array $options = []): array|\WP_Error {
         return new \WP_Error(
             'vision_not_supported',
-            __('O DeepSeek não suporta análise de imagens. Use extração de texto para PDFs ou escolha outro provedor para imagens.', 'tainacan-ai')
+            __('DeepSeek does not support image analysis. Use text extraction for PDFs or choose another provider for images.', 'tainacan-ai')
         );
     }
 
@@ -88,7 +88,7 @@ class DeepSeekProvider extends AbstractAIProvider {
     public function analyze_images(array $images, string $prompt, array $options = []): array|\WP_Error {
         return new \WP_Error(
             'vision_not_supported',
-            __('O DeepSeek não suporta análise de imagens. Use extração de texto para PDFs ou escolha outro provedor para imagens.', 'tainacan-ai')
+            __('DeepSeek does not support image analysis. Use text extraction for PDFs or choose another provider for images.', 'tainacan-ai')
         );
     }
 
@@ -120,7 +120,7 @@ class DeepSeekProvider extends AbstractAIProvider {
         if (!$this->is_configured()) {
             return [
                 'success' => false,
-                'message' => __('Chave API não configurada.', 'tainacan-ai'),
+                'message' => __('API key not configured.', 'tainacan-ai'),
             ];
         }
 
@@ -155,7 +155,7 @@ class DeepSeekProvider extends AbstractAIProvider {
         }
 
         if ($response['code'] !== 200) {
-            $error_msg = $response['body']['error']['message'] ?? __('Erro desconhecido', 'tainacan-ai');
+            $error_msg = $response['body']['error']['message'] ?? __('Unknown error', 'tainacan-ai');
             return [
                 'success' => false,
                 'message' => $error_msg,
@@ -164,7 +164,7 @@ class DeepSeekProvider extends AbstractAIProvider {
 
         return [
             'success' => true,
-            'message' => __('Conexão estabelecida com sucesso!', 'tainacan-ai'),
+            'message' => __('Connection established successfully!', 'tainacan-ai'),
         ];
     }
 
@@ -203,7 +203,7 @@ class DeepSeekProvider extends AbstractAIProvider {
         $content = $body['choices'][0]['message']['content'] ?? '';
 
         if (empty($content)) {
-            return new \WP_Error('empty_response', __('Resposta vazia da API.', 'tainacan-ai'));
+            return new \WP_Error('empty_response', __('Empty response from API.', 'tainacan-ai'));
         }
 
         $metadata = $this->parse_json_response($content);
@@ -211,7 +211,7 @@ class DeepSeekProvider extends AbstractAIProvider {
         if ($metadata === null) {
             return new \WP_Error(
                 'json_parse_error',
-                __('Erro ao interpretar resposta da API. O formato retornado não é JSON válido.', 'tainacan-ai')
+                __('Error interpreting API response. The returned format is not valid JSON.', 'tainacan-ai')
             );
         }
 
@@ -227,14 +227,14 @@ class DeepSeekProvider extends AbstractAIProvider {
      * Trata erros da API
      */
     private function handle_api_error(int $code, array $body): \WP_Error {
-        $error_msg = $body['error']['message'] ?? __('Erro desconhecido na API DeepSeek', 'tainacan-ai');
+        $error_msg = $body['error']['message'] ?? __('Unknown error in DeepSeek API', 'tainacan-ai');
 
         if ($code === 401) {
-            $error_msg = __('Chave API inválida ou expirada. Verifique suas configurações.', 'tainacan-ai');
+            $error_msg = __('Invalid or expired API key. Check your settings.', 'tainacan-ai');
         } elseif ($code === 429) {
-            $error_msg = __('Limite de requisições excedido. Aguarde alguns minutos.', 'tainacan-ai');
+            $error_msg = __('Rate limit exceeded. Wait a few minutes.', 'tainacan-ai');
         } elseif ($code === 500 || $code === 503) {
-            $error_msg = __('Serviço do DeepSeek temporariamente indisponível. Tente novamente.', 'tainacan-ai');
+            $error_msg = __('DeepSeek service temporarily unavailable. Try again.', 'tainacan-ai');
         }
 
         return new \WP_Error('api_error', $error_msg);

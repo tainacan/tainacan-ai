@@ -90,7 +90,7 @@ class GeminiProvider extends AbstractAIProvider {
             return new \WP_Error(
                 'vision_not_supported',
                 /* translators: %s: model name */
-                sprintf(__('O modelo %s não suporta análise de imagens.', 'tainacan-ai'), $this->model)
+                sprintf(__('The model %s does not support image analysis.', 'tainacan-ai'), $this->model)
             );
         }
 
@@ -118,7 +118,7 @@ class GeminiProvider extends AbstractAIProvider {
             return new \WP_Error(
                 'vision_not_supported',
                 /* translators: %s: model name */
-                sprintf(__('O modelo %s não suporta análise de imagens.', 'tainacan-ai'), $this->model)
+                sprintf(__('The model %s does not support image analysis.', 'tainacan-ai'), $this->model)
             );
         }
 
@@ -160,7 +160,7 @@ class GeminiProvider extends AbstractAIProvider {
         if (!$this->is_configured()) {
             return [
                 'success' => false,
-                'message' => __('Chave API não configurada.', 'tainacan-ai'),
+                'message' => __('API key not configured.', 'tainacan-ai'),
             ];
         }
 
@@ -194,7 +194,7 @@ class GeminiProvider extends AbstractAIProvider {
         }
 
         if ($response['code'] !== 200) {
-            $error_msg = $response['body']['error']['message'] ?? __('Erro desconhecido', 'tainacan-ai');
+            $error_msg = $response['body']['error']['message'] ?? __('Unknown error', 'tainacan-ai');
             return [
                 'success' => false,
                 'message' => $error_msg,
@@ -203,7 +203,7 @@ class GeminiProvider extends AbstractAIProvider {
 
         return [
             'success' => true,
-            'message' => __('Conexão estabelecida com sucesso!', 'tainacan-ai'),
+            'message' => __('Connection established successfully!', 'tainacan-ai'),
         ];
     }
 
@@ -244,7 +244,7 @@ class GeminiProvider extends AbstractAIProvider {
         $content = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
         if (empty($content)) {
-            return new \WP_Error('empty_response', __('Resposta vazia da API.', 'tainacan-ai'));
+            return new \WP_Error('empty_response', __('Empty response from API.', 'tainacan-ai'));
         }
 
         $metadata = $this->parse_json_response($content);
@@ -252,7 +252,7 @@ class GeminiProvider extends AbstractAIProvider {
         if ($metadata === null) {
             return new \WP_Error(
                 'json_parse_error',
-                __('Erro ao interpretar resposta da API. O formato retornado não é JSON válido.', 'tainacan-ai')
+                __('Error interpreting API response. The returned format is not valid JSON.', 'tainacan-ai')
             );
         }
 
@@ -294,16 +294,16 @@ class GeminiProvider extends AbstractAIProvider {
      * Trata erros da API
      */
     private function handle_api_error(int $code, array $body): \WP_Error {
-        $error_msg = $body['error']['message'] ?? __('Erro desconhecido na API Gemini', 'tainacan-ai');
+        $error_msg = $body['error']['message'] ?? __('Unknown error in Gemini API', 'tainacan-ai');
 
         if ($code === 400) {
-            $error_msg = __('Requisição inválida. Verifique os parâmetros.', 'tainacan-ai');
+            $error_msg = __('Invalid request. Check the parameters.', 'tainacan-ai');
         } elseif ($code === 401 || $code === 403) {
-            $error_msg = __('Chave API inválida ou sem permissão. Verifique suas configurações.', 'tainacan-ai');
+            $error_msg = __('Invalid API key or no permission. Check your settings.', 'tainacan-ai');
         } elseif ($code === 429) {
-            $error_msg = __('Limite de requisições excedido. Aguarde alguns minutos.', 'tainacan-ai');
+            $error_msg = __('Rate limit exceeded. Wait a few minutes.', 'tainacan-ai');
         } elseif ($code === 500 || $code === 503) {
-            $error_msg = __('Serviço do Google temporariamente indisponível. Tente novamente.', 'tainacan-ai');
+            $error_msg = __('Google service temporarily unavailable. Try again.', 'tainacan-ai');
         }
 
         return new \WP_Error('api_error', $error_msg);

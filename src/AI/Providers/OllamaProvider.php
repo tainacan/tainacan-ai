@@ -111,7 +111,7 @@ class OllamaProvider extends AbstractAIProvider {
                 'vision_not_supported',
                 sprintf(
                     /* translators: %s: model name */
-                    __('O modelo %s não suporta análise de imagens. Use llama3.2-vision ou llava.', 'tainacan-ai'),
+                    __('The model %s does not support image analysis. Use llama3.2-vision or llava.', 'tainacan-ai'),
                     $this->model
                 )
             );
@@ -140,7 +140,7 @@ class OllamaProvider extends AbstractAIProvider {
                 'vision_not_supported',
                 sprintf(
                     /* translators: %s: model name */
-                    __('O modelo %s não suporta análise de imagens. Use llama3.2-vision ou llava.', 'tainacan-ai'),
+                    __('The model %s does not support image analysis. Use llama3.2-vision or llava.', 'tainacan-ai'),
                     $this->model
                 )
             );
@@ -200,7 +200,7 @@ class OllamaProvider extends AbstractAIProvider {
                 'success' => false,
                 'message' => sprintf(
                     /* translators: %s: Ollama base URL */
-                    __('Não foi possível conectar ao Ollama em %s. Verifique se o serviço está rodando.', 'tainacan-ai'),
+                    __('Could not connect to Ollama at %s. Check if the service is running.', 'tainacan-ai'),
                     $this->base_url
                 ),
             ];
@@ -213,7 +213,7 @@ class OllamaProvider extends AbstractAIProvider {
                 'success' => false,
                 'message' => sprintf(
                     /* translators: %d: HTTP status code */
-                    __('Ollama retornou erro %d. Verifique a URL e se o serviço está rodando.', 'tainacan-ai'),
+                    __('Ollama returned error %d. Check the URL and if the service is running.', 'tainacan-ai'),
                     $code
                 ),
             ];
@@ -235,7 +235,7 @@ class OllamaProvider extends AbstractAIProvider {
         if (!empty($models) && !$model_available) {
             $model_warning = sprintf(
                 /* translators: %1$s: model name, %2$s: list of available models */
-                __(' Aviso: modelo "%1$s" não encontrado. Modelos disponíveis: %2$s', 'tainacan-ai'),
+                __(' Warning: model "%1$s" not found. Available models: %2$s', 'tainacan-ai'),
                 $this->model,
                 implode(', ', array_slice($models, 0, 5))
             );
@@ -243,7 +243,7 @@ class OllamaProvider extends AbstractAIProvider {
 
         return [
             'success' => true,
-            'message' => __('Conexão com Ollama estabelecida!', 'tainacan-ai') . $model_warning,
+            'message' => __('Connection with Ollama established!', 'tainacan-ai') . $model_warning,
             'models' => $models,
         ];
     }
@@ -285,7 +285,7 @@ class OllamaProvider extends AbstractAIProvider {
         $content = $body['message']['content'] ?? '';
 
         if (empty($content)) {
-            return new \WP_Error('empty_response', __('Resposta vazia do Ollama.', 'tainacan-ai'));
+            return new \WP_Error('empty_response', __('Empty response from Ollama.', 'tainacan-ai'));
         }
 
         $metadata = $this->parse_json_response($content);
@@ -293,7 +293,7 @@ class OllamaProvider extends AbstractAIProvider {
         if ($metadata === null) {
             return new \WP_Error(
                 'json_parse_error',
-                __('Erro ao interpretar resposta do Ollama. O formato retornado não é JSON válido.', 'tainacan-ai')
+                __('Error interpreting Ollama response. The returned format is not valid JSON.', 'tainacan-ai')
             );
         }
 
@@ -326,17 +326,17 @@ class OllamaProvider extends AbstractAIProvider {
      * Trata erros da API
      */
     private function handle_api_error(int $code, array $body): \WP_Error {
-        $error_msg = $body['error'] ?? __('Erro desconhecido no Ollama', 'tainacan-ai');
+        $error_msg = $body['error'] ?? __('Unknown error in Ollama', 'tainacan-ai');
 
         if ($code === 404) {
             $error_msg = sprintf(
                 /* translators: %1$s: model name, %2$s: model name for command */
-                __('Modelo "%1$s" não encontrado. Execute: ollama pull %2$s', 'tainacan-ai'),
+                __('Model "%1$s" not found. Run: ollama pull %2$s', 'tainacan-ai'),
                 $this->model,
                 $this->model
             );
         } elseif ($code === 500) {
-            $error_msg = __('Erro interno do Ollama. Verifique os logs do serviço.', 'tainacan-ai');
+            $error_msg = __('Ollama internal error. Check the service logs.', 'tainacan-ai');
         }
 
         return new \WP_Error('api_error', $error_msg);

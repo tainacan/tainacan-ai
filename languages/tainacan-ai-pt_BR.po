@@ -20,11 +20,7 @@ msgstr ""
 msgid "Tainacan AI requires PHP 8.0 or higher."
 msgstr "Tainacan AI requer PHP 8.0 ou superior."
 
-msgid "Analise esta imagem museológica e extraia os seguintes metadados: título, autor, data de criação, técnica utilizada, dimensões, estado de conservação, descrição visual detalhada. Formate a resposta como um JSON com esses campos."
-msgstr "Analise esta imagem museológica e extraia os seguintes metadados: título, autor, data de criação, técnica utilizada, dimensões, estado de conservação, descrição visual detalhada. Formate a resposta como um JSON com esses campos."
-
-msgid "Analise este documento e extraia os seguintes metadados: título, autor(es), ano de publicação, resumo, palavras-chave, metodologia, instituição, área de conhecimento. Formate a resposta como um JSON com esses campos."
-msgstr "Analise este documento e extraia os seguintes metadados: título, autor(es), ano de publicação, resumo, palavras-chave, metodologia, instituição, área de conhecimento. Formate a resposta como um JSON com esses campos."
+# Note: Default prompts are in Portuguese in the code and are not translatable UI strings
 
 msgid "Settings"
 msgstr "Configurações"
@@ -238,3 +234,344 @@ msgstr "Imagens:"
 
 msgid "Documents:"
 msgstr "Documentos:"
+
+# Admin Page Strings
+msgid "Tainacan AI Tools"
+msgstr "Ferramentas Tainacan AI"
+
+msgid "Success Rate"
+msgstr "Taxa de Sucesso"
+
+msgid "Estimated Cost"
+msgstr "Custo Estimado"
+
+msgid "AI Provider"
+msgstr "Provedor de IA"
+
+msgid "Supports image analysis"
+msgstr "Suporta análise de imagens"
+
+msgid "Text only"
+msgstr "Apenas texto"
+
+msgid "Text"
+msgstr "Texto"
+
+msgid "Configured"
+msgstr "Configurado"
+
+msgid "Pending"
+msgstr "Pendente"
+
+msgid "OpenAI Configuration"
+msgstr "Configuração OpenAI"
+
+msgid "Google Gemini Configuration"
+msgstr "Configuração Google Gemini"
+
+msgid "DeepSeek Configuration"
+msgstr "Configuração DeepSeek"
+
+msgid "Ollama Configuration (Local)"
+msgstr "Configuração Ollama (Local)"
+
+msgid "Google AI API Key"
+msgstr "Chave da API Google AI"
+
+msgid "DeepSeek API Key"
+msgstr "Chave da API DeepSeek"
+
+msgid "Ollama URL"
+msgstr "URL do Ollama"
+
+msgid "Test"
+msgstr "Testar"
+
+msgid "Get your key at %s."
+msgstr "Obtenha sua chave em %s."
+
+msgid "URL where Ollama is running. Default: http://localhost:11434"
+msgstr "URL onde o Ollama está rodando. Padrão: http://localhost:11434"
+
+msgid "Use <code>llama3.2-vision</code> or <code>llava</code> for image analysis."
+msgstr "Use <code>llama3.2-vision</code> ou <code>llava</code> para análise de imagens."
+
+msgid "Make sure the model is installed. Run in terminal: <code>ollama pull llama3.2</code>"
+msgstr "Certifique-se de que o modelo está instalado. Execute no terminal: <code>ollama pull llama3.2</code>"
+
+msgid "<strong>Warning:</strong> DeepSeek does not support image analysis. Only documents with extractable text (PDFs with text, TXT) can be analyzed."
+msgstr "<strong>Atenção:</strong> O DeepSeek não suporta análise de imagens. Apenas documentos com texto extraível (PDFs com texto, TXT) podem ser analisados."
+
+msgid "<strong>Ollama</strong> allows you to run AI models locally, without API costs. You need to have Ollama installed and running on the server."
+msgstr "<strong>Ollama</strong> permite executar modelos de IA localmente, sem custos de API. Você precisa ter o Ollama instalado e rodando no servidor."
+
+msgid "Install at: %s"
+msgstr "Instale em: %s"
+
+msgid "Default Analysis Prompts"
+msgstr "Prompts de Análise Padrão"
+
+msgid "Prompts define how the AI should analyze documents. Use clear instructions and specify the JSON fields you want to extract."
+msgstr "Os prompts definem como a IA deve analisar os documentos. Use instruções claras e especifique os campos JSON que deseja extrair."
+
+msgid "Prompt for Images"
+msgstr "Prompt para Imagens"
+
+msgid "Prompt for Documents"
+msgstr "Prompt para Documentos"
+
+msgid "Prompts per Collection"
+msgstr "Prompts por Coleção"
+
+msgid "Configure specific prompts for each collection."
+msgstr "Configure prompts específicos para cada coleção."
+
+msgid "Select a Collection"
+msgstr "Selecione uma Coleção"
+
+msgid "-- Select --"
+msgstr "-- Selecione --"
+
+msgid "Prompt Type"
+msgstr "Tipo de Prompt"
+
+msgid "Image"
+msgstr "Imagem"
+
+msgid "Document"
+msgstr "Documento"
+
+msgid "Custom Prompt"
+msgstr "Prompt Personalizado"
+
+msgid "Generate Suggestion"
+msgstr "Gerar Sugestão"
+
+msgid "Leave blank to use default prompt..."
+msgstr "Deixe em branco para usar o prompt padrão..."
+
+msgid "Save Prompt"
+msgstr "Salvar Prompt"
+
+msgid "Reset to Default"
+msgstr "Resetar para Padrão"
+
+msgid "Field Mapping"
+msgstr "Mapeamento de Campos"
+
+msgid "Configure the mapping between AI-extracted fields and your collection metadata. This allows the \"Fill Fields\" button to work correctly."
+msgstr "Configure o mapeamento entre os campos extraídos pela IA e os metadados da sua coleção. Isso permite que o botão \"Preencher Campos\" funcione corretamente."
+
+msgid "AI Field"
+msgstr "Campo da IA"
+
+msgid "Tainacan Metadata"
+msgstr "Metadado do Tainacan"
+
+msgid "Save Mapping"
+msgstr "Salvar Mapeamento"
+
+msgid "Auto-detect"
+msgstr "Auto-detectar"
+
+msgid "Clear Mapping"
+msgstr "Limpar Mapeamento"
+
+msgid "<strong>Tip:</strong> AI fields are defined in your prompt. Configure the prompt to return the desired fields and map them here."
+msgstr "<strong>Dica:</strong> Os campos da IA são definidos no seu prompt. Configure o prompt para retornar os campos desejados e mapeie-os aqui."
+
+msgid "System Capabilities"
+msgstr "Capacidades do Sistema"
+
+msgid "Text Extraction (Built-in)"
+msgstr "Extração de Texto (Embutido)"
+
+msgid "Active"
+msgstr "Ativo"
+
+msgid "Available"
+msgstr "Disponível"
+
+msgid "Unavailable"
+msgstr "Indisponível"
+
+msgid "Missing"
+msgstr "Ausente"
+
+msgid "Native PDF parser of the plugin."
+msgstr "Parser PDF nativo do plugin."
+
+msgid "Visual PDF Analysis"
+msgstr "Análise Visual de PDFs"
+
+msgid "Converts scanned PDFs to images."
+msgstr "Converte PDFs escaneados em imagens."
+
+msgid "EXIF Extraction"
+msgstr "Extração EXIF"
+
+msgid "Extracts technical metadata from images."
+msgstr "Extrai metadados técnicos de imagens."
+
+msgid "Features"
+msgstr "Funcionalidades"
+
+msgid "Extract EXIF Data"
+msgstr "Extrair Dados EXIF"
+
+msgid "Extracts technical metadata from images"
+msgstr "Extrai metadados técnicos de imagens"
+
+msgid "Log Usage"
+msgstr "Registrar Uso"
+
+msgid "Keeps analysis history"
+msgstr "Mantém histórico de análises"
+
+msgid "Track Costs"
+msgstr "Rastrear Custos"
+
+msgid "Calculates estimated cost of analyses"
+msgstr "Calcula custo estimado das análises"
+
+msgid "Require Consent"
+msgstr "Requer Consentimento"
+
+msgid "Integrates with WP Consent API"
+msgstr "Integra com WP Consent API"
+
+msgid "Max Tokens"
+msgstr "Máximo de Tokens"
+
+msgid "Token limit in response (100-8000)."
+msgstr "Limite de tokens na resposta (100-8000)."
+
+msgid "Temperature"
+msgstr "Temperatura"
+
+msgid "Timeout (seconds)"
+msgstr "Timeout (segundos)"
+
+msgid "Cache Duration (seconds)"
+msgstr "Duração do Cache (segundos)"
+
+msgid "0 to disable."
+msgstr "0 para desativar."
+
+msgid "Save Settings"
+msgstr "Salvar Configurações"
+
+msgid "Clear Cache"
+msgstr "Limpar Cache"
+
+msgid "AI Providers"
+msgstr "Provedores de IA"
+
+msgid "GPT-4o with Vision (images and text)"
+msgstr "GPT-4o com Vision (imagens e texto)"
+
+msgid "Google AI with Vision (images and text)"
+msgstr "Google AI com Vision (imagens e texto)"
+
+msgid "Cost-effective alternative (text only)"
+msgstr "Alternativa econômica (apenas texto)"
+
+msgid "Free local AI (Llama, Mistral, etc)"
+msgstr "IA local gratuita (Llama, Mistral, etc)"
+
+msgid "How to Use"
+msgstr "Como Usar"
+
+msgid "Choose an AI provider"
+msgstr "Escolha um provedor de IA"
+
+msgid "Configure the API key"
+msgstr "Configure a chave API"
+
+msgid "Customize the prompts"
+msgstr "Personalize os prompts"
+
+msgid "Edit an item in Tainacan"
+msgstr "Edite um item no Tainacan"
+
+msgid "Click \"Analyze Document\""
+msgstr "Clique em \"Analisar Documento\""
+
+msgid "Supported Formats"
+msgstr "Formatos Suportados"
+
+# Provider Error Messages
+msgid "The model %s does not support image analysis."
+msgstr "O modelo %s não suporta análise de imagens."
+
+msgid "Connection established successfully!"
+msgstr "Conexão estabelecida com sucesso!"
+
+msgid "Empty response from API."
+msgstr "Resposta vazia da API."
+
+msgid "Error interpreting API response. The returned format is not valid JSON."
+msgstr "Erro ao interpretar resposta da API. O formato retornado não é JSON válido."
+
+msgid "Unknown error in OpenAI API"
+msgstr "Erro desconhecido na API OpenAI"
+
+msgid "Invalid or expired API key. Check your settings."
+msgstr "Chave API inválida ou expirada. Verifique suas configurações."
+
+msgid "Rate limit exceeded. Wait a few minutes."
+msgstr "Limite de requisições excedido. Aguarde alguns minutos."
+
+msgid "OpenAI service temporarily unavailable. Try again."
+msgstr "Serviço da OpenAI temporariamente indisponível. Tente novamente."
+
+msgid "Unknown error in Gemini API"
+msgstr "Erro desconhecido na API Gemini"
+
+msgid "Invalid request. Check the parameters."
+msgstr "Requisição inválida. Verifique os parâmetros."
+
+msgid "Invalid API key or no permission. Check your settings."
+msgstr "Chave API inválida ou sem permissão. Verifique suas configurações."
+
+msgid "Google service temporarily unavailable. Try again."
+msgstr "Serviço do Google temporariamente indisponível. Tente novamente."
+
+msgid "DeepSeek does not support image analysis. Use text extraction for PDFs or choose another provider for images."
+msgstr "O DeepSeek não suporta análise de imagens. Use extração de texto para PDFs ou escolha outro provedor para imagens."
+
+msgid "Unknown error in DeepSeek API"
+msgstr "Erro desconhecido na API DeepSeek"
+
+msgid "DeepSeek service temporarily unavailable. Try again."
+msgstr "Serviço do DeepSeek temporariamente indisponível. Tente novamente."
+
+msgid "The model %s does not support image analysis. Use llama3.2-vision or llava."
+msgstr "O modelo %s não suporta análise de imagens. Use llama3.2-vision ou llava."
+
+msgid "Could not connect to Ollama at %s. Check if the service is running."
+msgstr "Não foi possível conectar ao Ollama em %s. Verifique se o serviço está rodando."
+
+msgid "Ollama returned error %d. Check the URL and if the service is running."
+msgstr "Ollama retornou erro %d. Verifique a URL e se o serviço está rodando."
+
+msgid " Warning: model \"%1$s\" not found. Available models: %2$s"
+msgstr " Aviso: modelo \"%1$s\" não encontrado. Modelos disponíveis: %2$s"
+
+msgid "Connection with Ollama established!"
+msgstr "Conexão com Ollama estabelecida!"
+
+msgid "Empty response from Ollama."
+msgstr "Resposta vazia do Ollama."
+
+msgid "Error interpreting Ollama response. The returned format is not valid JSON."
+msgstr "Erro ao interpretar resposta do Ollama. O formato retornado não é JSON válido."
+
+msgid "Unknown error in Ollama"
+msgstr "Erro desconhecido no Ollama"
+
+msgid "Model \"%1$s\" not found. Run: ollama pull %2$s"
+msgstr "Modelo \"%1$s\" não encontrado. Execute: ollama pull %2$s"
+
+msgid "Ollama internal error. Check the service logs."
+msgstr "Erro interno do Ollama. Verifique os logs do serviço."
