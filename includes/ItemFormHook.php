@@ -149,6 +149,28 @@ class ItemFormHook {
     }
 
     /**
+     * Get asset URL (checks for built assets first, falls back to source)
+     *
+     * @param string $type 'css' or 'js'
+     * @param string $name Asset name without extension
+     * @return string Asset URL
+     */
+    private function get_asset_url(string $type, string $name): string {
+        $base_path = TAINACAN_AI_PLUGIN_DIR;
+        $base_url = TAINACAN_AI_PLUGIN_URL;
+        $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
+
+        // Check if built asset exists
+        $built_path = "build/{$type}/{$name}{$suffix}.{$type}";
+        if (file_exists($base_path . $built_path)) {
+            return $base_url . $built_path;
+        }
+
+        // Fallback to source asset
+        return $base_url . "src/{$type}/{$name}.{$type}";
+    }
+
+    /**
      * Carrega assets
      */
     public function enqueue_assets(string $hook): void {
@@ -159,14 +181,14 @@ class ItemFormHook {
 
         wp_enqueue_style(
             'tainacan-ai-item',
-            TAINACAN_AI_PLUGIN_URL . 'assets/css/item-form.css',
+            $this->get_asset_url('css', 'item-form'),
             [],
             TAINACAN_AI_VERSION
         );
 
         wp_enqueue_script(
             'tainacan-ai-item',
-            TAINACAN_AI_PLUGIN_URL . 'assets/js/item-form.js',
+            $this->get_asset_url('js', 'item-form'),
             ['jquery'],
             TAINACAN_AI_VERSION,
             true

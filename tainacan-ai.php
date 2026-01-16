@@ -33,7 +33,7 @@ define('TAINACAN_AI_DB_VERSION', '0.0.1');
  */
 spl_autoload_register(function ($class) {
     $prefix = 'Tainacan\\AI\\';
-    $base_dir = TAINACAN_AI_PLUGIN_DIR . 'src/';
+    $base_dir = TAINACAN_AI_PLUGIN_DIR . 'includes/';
     $lib_dir = TAINACAN_AI_PLUGIN_DIR . 'lib/';
 
     $len = strlen($prefix);
@@ -43,7 +43,7 @@ spl_autoload_register(function ($class) {
 
     $relative_class = substr($class, $len);
 
-    // First try in src/ directory
+    // First try in includes/ directory
     $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
     if (file_exists($file)) {
         require $file;

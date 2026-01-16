@@ -1,0 +1,43 @@
+# Development files
+.git/
+.gitignore
+.github/
+node_modules/
+vendor/
+tests/
+phpcs.xml.dist
+phpunit.xml.dist
+composer.json
+composer.lock
+package.json
+package-lock.json
+webpack.config.js
+.eslintrc*
+.prettierrc*
+.editorconfig
+
+# Documentation (keep readme.txt for WordPress.org)
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+SECURITY.md
+
+# Source assets (use built versions from build/ instead)
+src/js/
+src/css/
+
+# Note: includes/, lib/, languages/ MUST be included in the ZIP
+# templates/ was moved to includes/admin/ for WordPress conventions
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build process files
+build-config.*
