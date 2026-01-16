@@ -213,41 +213,29 @@ class CollectionPrompts {
         $json_example = json_encode($fields_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
         if ($type === 'image') {
-            return <<<PROMPT
-Você é um especialista em catalogação de acervos. Analise esta imagem e extraia metadados para os campos específicos desta coleção.
-
-## Campos da Coleção:
-{$fields_list}
-
-## Instruções:
-1. Analise cuidadosamente a imagem
-2. Preencha todos os campos relevantes
-3. Para campos não identificáveis, use null
-4. Seja preciso e objetivo nas descrições
-
-## Retorne um JSON com esta estrutura:
-{$json_example}
-
-Responda APENAS com o JSON válido, sem texto adicional.
-PROMPT;
+            return 'Você é um especialista em catalogação de acervos. Analise esta imagem e extraia metadados para os campos específicos desta coleção.' . "\n\n" .
+'## Campos da Coleção:' . "\n" .
+$fields_list . "\n\n" .
+'## Instruções:' . "\n" .
+'1. Analise cuidadosamente a imagem' . "\n" .
+'2. Preencha todos os campos relevantes' . "\n" .
+'3. Para campos não identificáveis, use null' . "\n" .
+'4. Seja preciso e objetivo nas descrições' . "\n\n" .
+'## Retorne um JSON com esta estrutura:' . "\n" .
+$json_example . "\n\n" .
+'Responda APENAS com o JSON válido, sem texto adicional.';
         } else {
-            return <<<PROMPT
-Você é um especialista em análise documental. Analise este documento e extraia metadados para os campos específicos desta coleção.
-
-## Campos da Coleção:
-{$fields_list}
-
-## Instruções:
-1. Leia e compreenda o documento
-2. Extraia informações para cada campo
-3. Para campos não encontrados, use null
-4. Seja preciso nas citações e referências
-
-## Retorne um JSON com esta estrutura:
-{$json_example}
-
-Responda APENAS com o JSON válido, sem texto adicional.
-PROMPT;
+            return 'Você é um especialista em análise documental. Analise este documento e extraia metadados para os campos específicos desta coleção.' . "\n\n" .
+'## Campos da Coleção:' . "\n" .
+$fields_list . "\n\n" .
+'## Instruções:' . "\n" .
+'1. Leia e compreenda o documento' . "\n" .
+'2. Extraia informações para cada campo' . "\n" .
+'3. Para campos não encontrados, use null' . "\n" .
+'4. Seja preciso nas citações e referências' . "\n\n" .
+'## Retorne um JSON com esta estrutura:' . "\n" .
+$json_example . "\n\n" .
+'Responda APENAS com o JSON válido, sem texto adicional.';
         }
     }
 

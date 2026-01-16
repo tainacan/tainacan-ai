@@ -515,45 +515,33 @@ class DocumentAnalyzer {
         $json_text = json_encode($json_example, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
         if ($type === 'image') {
-            return <<<PROMPT
-Você é um especialista em análise e catalogação de imagens de acervos culturais. Analise esta imagem cuidadosamente e extraia informações para os campos especificados abaixo.
-
-## Campos para Extrair:
-{$fields_text}
-
-## Instruções:
-1. Analise a imagem detalhadamente
-2. Extraia informações relevantes para CADA campo listado
-3. Se não conseguir identificar um campo, use null
-4. Para campos com múltiplos valores, use array
-5. Seja preciso e objetivo
-
-## Formato de Resposta:
-Retorne APENAS um JSON válido com esta estrutura (use EXATAMENTE estas chaves):
-{$json_text}
-
-IMPORTANTE: Use EXATAMENTE as chaves mostradas acima (como "titulo", "autor", etc.). Responda SOMENTE com o JSON, sem texto adicional.
-PROMPT;
+            return 'Você é um especialista em análise e catalogação de imagens de acervos culturais. Analise esta imagem cuidadosamente e extraia informações para os campos especificados abaixo.' . "\n\n" .
+'## Campos para Extrair:' . "\n" .
+$fields_text . "\n\n" .
+'## Instruções:' . "\n" .
+'1. Analise a imagem detalhadamente' . "\n" .
+'2. Extraia informações relevantes para CADA campo listado' . "\n" .
+'3. Se não conseguir identificar um campo, use null' . "\n" .
+'4. Para campos com múltiplos valores, use array' . "\n" .
+'5. Seja preciso e objetivo' . "\n\n" .
+'## Formato de Resposta:' . "\n" .
+'Retorne APENAS um JSON válido com esta estrutura (use EXATAMENTE estas chaves):' . "\n" .
+$json_text . "\n\n" .
+'IMPORTANTE: Use EXATAMENTE as chaves mostradas acima (como "titulo", "autor", etc.). Responda SOMENTE com o JSON, sem texto adicional.';
         } else {
-            return <<<PROMPT
-Você é um especialista em análise documental e catalogação. Analise este documento e extraia informações para os campos especificados abaixo.
-
-## Campos para Extrair:
-{$fields_text}
-
-## Instruções:
-1. Leia o documento completamente
-2. Extraia informações para CADA campo listado
-3. Se não encontrar informação para um campo, use null
-4. Para campos com múltiplos valores, use array
-5. Seja preciso nas citações
-
-## Formato de Resposta:
-Retorne APENAS um JSON válido com esta estrutura (use EXATAMENTE estas chaves):
-{$json_text}
-
-IMPORTANTE: Use EXATAMENTE as chaves mostradas acima (como "titulo", "autor", etc.). Responda SOMENTE com o JSON, sem texto adicional.
-PROMPT;
+            return 'Você é um especialista em análise documental e catalogação. Analise este documento e extraia informações para os campos especificados abaixo.' . "\n\n" .
+'## Campos para Extrair:' . "\n" .
+$fields_text . "\n\n" .
+'## Instruções:' . "\n" .
+'1. Leia o documento completamente' . "\n" .
+'2. Extraia informações para CADA campo listado' . "\n" .
+'3. Se não encontrar informação para um campo, use null' . "\n" .
+'4. Para campos com múltiplos valores, use array' . "\n" .
+'5. Seja preciso nas citações' . "\n\n" .
+'## Formato de Resposta:' . "\n" .
+'Retorne APENAS um JSON válido com esta estrutura (use EXATAMENTE estas chaves):' . "\n" .
+$json_text . "\n\n" .
+'IMPORTANTE: Use EXATAMENTE as chaves mostradas acima (como "titulo", "autor", etc.). Responda SOMENTE com o JSON, sem texto adicional.';
         }
     }
 
