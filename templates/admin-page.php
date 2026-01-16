@@ -12,59 +12,59 @@ if (!defined('ABSPATH')) {
 use Tainacan\AI\AI\AIProviderFactory;
 
 // Get available providers
-$providers = AIProviderFactory::get_available_providers();
-$current_provider = $options['ai_provider'] ?? 'openai';
+$tainacan_ai_providers = AIProviderFactory::get_available_providers();
+$tainacan_ai_current_provider = $options['ai_provider'] ?? 'openai';
 
 // Check configuration for each provider
-$provider_status = [
+$tainacan_ai_provider_status = [
     'openai' => !empty($options['api_key']),
     'gemini' => !empty($options['gemini_api_key']),
     'deepseek' => !empty($options['deepseek_api_key']),
     'ollama' => !empty($options['ollama_url']),
 ];
 
-$is_configured = $provider_status[$current_provider] ?? false;
+$tainacan_ai_is_configured = $tainacan_ai_provider_status[$tainacan_ai_current_provider] ?? false;
 
 // Check dependencies
-$has_exif = function_exists('exif_read_data');
-$has_pdfparser = class_exists('\Smalot\PdfParser\Parser') || file_exists(TAINACAN_AI_PLUGIN_DIR . 'vendor/autoload.php');
+$tainacan_ai_has_exif = function_exists('exif_read_data');
+$tainacan_ai_has_pdfparser = class_exists('\Smalot\PdfParser\Parser') || file_exists(TAINACAN_AI_PLUGIN_DIR . 'vendor/autoload.php');
 
 // Check visual PDF analysis capabilities
-$has_imagick = extension_loaded('imagick');
-$has_imagick_pdf = false;
-if ($has_imagick) {
+$tainacan_ai_has_imagick = extension_loaded('imagick');
+$tainacan_ai_has_imagick_pdf = false;
+if ($tainacan_ai_has_imagick) {
     try {
-        $imagick = new \Imagick();
-        $formats = $imagick->queryFormats('PDF');
-        $has_imagick_pdf = !empty($formats);
+        $tainacan_ai_imagick = new \Imagick();
+        $tainacan_ai_formats = $tainacan_ai_imagick->queryFormats('PDF');
+        $tainacan_ai_has_imagick_pdf = !empty($tainacan_ai_formats);
     } catch (\Exception $e) {
-        $has_imagick_pdf = false;
+        $tainacan_ai_has_imagick_pdf = false;
     }
 }
 
 // Check Ghostscript
-$has_ghostscript = false;
-$gs_path = null;
+$tainacan_ai_has_ghostscript = false;
+$tainacan_ai_gs_path = null;
 if (function_exists('shell_exec')) {
     if (PHP_OS_FAMILY === 'Windows') {
-        $output = @shell_exec('where gswin64c 2>nul');
-        if (empty($output)) {
-            $output = @shell_exec('where gswin32c 2>nul');
+        $tainacan_ai_output = @shell_exec('where gswin64c 2>nul');
+        if (empty($tainacan_ai_output)) {
+            $tainacan_ai_output = @shell_exec('where gswin32c 2>nul');
         }
-        if (!empty($output)) {
-            $has_ghostscript = true;
-            $gs_path = trim($output);
+        if (!empty($tainacan_ai_output)) {
+            $tainacan_ai_has_ghostscript = true;
+            $tainacan_ai_gs_path = trim($tainacan_ai_output);
         }
     } else {
-        $output = @shell_exec('which gs 2>/dev/null');
-        if (!empty($output)) {
-            $has_ghostscript = true;
-            $gs_path = trim($output);
+        $tainacan_ai_output = @shell_exec('which gs 2>/dev/null');
+        if (!empty($tainacan_ai_output)) {
+            $tainacan_ai_has_ghostscript = true;
+            $tainacan_ai_gs_path = trim($tainacan_ai_output);
         }
     }
 }
 
-$has_builtin_parser = true;
+$tainacan_ai_has_builtin_parser = true;
 ?>
 
 <div class="wrap tainacan-page-container-content tainacan-ai-admin">
@@ -79,7 +79,7 @@ $has_builtin_parser = true;
     </div>
 
     <!-- Stats Cards -->
-    <?php if ($is_configured && !empty($stats)): ?>
+    <?php if ($tainacan_ai_is_configured && !empty($stats)): ?>
     <div class="tainacan-ai-stats-grid">
         <div class="tainacan-ai-stat-card">
             <div class="tainacan-ai-stat-icon">
@@ -137,18 +137,18 @@ $has_builtin_parser = true;
                 </div>
                 <div class="tainacan-ai-card-body">
                     <div class="tainacan-ai-provider-selector">
-                        <?php foreach ($providers as $id => $provider): ?>
-                        <label class="tainacan-ai-provider-option <?php echo $current_provider === $id ? 'selected' : ''; ?>">
+                        <?php foreach ($tainacan_ai_providers as $id => $tainacan_ai_provider): ?>
+                        <label class="tainacan-ai-provider-option <?php echo $tainacan_ai_current_provider === $id ? 'selected' : ''; ?>">
                             <input
                                 type="radio"
                                 name="tainacan_ai_options[ai_provider]"
                                 value="<?php echo esc_attr($id); ?>"
-                                <?php checked($current_provider, $id); ?>
+                                <?php checked($tainacan_ai_current_provider, $id); ?>
                             />
                             <div class="tainacan-ai-provider-content">
-                                <span class="tainacan-ai-provider-name"><?php echo esc_html($provider['name']); ?></span>
+                                <span class="tainacan-ai-provider-name"><?php echo esc_html($tainacan_ai_provider['name']); ?></span>
                                 <span class="tainacan-ai-provider-features">
-                                    <?php if ($provider['supports_vision']): ?>
+                                    <?php if ($tainacan_ai_provider['supports_vision']): ?>
                                         <span class="tainacan-ai-feature-badge success" title="<?php esc_attr_e('Suporta análise de imagens', 'tainacan-ai'); ?>">
                                             <span class="dashicons dashicons-format-image"></span>
                                             <?php esc_html_e('Vision', 'tainacan-ai'); ?>
@@ -160,7 +160,7 @@ $has_builtin_parser = true;
                                         </span>
                                     <?php endif; ?>
                                 </span>
-                                <?php if ($provider_status[$id]): ?>
+                                <?php if ($tainacan_ai_provider_status[$id]): ?>
                                     <span class="tainacan-ai-provider-status configured">
                                         <span class="dashicons dashicons-yes"></span>
                                     </span>
@@ -173,13 +173,13 @@ $has_builtin_parser = true;
             </div>
 
             <!-- Seção: OpenAI -->
-            <div class="tainacan-ai-card tainacan-ai-provider-config" id="provider-config-openai" <?php echo $current_provider !== 'openai' ? 'style="display:none;"' : ''; ?>>
+            <div class="tainacan-ai-card tainacan-ai-provider-config" id="provider-config-openai" <?php echo $tainacan_ai_current_provider !== 'openai' ? 'style="display:none;"' : ''; ?>>
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-network"></span>
                         <h2><?php esc_html_e('Configuração OpenAI', 'tainacan-ai'); ?></h2>
                     </div>
-                    <?php if ($provider_status['openai']): ?>
+                    <?php if ($tainacan_ai_provider_status['openai']): ?>
                         <span class="tainacan-ai-badge success"><?php esc_html_e('Configurado', 'tainacan-ai'); ?></span>
                     <?php else: ?>
                         <span class="tainacan-ai-badge warning"><?php esc_html_e('Pendente', 'tainacan-ai'); ?></span>
@@ -226,14 +226,14 @@ $has_builtin_parser = true;
                         <label for="model"><?php esc_html_e('Modelo', 'tainacan-ai'); ?></label>
                         <select id="model" name="tainacan_ai_options[model]">
                             <?php
-                            $openai_models = $providers['openai']['models'] ?? [];
-                            $current_model = $options['model'] ?? 'gpt-4o';
-                            foreach ($openai_models as $value => $label) {
+                            $tainacan_ai_openai_models = $tainacan_ai_providers['openai']['models'] ?? [];
+                            $tainacan_ai_current_model = $options['model'] ?? 'gpt-4o';
+                            foreach ($tainacan_ai_openai_models as $tainacan_ai_value => $tainacan_ai_label) {
                                 printf(
                                     '<option value="%s" %s>%s</option>',
-                                    esc_attr($value),
-                                    selected($current_model, $value, false),
-                                    esc_html($label)
+                                    esc_attr($tainacan_ai_value),
+                                    selected($tainacan_ai_current_model, $tainacan_ai_value, false),
+                                    esc_html($tainacan_ai_label)
                                 );
                             }
                             ?>
@@ -243,13 +243,13 @@ $has_builtin_parser = true;
             </div>
 
             <!-- Seção: Google Gemini -->
-            <div class="tainacan-ai-card tainacan-ai-provider-config" id="provider-config-gemini" <?php echo $current_provider !== 'gemini' ? 'style="display:none;"' : ''; ?>>
+            <div class="tainacan-ai-card tainacan-ai-provider-config" id="provider-config-gemini" <?php echo $tainacan_ai_current_provider !== 'gemini' ? 'style="display:none;"' : ''; ?>>
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-network"></span>
                         <h2><?php esc_html_e('Configuração Google Gemini', 'tainacan-ai'); ?></h2>
                     </div>
-                    <?php if ($provider_status['gemini']): ?>
+                    <?php if ($tainacan_ai_provider_status['gemini']): ?>
                         <span class="tainacan-ai-badge success"><?php esc_html_e('Configurado', 'tainacan-ai'); ?></span>
                     <?php else: ?>
                         <span class="tainacan-ai-badge warning"><?php esc_html_e('Pendente', 'tainacan-ai'); ?></span>
@@ -296,14 +296,14 @@ $has_builtin_parser = true;
                         <label for="gemini_model"><?php esc_html_e('Modelo', 'tainacan-ai'); ?></label>
                         <select id="gemini_model" name="tainacan_ai_options[gemini_model]">
                             <?php
-                            $gemini_models = $providers['gemini']['models'] ?? [];
-                            $current_gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
-                            foreach ($gemini_models as $value => $label) {
+                            $tainacan_ai_gemini_models = $tainacan_ai_providers['gemini']['models'] ?? [];
+                            $tainacan_ai_current_gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
+                            foreach ($tainacan_ai_gemini_models as $tainacan_ai_value => $tainacan_ai_label) {
                                 printf(
                                     '<option value="%s" %s>%s</option>',
-                                    esc_attr($value),
-                                    selected($current_gemini_model, $value, false),
-                                    esc_html($label)
+                                    esc_attr($tainacan_ai_value),
+                                    selected($tainacan_ai_current_gemini_model, $tainacan_ai_value, false),
+                                    esc_html($tainacan_ai_label)
                                 );
                             }
                             ?>
@@ -313,13 +313,13 @@ $has_builtin_parser = true;
             </div>
 
             <!-- Seção: DeepSeek -->
-            <div class="tainacan-ai-card tainacan-ai-provider-config" id="provider-config-deepseek" <?php echo $current_provider !== 'deepseek' ? 'style="display:none;"' : ''; ?>>
+            <div class="tainacan-ai-card tainacan-ai-provider-config" id="provider-config-deepseek" <?php echo $tainacan_ai_current_provider !== 'deepseek' ? 'style="display:none;"' : ''; ?>>
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-network"></span>
                         <h2><?php esc_html_e('Configuração DeepSeek', 'tainacan-ai'); ?></h2>
                     </div>
-                    <?php if ($provider_status['deepseek']): ?>
+                    <?php if ($tainacan_ai_provider_status['deepseek']): ?>
                         <span class="tainacan-ai-badge success"><?php esc_html_e('Configurado', 'tainacan-ai'); ?></span>
                     <?php else: ?>
                         <span class="tainacan-ai-badge warning"><?php esc_html_e('Pendente', 'tainacan-ai'); ?></span>
@@ -373,14 +373,14 @@ $has_builtin_parser = true;
                         <label for="deepseek_model"><?php esc_html_e('Modelo', 'tainacan-ai'); ?></label>
                         <select id="deepseek_model" name="tainacan_ai_options[deepseek_model]">
                             <?php
-                            $deepseek_models = $providers['deepseek']['models'] ?? [];
-                            $current_deepseek_model = $options['deepseek_model'] ?? 'deepseek-chat';
-                            foreach ($deepseek_models as $value => $label) {
+                            $tainacan_ai_deepseek_models = $tainacan_ai_providers['deepseek']['models'] ?? [];
+                            $tainacan_ai_current_deepseek_model = $options['deepseek_model'] ?? 'deepseek-chat';
+                            foreach ($tainacan_ai_deepseek_models as $tainacan_ai_value => $tainacan_ai_label) {
                                 printf(
                                     '<option value="%s" %s>%s</option>',
-                                    esc_attr($value),
-                                    selected($current_deepseek_model, $value, false),
-                                    esc_html($label)
+                                    esc_attr($tainacan_ai_value),
+                                    selected($tainacan_ai_current_deepseek_model, $tainacan_ai_value, false),
+                                    esc_html($tainacan_ai_label)
                                 );
                             }
                             ?>
@@ -390,13 +390,13 @@ $has_builtin_parser = true;
             </div>
 
             <!-- Seção: Ollama -->
-            <div class="tainacan-ai-card tainacan-ai-provider-config" id="provider-config-ollama" <?php echo $current_provider !== 'ollama' ? 'style="display:none;"' : ''; ?>>
+            <div class="tainacan-ai-card tainacan-ai-provider-config" id="provider-config-ollama" <?php echo $tainacan_ai_current_provider !== 'ollama' ? 'style="display:none;"' : ''; ?>>
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-desktop"></span>
                         <h2><?php esc_html_e('Configuração Ollama (Local)', 'tainacan-ai'); ?></h2>
                     </div>
-                    <?php if ($provider_status['ollama']): ?>
+                    <?php if ($tainacan_ai_provider_status['ollama']): ?>
                         <span class="tainacan-ai-badge success"><?php esc_html_e('Configurado', 'tainacan-ai'); ?></span>
                     <?php else: ?>
                         <span class="tainacan-ai-badge warning"><?php esc_html_e('Pendente', 'tainacan-ai'); ?></span>
@@ -448,14 +448,14 @@ $has_builtin_parser = true;
                         <label for="ollama_model"><?php esc_html_e('Modelo', 'tainacan-ai'); ?></label>
                         <select id="ollama_model" name="tainacan_ai_options[ollama_model]">
                             <?php
-                            $ollama_models = $providers['ollama']['models'] ?? [];
-                            $current_ollama_model = $options['ollama_model'] ?? 'llama3.2';
-                            foreach ($ollama_models as $value => $label) {
+                            $tainacan_ai_ollama_models = $tainacan_ai_providers['ollama']['models'] ?? [];
+                            $tainacan_ai_current_ollama_model = $options['ollama_model'] ?? 'llama3.2';
+                            foreach ($tainacan_ai_ollama_models as $tainacan_ai_value => $tainacan_ai_label) {
                                 printf(
                                     '<option value="%s" %s>%s</option>',
-                                    esc_attr($value),
-                                    selected($current_ollama_model, $value, false),
-                                    esc_html($label)
+                                    esc_attr($tainacan_ai_value),
+                                    selected($tainacan_ai_current_ollama_model, $tainacan_ai_value, false),
+                                    esc_html($tainacan_ai_label)
                                 );
                             }
                             ?>
@@ -624,14 +624,14 @@ $has_builtin_parser = true;
                             <?php
                             // Popula coleções diretamente no PHP
                             if (class_exists('\Tainacan\Repositories\Collections')) {
-                                $collections_repo = \Tainacan\Repositories\Collections::get_instance();
-                                $collections = $collections_repo->fetch([], 'OBJECT');
-                                if (is_array($collections)) {
-                                    foreach ($collections as $collection) {
+                                $tainacan_ai_collections_repo = \Tainacan\Repositories\Collections::get_instance();
+                                $tainacan_ai_collections = $tainacan_ai_collections_repo->fetch([], 'OBJECT');
+                                if (is_array($tainacan_ai_collections)) {
+                                    foreach ($tainacan_ai_collections as $tainacan_ai_collection) {
                                         printf(
                                             '<option value="%d">%s</option>',
-                                            esc_attr($collection->get_id()),
-                                            esc_html($collection->get_name())
+                                            esc_attr($tainacan_ai_collection->get_id()),
+                                            esc_html($tainacan_ai_collection->get_name())
                                         );
                                     }
                                 }
@@ -704,16 +704,16 @@ $has_builtin_parser = true;
                         </div>
 
                         <!-- Análise Visual -->
-                        <?php $has_visual = $has_imagick_pdf || $has_ghostscript; ?>
-                        <div class="tainacan-ai-dep-item <?php echo $has_visual ? 'installed' : 'missing'; ?>">
+                        <?php $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghostscript; ?>
+                        <div class="tainacan-ai-dep-item <?php echo $tainacan_ai_has_visual ? 'installed' : 'missing'; ?>">
                             <div class="tainacan-ai-dep-icon">
-                                <span class="dashicons dashicons-<?php echo $has_visual ? 'yes' : 'warning'; ?>"></span>
+                                <span class="dashicons dashicons-<?php echo $tainacan_ai_has_visual ? 'yes' : 'warning'; ?>"></span>
                             </div>
                             <div class="tainacan-ai-dep-content">
                                 <div class="tainacan-ai-dep-header">
                                     <span class="tainacan-ai-dep-name"><?php esc_html_e('Análise Visual de PDFs', 'tainacan-ai'); ?></span>
                                     <span class="tainacan-ai-dep-status">
-                                        <?php echo $has_visual ? esc_html__('Disponível', 'tainacan-ai') : esc_html__('Indisponível', 'tainacan-ai'); ?>
+                                        <?php echo $tainacan_ai_has_visual ? esc_html__('Disponível', 'tainacan-ai') : esc_html__('Indisponível', 'tainacan-ai'); ?>
                                     </span>
                                 </div>
                                 <p class="tainacan-ai-dep-desc">
@@ -722,12 +722,12 @@ $has_builtin_parser = true;
                                 <div class="tainacan-ai-dep-methods">
                                     <small>
                                         <strong><?php esc_html_e('Backends:', 'tainacan-ai'); ?></strong>
-                                        <?php if ($has_imagick_pdf): ?>
+                                        <?php if ($tainacan_ai_has_imagick_pdf): ?>
                                             <span class="tainacan-ai-method-available">Imagick</span>
                                         <?php else: ?>
                                             <span class="tainacan-ai-method-missing">Imagick</span>
                                         <?php endif; ?>
-                                        <?php if ($has_ghostscript): ?>
+                                        <?php if ($tainacan_ai_has_ghostscript): ?>
                                             <span class="tainacan-ai-method-available">Ghostscript</span>
                                         <?php else: ?>
                                             <span class="tainacan-ai-method-missing">Ghostscript</span>
@@ -738,15 +738,15 @@ $has_builtin_parser = true;
                         </div>
 
                         <!-- EXIF -->
-                        <div class="tainacan-ai-dep-item <?php echo $has_exif ? 'installed' : 'missing'; ?>">
+                        <div class="tainacan-ai-dep-item <?php echo $tainacan_ai_has_exif ? 'installed' : 'missing'; ?>">
                             <div class="tainacan-ai-dep-icon">
-                                <span class="dashicons dashicons-<?php echo $has_exif ? 'yes' : 'warning'; ?>"></span>
+                                <span class="dashicons dashicons-<?php echo $tainacan_ai_has_exif ? 'yes' : 'warning'; ?>"></span>
                             </div>
                             <div class="tainacan-ai-dep-content">
                                 <div class="tainacan-ai-dep-header">
                                     <span class="tainacan-ai-dep-name"><?php esc_html_e('Extração EXIF', 'tainacan-ai'); ?></span>
                                     <span class="tainacan-ai-dep-status">
-                                        <?php echo $has_exif ? esc_html__('Ativo', 'tainacan-ai') : esc_html__('Ausente', 'tainacan-ai'); ?>
+                                        <?php echo $tainacan_ai_has_exif ? esc_html__('Ativo', 'tainacan-ai') : esc_html__('Ausente', 'tainacan-ai'); ?>
                                     </span>
                                 </div>
                                 <p class="tainacan-ai-dep-desc">
