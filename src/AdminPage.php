@@ -287,10 +287,10 @@ class AdminPage extends \Tainacan\Pages {
         $deleted = $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_tainacan_ai_%'");
         $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_tainacan_ai_%'");
 
-        wp_send_json_success(sprintf(
-            __('Cache cleared! %d entries removed.', 'tainacan-ai'),
-            $deleted
-        ));
+        wp_send_json_success(
+            /* translators: %d: number of cache entries removed */
+            sprintf(__('Cache cleared! %d entries removed.', 'tainacan-ai'), $deleted)
+        );
     }
 
     /**

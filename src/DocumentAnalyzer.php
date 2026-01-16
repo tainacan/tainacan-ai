@@ -87,6 +87,7 @@ class DocumentAnalyzer {
             return new \WP_Error(
                 'no_api_key',
                 sprintf(
+                    /* translators: %s: provider name */
                     __('%s API key not configured. Go to Tainacan > AI Tools to configure.', 'tainacan-ai'),
                     $provider->get_name()
                 )
@@ -115,6 +116,7 @@ class DocumentAnalyzer {
             return new \WP_Error(
                 'file_not_found',
                 sprintf(
+                    /* translators: %s: file path */
                     __('Physical file does not exist on server. Expected at: %s', 'tainacan-ai'),
                     $file_path
                 )
@@ -161,6 +163,7 @@ class DocumentAnalyzer {
         } else {
             return new \WP_Error(
                 'unsupported_type',
+                /* translators: %s: file type */
                 sprintf(__('Unsupported file type: %s', 'tainacan-ai'), $mime_type)
             );
         }
@@ -256,6 +259,7 @@ class DocumentAnalyzer {
 
         if ($provider && !$provider->supports_vision()) {
             $error_msg .= sprintf(
+                /* translators: %s: provider name */
                 __('Provider %s does not support visual image analysis.', 'tainacan-ai'),
                 $provider->get_name()
             );
@@ -304,6 +308,7 @@ class DocumentAnalyzer {
 
             $pageCount = count($images);
             $promptWithContext = $prompt . "\n\n" . sprintf(
+                /* translators: %d: number of pages */
                 __('The document has %d page(s). Analyze the visual content of all provided pages.', 'tainacan-ai'),
                 $pageCount
             );
@@ -350,6 +355,7 @@ class DocumentAnalyzer {
             return new \WP_Error(
                 'vision_not_supported',
                 sprintf(
+                    /* translators: %s: provider name */
                     __('Provider %s does not support image analysis. Use text extraction or choose another provider.', 'tainacan-ai'),
                     $provider->get_name()
                 )

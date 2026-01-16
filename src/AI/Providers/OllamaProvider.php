@@ -106,6 +106,7 @@ class OllamaProvider extends AbstractAIProvider {
             return new \WP_Error(
                 'vision_not_supported',
                 sprintf(
+                    /* translators: %s: model name */
                     __('O modelo %s não suporta análise de imagens. Use llama3.2-vision ou llava.', 'tainacan-ai'),
                     $this->model
                 )
@@ -134,6 +135,7 @@ class OllamaProvider extends AbstractAIProvider {
             return new \WP_Error(
                 'vision_not_supported',
                 sprintf(
+                    /* translators: %s: model name */
                     __('O modelo %s não suporta análise de imagens. Use llama3.2-vision ou llava.', 'tainacan-ai'),
                     $this->model
                 )
@@ -193,6 +195,7 @@ class OllamaProvider extends AbstractAIProvider {
             return [
                 'success' => false,
                 'message' => sprintf(
+                    /* translators: %s: Ollama base URL */
                     __('Não foi possível conectar ao Ollama em %s. Verifique se o serviço está rodando.', 'tainacan-ai'),
                     $this->base_url
                 ),
@@ -205,6 +208,7 @@ class OllamaProvider extends AbstractAIProvider {
             return [
                 'success' => false,
                 'message' => sprintf(
+                    /* translators: %d: HTTP status code */
                     __('Ollama retornou erro %d. Verifique a URL e se o serviço está rodando.', 'tainacan-ai'),
                     $code
                 ),
@@ -226,7 +230,8 @@ class OllamaProvider extends AbstractAIProvider {
 
         if (!empty($models) && !$model_available) {
             $model_warning = sprintf(
-                __(' Aviso: modelo "%s" não encontrado. Modelos disponíveis: %s', 'tainacan-ai'),
+                /* translators: %1$s: model name, %2$s: list of available models */
+                __(' Aviso: modelo "%1$s" não encontrado. Modelos disponíveis: %2$s', 'tainacan-ai'),
                 $this->model,
                 implode(', ', array_slice($models, 0, 5))
             );
@@ -321,7 +326,8 @@ class OllamaProvider extends AbstractAIProvider {
 
         if ($code === 404) {
             $error_msg = sprintf(
-                __('Modelo "%s" não encontrado. Execute: ollama pull %s', 'tainacan-ai'),
+                /* translators: %1$s: model name, %2$s: model name for command */
+                __('Modelo "%1$s" não encontrado. Execute: ollama pull %2$s', 'tainacan-ai'),
                 $this->model,
                 $this->model
             );

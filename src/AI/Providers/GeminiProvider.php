@@ -85,6 +85,7 @@ class GeminiProvider extends AbstractAIProvider {
         if (!$this->supports_vision()) {
             return new \WP_Error(
                 'vision_not_supported',
+                /* translators: %s: model name */
                 sprintf(__('O modelo %s não suporta análise de imagens.', 'tainacan-ai'), $this->model)
             );
         }
@@ -112,6 +113,7 @@ class GeminiProvider extends AbstractAIProvider {
         if (!$this->supports_vision()) {
             return new \WP_Error(
                 'vision_not_supported',
+                /* translators: %s: model name */
                 sprintf(__('O modelo %s não suporta análise de imagens.', 'tainacan-ai'), $this->model)
             );
         }

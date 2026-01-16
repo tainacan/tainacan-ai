@@ -210,7 +210,9 @@ $has_builtin_parser = true;
                             </button>
                         </div>
                         <p class="description">
-                            <?php printf(
+                            <?php
+                            printf(
+                                /* translators: %s: link to OpenAI platform */
                                 __('Obtenha sua chave em %s.', 'tainacan-ai'),
                                 '<a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>'
                             ); ?>
@@ -276,7 +278,9 @@ $has_builtin_parser = true;
                             </button>
                         </div>
                         <p class="description">
-                            <?php printf(
+                            <?php
+                            printf(
+                                /* translators: %s: link to Google AI Studio */
                                 __('Obtenha sua chave em %s.', 'tainacan-ai'),
                                 '<a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>'
                             ); ?>
@@ -349,7 +353,9 @@ $has_builtin_parser = true;
                             </button>
                         </div>
                         <p class="description">
-                            <?php printf(
+                            <?php
+                            printf(
+                                /* translators: %s: link to DeepSeek platform */
                                 __('Obtenha sua chave em %s.', 'tainacan-ai'),
                                 '<a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com</a>'
                             ); ?>
@@ -396,7 +402,9 @@ $has_builtin_parser = true;
                         <p>
                             <?php _e('<strong>Ollama</strong> permite executar modelos de IA localmente, sem custos de API. Você precisa ter o Ollama instalado e rodando no servidor.', 'tainacan-ai'); ?>
                             <br>
-                            <?php printf(
+                            <?php
+                            printf(
+                                /* translators: %s: link to Ollama download page */
                                 __('Instale em: %s', 'tainacan-ai'),
                                 '<a href="https://ollama.com/download" target="_blank">ollama.com/download</a>'
                             ); ?>

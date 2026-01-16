@@ -73,10 +73,13 @@ class ItemFormHook {
             <?php if (!$is_configured): ?>
                 <div class="tainacan-ai-notice warning">
                     <p>
-                        <?php printf(
-                            __('Configure your API key in %sTainacan > AI%s to use automatic extraction.', 'tainacan-ai'),
-                            '<a href="' . admin_url('admin.php?page=tainacan_ai') . '">',
-                            '</a>'
+                        <?php
+                        /* translators: %s: link to AI Tools settings page */
+                        echo wp_kses_post(
+                            sprintf(
+                                __('Configure your API key in <a href="%s">Tainacan > AI</a> to use automatic extraction.', 'tainacan-ai'),
+                                esc_url(admin_url('admin.php?page=tainacan_ai'))
+                            )
                         ); ?>
                     </p>
                 </div>
@@ -417,6 +420,7 @@ class ItemFormHook {
             }
 
             wp_send_json_error(
+                /* translators: %s: error message */
                 sprintf(__('Error analyzing document: %s', 'tainacan-ai'), $error_message)
             );
         }

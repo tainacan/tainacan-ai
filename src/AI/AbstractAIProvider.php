@@ -111,6 +111,7 @@ abstract class AbstractAIProvider implements AIProviderInterface {
         if ($json_body === false) {
             return new \WP_Error(
                 'json_encode_error',
+                /* translators: %s: JSON error message */
                 sprintf(__('Erro ao preparar dados para API: %s', 'tainacan-ai'), json_last_error_msg())
             );
         }
@@ -124,6 +125,7 @@ abstract class AbstractAIProvider implements AIProviderInterface {
         if (is_wp_error($response)) {
             return new \WP_Error(
                 'api_connection_error',
+                /* translators: %s: error message */
                 sprintf(__('Erro de conexão com a API: %s', 'tainacan-ai'), $response->get_error_message())
             );
         }
