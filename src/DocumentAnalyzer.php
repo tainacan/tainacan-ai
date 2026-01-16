@@ -662,7 +662,7 @@ $json_text . "\n\n" .
      * Check if it's a public URL (not localhost/local)
      */
     private function is_public_url(string $url): bool {
-        $parsed = parse_url($url);
+        $parsed = wp_parse_url($url);
 
         if (!$parsed || empty($parsed['host'])) {
             return false;
