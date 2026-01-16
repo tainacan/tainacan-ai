@@ -11,7 +11,7 @@
  * License: GPL v2 or later
  * Requires Plugins: tainacan
  * Requires at least: 6.5
- * Tested up to: 6.7
+ * Tested up to: 6.9
  * Requires PHP: 8.0
  *
  * @package Tainacan_AI
