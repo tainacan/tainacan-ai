@@ -1,0 +1,240 @@
+# Tainacan AI - Portuguese (Brazil)
+# Copyright (C) 2025
+# This file is distributed under the GPL v2 or later.
+
+msgid ""
+msgstr ""
+"Project-Id-Version: Tainacan AI 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-01-01T00:00:00+00:00\n"
+"PO-Revision-Date: 2025-01-01T00:00:00+00:00\n"
+"Last-Translator: \n"
+"Language-Team: Portuguese (Brazil)\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: WP-CLI\n"
+"X-Domain: tainacan-ai\n"
+
+msgid "Tainacan AI requires PHP 8.0 or higher."
+msgstr "Tainacan AI requer PHP 8.0 ou superior."
+
+msgid "Analise esta imagem museológica e extraia os seguintes metadados: título, autor, data de criação, técnica utilizada, dimensões, estado de conservação, descrição visual detalhada. Formate a resposta como um JSON com esses campos."
+msgstr "Analise esta imagem museológica e extraia os seguintes metadados: título, autor, data de criação, técnica utilizada, dimensões, estado de conservação, descrição visual detalhada. Formate a resposta como um JSON com esses campos."
+
+msgid "Analise este documento e extraia os seguintes metadados: título, autor(es), ano de publicação, resumo, palavras-chave, metodologia, instituição, área de conhecimento. Formate a resposta como um JSON com esses campos."
+msgstr "Analise este documento e extraia os seguintes metadados: título, autor(es), ano de publicação, resumo, palavras-chave, metodologia, instituição, área de conhecimento. Formate a resposta como um JSON com esses campos."
+
+msgid "Settings"
+msgstr "Configurações"
+
+msgid "ChatGPT"
+msgstr "ChatGPT"
+
+msgid "Testing API..."
+msgstr "Testando API..."
+
+msgid "Connection successful!"
+msgstr "Conexão bem-sucedida!"
+
+msgid "Connection failed. Check your API key."
+msgstr "Falha na conexão. Verifique sua chave API."
+
+msgid "Clearing cache..."
+msgstr "Limpando cache..."
+
+msgid "Cache cleared successfully!"
+msgstr "Cache limpo com sucesso!"
+
+msgid "Permission denied."
+msgstr "Permissão negada."
+
+msgid "API key not configured."
+msgstr "Chave API não configurada."
+
+msgid "Unknown error"
+msgstr "Erro desconhecido"
+
+msgid "API connected successfully!"
+msgstr "API conectada com sucesso!"
+
+msgid "AI Analysis"
+msgstr "Análise com IA"
+
+msgid "Analyze this item's document using artificial intelligence to automatically extract metadata."
+msgstr "Analise o documento deste item usando inteligência artificial para extrair metadados automaticamente."
+
+msgid "Analyze with ChatGPT"
+msgstr "Analisar com ChatGPT"
+
+msgid "Clear cache and re-analyze"
+msgstr "Limpar cache e refazer análise"
+
+msgid "Analyzing document..."
+msgstr "Analisando documento..."
+
+msgid "Extracted Metadata"
+msgstr "Metadados Extraídos"
+
+msgid "Cache"
+msgstr "Cache"
+
+msgid "Review metadata before copying."
+msgstr "Revise os metadados antes de copiar."
+
+msgid "Analyzing..."
+msgstr "Analisando..."
+
+msgid "Error analyzing. Please try again."
+msgstr "Erro ao analisar. Tente novamente."
+
+msgid "No document found in this item."
+msgstr "Nenhum documento encontrado neste item."
+
+msgid "Copy"
+msgstr "Copiar"
+
+msgid "Copied!"
+msgstr "Copiado!"
+
+msgid "Cache cleared!"
+msgstr "Cache limpo!"
+
+msgid "Clearing..."
+msgstr "Limpando..."
+
+msgid "Item or attachment ID not provided."
+msgstr "ID do item ou anexo não fornecido."
+
+msgid "No document found."
+msgstr "Nenhum documento encontrado."
+
+msgid "Item ID not provided."
+msgstr "ID do item não fornecido."
+
+msgid "Document not found."
+msgstr "Documento não encontrado."
+
+msgid "Attachment ID not provided."
+msgstr "ID do anexo não fornecido."
+
+msgid "File not found."
+msgstr "Arquivo não encontrado."
+
+msgid "Unsupported file type."
+msgstr "Tipo de arquivo não suportado."
+
+msgid "Could not get image URL."
+msgstr "Não foi possível obter URL da imagem."
+
+msgid "Could not extract text from PDF."
+msgstr "Não foi possível extrair texto do PDF."
+
+msgid "Could not extract text from PDF. Install smalot/pdfparser library via Composer."
+msgstr "Não foi possível extrair texto do PDF. Instale a biblioteca smalot/pdfparser via Composer."
+
+msgid "API key not configured."
+msgstr "Chave API não configurada."
+
+msgid "OpenAI API Error"
+msgstr "Erro na API OpenAI"
+
+msgid "Empty API response."
+msgstr "Resposta vazia da API."
+
+msgid "Error interpreting API response."
+msgstr "Erro ao interpretar resposta da API."
+
+msgid "Cache cleared successfully."
+msgstr "Cache limpo com sucesso."
+
+msgid "Tainacan AI"
+msgstr "Tainacan AI"
+
+msgid "API Settings"
+msgstr "Configurações da API"
+
+msgid "OpenAI API Key"
+msgstr "Chave da API OpenAI"
+
+msgid "Test Connection"
+msgstr "Testar Conexão"
+
+msgid "Get your key at %s"
+msgstr "Obtenha sua chave em %s"
+
+msgid "Model"
+msgstr "Modelo"
+
+msgid "GPT-4o offers better image analysis."
+msgstr "GPT-4o oferece melhor análise de imagens."
+
+msgid "Analysis Prompts"
+msgstr "Prompts de Análise"
+
+msgid "Image Prompt"
+msgstr "Prompt para Imagens"
+
+msgid "Instruction sent when analyzing images. Use desired JSON fields."
+msgstr "Instrução enviada ao analisar imagens. Use campos JSON desejados."
+
+msgid "Document Prompt"
+msgstr "Prompt para Documentos"
+
+msgid "Instruction sent when analyzing PDFs and texts."
+msgstr "Instrução enviada ao analisar PDFs e textos."
+
+msgid "Advanced Settings"
+msgstr "Configurações Avançadas"
+
+msgid "Max Tokens"
+msgstr "Máximo de Tokens"
+
+msgid "Token limit in response."
+msgstr "Limite de tokens na resposta."
+
+msgid "Temperature"
+msgstr "Temperatura"
+
+msgid "0 = deterministic, 2 = creative."
+msgstr "0 = determinístico, 2 = criativo."
+
+msgid "Timeout (seconds)"
+msgstr "Timeout (segundos)"
+
+msgid "Cache Duration (seconds)"
+msgstr "Duração do Cache (segundos)"
+
+msgid "0 to disable cache."
+msgstr "0 para desativar cache."
+
+msgid "Save Settings"
+msgstr "Salvar Configurações"
+
+msgid "Clear All Cache"
+msgstr "Limpar Todo Cache"
+
+msgid "How to Use"
+msgstr "Como Usar"
+
+msgid "Configure your OpenAI API key above"
+msgstr "Configure sua chave API da OpenAI acima"
+
+msgid "Edit a Tainacan item that has an attached document"
+msgstr "Edite um item no Tainacan que tenha documento anexado"
+
+msgid "Click \"Analyze with ChatGPT\" in the AI section"
+msgstr "Clique em \"Analisar com ChatGPT\" na seção de IA"
+
+msgid "Copy extracted metadata to item fields"
+msgstr "Copie os metadados extraídos para os campos do item"
+
+msgid "Supported Formats"
+msgstr "Formatos Suportados"
+
+msgid "Images:"
+msgstr "Imagens:"
+
+msgid "Documents:"
+msgstr "Documentos:"

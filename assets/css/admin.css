@@ -1,0 +1,1668 @@
+/**
+ * Tainacan AI - Admin Styles
+ * Palette: #b5e0e3 (accent), #e5f2f2 (background), #1f2f56 (titles)
+ */
+
+:root {
+    --tcgpt-primary: #1f2f56;
+    --tcgpt-primary-light: #2d4270;
+    --tcgpt-accent: #b5e0e3;
+    --tcgpt-accent-dark: #8bc9ce;
+    --tcgpt-bg: #e5f2f2;
+    --tcgpt-bg-light: #f0f8f8;
+    --tcgpt-white: #ffffff;
+    --tcgpt-text: #333333;
+    --tcgpt-text-light: #666666;
+    --tcgpt-border: #d0e8e8;
+    --tcgpt-success: #4caf50;
+    --tcgpt-error: #e53935;
+    --tcgpt-warning: #ff9800;
+    --tcgpt-shadow: rgba(31, 47, 86, 0.1);
+}
+
+/* Main Container */
+.tainacan-ai-admin {
+    max-width: 1200px;
+}
+
+.tainacan-ai-admin-content {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    padding: 24px 0;
+}
+
+@media (max-width: 1024px) {
+    .tainacan-ai-admin-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Título */
+.tainacan-ai-admin .tainacan-page-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--tcgpt-primary);
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.tainacan-ai-title-icon {
+    color: var(--tcgpt-accent-dark);
+}
+
+/* Cards */
+.tainacan-ai-card {
+    background: var(--tcgpt-white);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px var(--tcgpt-shadow);
+    margin-bottom: 24px;
+    overflow: hidden;
+    border: 1px solid var(--tcgpt-border);
+}
+
+.tainacan-ai-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, var(--tcgpt-primary) 0%, var(--tcgpt-primary-light) 100%);
+    color: var(--tcgpt-white);
+}
+
+.tainacan-ai-card-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--tcgpt-white);
+}
+
+.tainacan-ai-toggle-card {
+    background: transparent;
+    border: none;
+    color: var(--tcgpt-white);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.tainacan-ai-toggle-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tainacan-ai-card-body {
+    padding: 24px;
+    background: var(--tcgpt-bg-light);
+}
+
+.tainacan-ai-collapsible {
+    display: block;
+}
+
+.tainacan-ai-collapsible.collapsed {
+    display: none;
+}
+
+/* Campos */
+.tainacan-ai-field {
+    margin-bottom: 20px;
+}
+
+.tainacan-ai-field:last-child {
+    margin-bottom: 0;
+}
+
+.tainacan-ai-field label {
+    display: block;
+    font-weight: 600;
+    color: var(--tcgpt-primary);
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.tainacan-ai-field input[type="text"],
+.tainacan-ai-field input[type="password"],
+.tainacan-ai-field input[type="number"],
+.tainacan-ai-field select,
+.tainacan-ai-field textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--tcgpt-border);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: var(--tcgpt-white);
+}
+
+.tainacan-ai-field input:focus,
+.tainacan-ai-field select:focus,
+.tainacan-ai-field textarea:focus {
+    border-color: var(--tcgpt-accent-dark);
+    box-shadow: 0 0 0 3px rgba(181, 224, 227, 0.3);
+    outline: none;
+}
+
+.tainacan-ai-field .description {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--tcgpt-text-light);
+}
+
+.tainacan-ai-field .description a {
+    color: var(--tcgpt-primary);
+}
+
+/* Input Group */
+.tainacan-ai-input-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tainacan-ai-input-group input {
+    flex: 1;
+    min-width: 200px;
+}
+
+.tainacan-ai-input-group .button {
+    flex-shrink: 0;
+}
+
+/* Grid */
+.tainacan-ai-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 600px) {
+    .tainacan-ai-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Botões */
+.tainacan-ai-admin .button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.tainacan-ai-admin .button-primary {
+    background: var(--tcgpt-primary);
+    border-color: var(--tcgpt-primary);
+    color: var(--tcgpt-white);
+}
+
+.tainacan-ai-admin .button-primary:hover,
+.tainacan-ai-admin .button-primary:focus {
+    background: var(--tcgpt-primary-light);
+    border-color: var(--tcgpt-primary-light);
+}
+
+.tainacan-ai-admin .button-secondary {
+    background: var(--tcgpt-accent);
+    border-color: var(--tcgpt-accent-dark);
+    color: var(--tcgpt-primary);
+}
+
+.tainacan-ai-admin .button-secondary:hover,
+.tainacan-ai-admin .button-secondary:focus {
+    background: var(--tcgpt-accent-dark);
+    border-color: var(--tcgpt-accent-dark);
+}
+
+/* Ações */
+.tainacan-ai-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.tainacan-ai-actions .button {
+    margin: 0 !important;
+}
+
+/* Notices */
+.tainacan-ai-notice {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tainacan-ai-notice.success {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid var(--tcgpt-success);
+    color: var(--tcgpt-success);
+}
+
+.tainacan-ai-notice.error {
+    background: rgba(229, 57, 53, 0.1);
+    border: 1px solid var(--tcgpt-error);
+    color: var(--tcgpt-error);
+}
+
+.tainacan-ai-notice.loading {
+    background: var(--tcgpt-bg);
+    border: 1px solid var(--tcgpt-border);
+    color: var(--tcgpt-text-light);
+}
+
+/* Info Box */
+.tainacan-ai-info-box {
+    background: var(--tcgpt-white);
+    border-radius: 12px;
+    padding: 24px;
+    border: 2px solid var(--tcgpt-accent);
+    box-shadow: 0 2px 8px var(--tcgpt-shadow);
+    height: fit-content;
+    position: sticky;
+    top: 48px;
+}
+
+.tainacan-ai-info-box h3 {
+    color: var(--tcgpt-primary);
+    margin: 0 0 16px;
+    font-size: 18px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--tcgpt-accent);
+}
+
+.tainacan-ai-info-box h4 {
+    color: var(--tcgpt-primary);
+    margin: 20px 0 12px;
+    font-size: 14px;
+}
+
+.tainacan-ai-info-box ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.tainacan-ai-info-box li {
+    margin-bottom: 8px;
+    color: var(--tcgpt-text);
+    font-size: 14px;
+}
+
+.tainacan-ai-info-box p {
+    font-size: 13px;
+    color: var(--tcgpt-text-light);
+    line-height: 1.6;
+}
+
+/* Spinner */
+@keyframes tcgpt-spin {
+    to { transform: rotate(360deg); }
+}
+
+.tainacan-ai-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--tcgpt-border);
+    border-top-color: var(--tcgpt-primary);
+    border-radius: 50%;
+    animation: tcgpt-spin 0.8s linear infinite;
+}
+
+/* Menu Icon */
+.toplevel_page_tainacan_ai .wp-menu-image svg,
+.menu-icon-tainacan_ai .wp-menu-image svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+/* ================================
+   Stats Grid
+   ================================ */
+.tainacan-ai-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.tainacan-ai-stat-card {
+    background: var(--tcgpt-white);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px var(--tcgpt-shadow);
+    border: 1px solid var(--tcgpt-border);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tainacan-ai-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px var(--tcgpt-shadow);
+}
+
+.tainacan-ai-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--tcgpt-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tainacan-ai-stat-icon .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: var(--tcgpt-primary);
+}
+
+.tainacan-ai-stat-icon.success {
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.tainacan-ai-stat-icon.success .dashicons {
+    color: var(--tcgpt-success);
+}
+
+.tainacan-ai-stat-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tainacan-ai-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--tcgpt-primary);
+    line-height: 1;
+}
+
+.tainacan-ai-stat-label {
+    font-size: 12px;
+    color: var(--tcgpt-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ================================
+   Version Badge
+   ================================ */
+.tainacan-ai-version {
+    font-size: 12px;
+    font-weight: 400;
+    background: var(--tcgpt-accent);
+    color: var(--tcgpt-primary);
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+}
+
+/* ================================
+   Badges
+   ================================ */
+.tainacan-ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tainacan-ai-badge.success {
+    background: rgba(76, 175, 80, 0.2);
+    color: #2e7d32;
+}
+
+.tainacan-ai-badge.warning {
+    background: rgba(255, 152, 0, 0.2);
+    color: #e65100;
+}
+
+.tainacan-ai-badge.error {
+    background: rgba(229, 57, 53, 0.2);
+    color: #c62828;
+}
+
+/* ================================
+   Card Title with Icon
+   ================================ */
+.tainacan-ai-card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tainacan-ai-card-title .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    opacity: 0.9;
+}
+
+/* ================================
+   Field Row (Side by Side)
+   ================================ */
+.tainacan-ai-field-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.tainacan-ai-field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+/* ================================
+   Checkbox Grid
+   ================================ */
+.tainacan-ai-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.tainacan-ai-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: var(--tcgpt-white);
+    border: 2px solid var(--tcgpt-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tainacan-ai-checkbox:hover {
+    border-color: var(--tcgpt-accent-dark);
+    background: var(--tcgpt-bg);
+}
+
+.tainacan-ai-checkbox input[type="checkbox"] {
+    margin-top: 2px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--tcgpt-primary);
+    flex-shrink: 0;
+}
+
+.tainacan-ai-checkbox-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tainacan-ai-checkbox-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--tcgpt-primary);
+    font-size: 14px;
+}
+
+.tainacan-ai-checkbox-title .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--tcgpt-accent-dark);
+}
+
+.tainacan-ai-checkbox-desc {
+    font-size: 12px;
+    color: var(--tcgpt-text-light);
+    line-height: 1.4;
+}
+
+/* ================================
+   Prompt Info Box
+   ================================ */
+.tainacan-ai-prompt-info {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(181, 224, 227, 0.3) 0%, rgba(229, 242, 242, 0.5) 100%);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--tcgpt-accent-dark);
+}
+
+.tainacan-ai-prompt-info .dashicons {
+    flex-shrink: 0;
+    color: var(--tcgpt-primary);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+}
+
+.tainacan-ai-prompt-info p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--tcgpt-text);
+    line-height: 1.5;
+}
+
+/* ================================
+   Radio Group
+   ================================ */
+.tainacan-ai-radio-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.tainacan-ai-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--tcgpt-white);
+    border: 2px solid var(--tcgpt-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    color: var(--tcgpt-text);
+}
+
+.tainacan-ai-radio-group label:hover {
+    border-color: var(--tcgpt-accent-dark);
+}
+
+.tainacan-ai-radio-group input[type="radio"]:checked + .dashicons + span,
+.tainacan-ai-radio-group input[type="radio"]:checked ~ span {
+    color: var(--tcgpt-primary);
+}
+
+.tainacan-ai-radio-group label:has(input:checked) {
+    border-color: var(--tcgpt-primary);
+    background: var(--tcgpt-bg);
+}
+
+.tainacan-ai-radio-group .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--tcgpt-accent-dark);
+}
+
+/* ================================
+   Field Header with Actions
+   ================================ */
+.tainacan-ai-field-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.tainacan-ai-field-header label {
+    margin-bottom: 0;
+}
+
+/* ================================
+   Collection Actions
+   ================================ */
+.tainacan-ai-collection-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--tcgpt-border);
+}
+
+/* ================================
+   Actions Bar
+   ================================ */
+.tainacan-ai-actions-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 20px 0;
+    border-top: 2px solid var(--tcgpt-border);
+    margin-top: 24px;
+}
+
+.tainacan-ai-actions-bar .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tainacan-ai-actions-bar .button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* ================================
+   Sidebar
+   ================================ */
+.tainacan-ai-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.tainacan-ai-sidebar .tainacan-ai-info-box {
+    position: relative;
+    top: 0;
+}
+
+.tainacan-ai-sidebar .tainacan-ai-info-box h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tainacan-ai-sidebar .tainacan-ai-info-box h3 .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--tcgpt-accent-dark);
+}
+
+.tainacan-ai-sidebar .tainacan-ai-info-box ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.tainacan-ai-sidebar .tainacan-ai-info-box ul li {
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+/* ================================
+   Formats
+   ================================ */
+.tainacan-ai-formats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tainacan-ai-format-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tainacan-ai-format-group strong {
+    font-size: 12px;
+    color: var(--tcgpt-primary);
+    text-transform: uppercase;
+}
+
+.tainacan-ai-format-group span {
+    font-size: 13px;
+    color: var(--tcgpt-text);
+}
+
+/* ================================
+   Required Field
+   ================================ */
+.tainacan-ai-field label .required {
+    color: var(--tcgpt-error);
+    margin-left: 2px;
+}
+
+/* ================================
+   Dependencies Section
+   ================================ */
+.tainacan-ai-dependencies {
+    margin-top: 20px;
+}
+
+.tainacan-ai-dep-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.tainacan-ai-dep-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: var(--tcgpt-white);
+    border: 2px solid var(--tcgpt-border);
+    border-radius: 10px;
+}
+
+.tainacan-ai-dep-item.installed {
+    border-color: var(--tcgpt-success);
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.tainacan-ai-dep-item.missing {
+    border-color: var(--tcgpt-warning);
+    background: rgba(255, 152, 0, 0.05);
+}
+
+.tainacan-ai-dep-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tainacan-ai-dep-item.installed .tainacan-ai-dep-icon {
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.tainacan-ai-dep-item.installed .tainacan-ai-dep-icon .dashicons {
+    color: var(--tcgpt-success);
+}
+
+.tainacan-ai-dep-item.missing .tainacan-ai-dep-icon {
+    background: rgba(255, 152, 0, 0.1);
+}
+
+.tainacan-ai-dep-item.missing .tainacan-ai-dep-icon .dashicons {
+    color: var(--tcgpt-warning);
+}
+
+.tainacan-ai-dep-icon .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.tainacan-ai-dep-content {
+    flex: 1;
+}
+
+.tainacan-ai-dep-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.tainacan-ai-dep-name {
+    font-weight: 600;
+    color: var(--tcgpt-primary);
+    font-size: 14px;
+}
+
+.tainacan-ai-dep-status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.tainacan-ai-dep-item.installed .tainacan-ai-dep-status {
+    background: rgba(76, 175, 80, 0.2);
+    color: #2e7d32;
+}
+
+.tainacan-ai-dep-item.missing .tainacan-ai-dep-status {
+    background: rgba(255, 152, 0, 0.2);
+    color: #e65100;
+}
+
+.tainacan-ai-dep-desc {
+    font-size: 12px;
+    color: var(--tcgpt-text-light);
+    line-height: 1.4;
+    margin-bottom: 8px;
+}
+
+.tainacan-ai-dep-action {
+    margin-top: 8px;
+}
+
+.tainacan-ai-dep-action .button-small {
+    font-size: 11px;
+    padding: 4px 10px;
+}
+
+/* Method badges for backends */
+.tainacan-ai-dep-methods {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--tcgpt-border);
+}
+
+.tainacan-ai-dep-methods small {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tainacan-ai-method-available,
+.tainacan-ai-method-missing {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.tainacan-ai-method-available {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2e7d32;
+}
+
+.tainacan-ai-method-missing {
+    background: rgba(0, 0, 0, 0.05);
+    color: #999;
+    text-decoration: line-through;
+}
+
+/* Info box inline */
+.tainacan-ai-info-box-inline {
+    background: var(--tcgpt-white);
+    border: 2px solid var(--tcgpt-accent);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.tainacan-ai-info-box-inline h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px 0;
+    color: var(--tcgpt-primary);
+    font-size: 14px;
+}
+
+.tainacan-ai-info-box-inline h4 .dashicons {
+    color: var(--tcgpt-accent-dark);
+}
+
+.tainacan-ai-info-box-inline ol {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.tainacan-ai-info-box-inline ol li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--tcgpt-border);
+    font-size: 13px;
+    color: var(--tcgpt-text-light);
+}
+
+.tainacan-ai-info-box-inline ol li:last-child {
+    border-bottom: none;
+}
+
+.tainacan-ai-info-box-inline ol li strong {
+    color: var(--tcgpt-primary);
+}
+
+/* ================================
+   Modal/Popup Styles
+   ================================ */
+.tainacan-ai-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.tainacan-ai-modal {
+    background: var(--tcgpt-white);
+    border-radius: 16px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: tcgpt-modal-in 0.3s ease;
+}
+
+@keyframes tcgpt-modal-in {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.tainacan-ai-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--tcgpt-primary) 0%, var(--tcgpt-primary-light) 100%);
+    color: var(--tcgpt-white);
+}
+
+.tainacan-ai-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tainacan-ai-modal-close {
+    background: transparent;
+    border: none;
+    color: var(--tcgpt-white);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.tainacan-ai-modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.tainacan-ai-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(80vh - 140px);
+}
+
+.tainacan-ai-modal-footer {
+    padding: 16px 24px;
+    background: var(--tcgpt-bg);
+    border-top: 1px solid var(--tcgpt-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Installation Instructions */
+.tainacan-ai-install-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--tcgpt-border);
+    padding-bottom: 12px;
+}
+
+.tainacan-ai-install-tab {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--tcgpt-text-light);
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.tainacan-ai-install-tab:hover {
+    background: var(--tcgpt-bg);
+    color: var(--tcgpt-primary);
+}
+
+.tainacan-ai-install-tab.active {
+    background: var(--tcgpt-primary);
+    color: var(--tcgpt-white);
+}
+
+.tainacan-ai-install-content {
+    display: none;
+}
+
+.tainacan-ai-install-content.active {
+    display: block;
+}
+
+.tainacan-ai-code-block {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    border-radius: 8px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 12px 0;
+    position: relative;
+}
+
+.tainacan-ai-code-block code {
+    color: #9cdcfe;
+}
+
+.tainacan-ai-code-block .comment {
+    color: #6a9955;
+}
+
+.tainacan-ai-code-block .command {
+    color: #dcdcaa;
+}
+
+.tainacan-ai-copy-code {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.2s;
+}
+
+.tainacan-ai-copy-code:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.tainacan-ai-step {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--tcgpt-border);
+}
+
+.tainacan-ai-step:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.tainacan-ai-step-number {
+    width: 28px;
+    height: 28px;
+    background: var(--tcgpt-primary);
+    color: var(--tcgpt-white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.tainacan-ai-step-content {
+    flex: 1;
+}
+
+.tainacan-ai-step-content h4 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--tcgpt-primary);
+}
+
+.tainacan-ai-step-content p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--tcgpt-text-light);
+    line-height: 1.5;
+}
+
+/* Warning Box */
+.tainacan-ai-warning-box {
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid var(--tcgpt-warning);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    margin: 16px 0;
+}
+
+.tainacan-ai-warning-box .dashicons {
+    color: var(--tcgpt-warning);
+    flex-shrink: 0;
+}
+
+.tainacan-ai-warning-box p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--tcgpt-text);
+}
+
+/* ================================
+   Provider Selector
+   ================================ */
+.tainacan-ai-provider-selector {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.tainacan-ai-provider-option {
+    flex: 1;
+    min-width: 200px;
+    max-width: 280px;
+    background: var(--tcgpt-white);
+    border: 2px solid var(--tcgpt-border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.tainacan-ai-provider-option:hover {
+    border-color: var(--tcgpt-accent-dark);
+    box-shadow: 0 4px 12px var(--tcgpt-shadow);
+}
+
+.tainacan-ai-provider-option.selected {
+    border-color: var(--tcgpt-primary);
+    background: var(--tcgpt-bg);
+}
+
+.tainacan-ai-provider-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tainacan-ai-provider-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.tainacan-ai-provider-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.tainacan-ai-provider-icon.openai {
+    background: linear-gradient(135deg, #10a37f 0%, #0d8f6f 100%);
+    color: white;
+}
+
+.tainacan-ai-provider-icon.gemini {
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc04 100%);
+    color: white;
+}
+
+.tainacan-ai-provider-icon.deepseek {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+}
+
+.tainacan-ai-provider-icon.ollama {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white;
+}
+
+.tainacan-ai-provider-name {
+    font-weight: 600;
+    color: var(--tcgpt-primary);
+    font-size: 16px;
+}
+
+.tainacan-ai-provider-desc {
+    font-size: 13px;
+    color: var(--tcgpt-text-light);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.tainacan-ai-provider-features {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tainacan-ai-feature-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.tainacan-ai-feature-badge.vision {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2e7d32;
+}
+
+.tainacan-ai-feature-badge.text {
+    background: rgba(33, 150, 243, 0.15);
+    color: #1565c0;
+}
+
+.tainacan-ai-feature-badge.economy {
+    background: rgba(255, 152, 0, 0.15);
+    color: #e65100;
+}
+
+.tainacan-ai-feature-badge.free {
+    background: rgba(156, 39, 176, 0.15);
+    color: #7b1fa2;
+}
+
+.tainacan-ai-feature-badge.local {
+    background: rgba(96, 125, 139, 0.15);
+    color: #37474f;
+}
+
+.tainacan-ai-feature-badge .dashicons {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+}
+
+/* Provider Config Cards */
+.tainacan-ai-provider-config {
+    display: none;
+    background: var(--tcgpt-white);
+    border: 2px solid var(--tcgpt-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.tainacan-ai-provider-config.active {
+    display: block;
+}
+
+.tainacan-ai-provider-config-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--tcgpt-border);
+}
+
+.tainacan-ai-provider-config-header h4 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--tcgpt-primary);
+}
+
+.tainacan-ai-provider-config-header .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: var(--tcgpt-accent-dark);
+}
+
+/* API Key Input Group */
+.tainacan-ai-api-key-group {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.tainacan-ai-api-key-group input {
+    flex: 1;
+}
+
+.tainacan-ai-api-key-group .button {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+}
+
+/* Provider Selection Indicator */
+.tainacan-ai-provider-option::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--tcgpt-border);
+    transition: all 0.2s;
+}
+
+.tainacan-ai-provider-option.selected::after {
+    background: var(--tcgpt-primary);
+    border-color: var(--tcgpt-primary);
+}
+
+.tainacan-ai-provider-option.selected::before {
+    content: '✓';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 20px;
+    height: 20px;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+/* Provider Info Alert */
+.tainacan-ai-provider-info-alert {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(33, 150, 243, 0.1);
+    border: 1px solid rgba(33, 150, 243, 0.3);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.tainacan-ai-provider-info-alert .dashicons {
+    color: #1976d2;
+    flex-shrink: 0;
+}
+
+.tainacan-ai-provider-info-alert p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--tcgpt-text);
+}
+
+/* No Vision Warning */
+.tainacan-ai-no-vision-warning {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.tainacan-ai-no-vision-warning .dashicons {
+    color: var(--tcgpt-warning);
+    flex-shrink: 0;
+}
+
+.tainacan-ai-no-vision-warning p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--tcgpt-text);
+}
+
+/* ================================
+   Metadata Mapping Section
+   ================================ */
+.tainacan-ai-mapping-header {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--tcgpt-primary);
+    color: var(--tcgpt-white);
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 0;
+}
+
+.tainacan-ai-mapping-col:last-child {
+    text-align: left;
+}
+
+.tainacan-ai-mapping-list {
+    background: var(--tcgpt-white);
+    border: 2px solid var(--tcgpt-border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.tainacan-ai-mapping-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr auto;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--tcgpt-border);
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.tainacan-ai-mapping-row:hover {
+    background: var(--tcgpt-bg);
+}
+
+.tainacan-ai-mapping-row:last-of-type {
+    border-bottom: none;
+}
+
+.tainacan-ai-mapping-ai-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tainacan-ai-mapping-ai-field .ai-field-label {
+    font-weight: 600;
+    color: var(--tcgpt-primary);
+    font-size: 14px;
+}
+
+.tainacan-ai-mapping-ai-field .ai-field-key {
+    font-size: 11px;
+    background: var(--tcgpt-bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: var(--tcgpt-text-light);
+    font-family: 'Consolas', 'Monaco', monospace;
+    width: fit-content;
+}
+
+.tainacan-ai-mapping-ai-field input.ai-field-name {
+    padding: 8px 12px;
+    border: 2px solid var(--tcgpt-border);
+    border-radius: 6px;
+    font-size: 13px;
+    width: 100%;
+    max-width: 200px;
+}
+
+.tainacan-ai-mapping-ai-field input.ai-field-name:focus {
+    border-color: var(--tcgpt-accent-dark);
+    outline: none;
+}
+
+.tainacan-ai-mapping-arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--tcgpt-accent-dark);
+}
+
+.tainacan-ai-mapping-arrow .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.tainacan-ai-mapping-metadata select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--tcgpt-border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: var(--tcgpt-white);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.tainacan-ai-mapping-metadata select:focus {
+    border-color: var(--tcgpt-accent-dark);
+    outline: none;
+}
+
+.tainacan-ai-mapping-metadata select:has(option[value]:not([value=""]):checked) {
+    border-color: var(--tcgpt-success);
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.tainacan-ai-mapping-row .remove-mapping-row {
+    padding: 6px;
+    border-radius: 4px;
+    color: var(--tcgpt-error);
+    border-color: var(--tcgpt-error);
+    background: transparent;
+}
+
+.tainacan-ai-mapping-row .remove-mapping-row:hover {
+    background: var(--tcgpt-error);
+    color: white;
+}
+
+.tainacan-ai-mapping-row .remove-mapping-row .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.tainacan-ai-mapping-add {
+    padding: 16px;
+    text-align: center;
+    border-top: 1px dashed var(--tcgpt-border);
+}
+
+.tainacan-ai-mapping-add .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tainacan-ai-mapping-add .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.tainacan-ai-mapping-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--tcgpt-border);
+    flex-wrap: wrap;
+}
+
+.tainacan-ai-mapping-actions .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tainacan-ai-mapping-actions .button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Loading state */
+.tainacan-ai-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px 20px;
+    color: var(--tcgpt-text-light);
+    font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tainacan-ai-mapping-header,
+    .tainacan-ai-mapping-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .tainacan-ai-mapping-arrow {
+        transform: rotate(90deg);
+        padding: 4px 0;
+    }
+
+    .tainacan-ai-mapping-header .tainacan-ai-mapping-col:nth-child(2) {
+        display: none;
+    }
+
+    .tainacan-ai-mapping-ai-field input.ai-field-name {
+        max-width: 100%;
+    }
+}
+
+/* Warning info box variant */
+.tainacan-ai-prompt-info.warning {
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 193, 7, 0.1) 100%);
+    border-left-color: var(--tcgpt-warning);
+}
+
+.tainacan-ai-prompt-info.warning .dashicons {
+    color: var(--tcgpt-warning);
+}
+
+/* Feature badges in provider selector */
+.tainacan-ai-feature-badge.success {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2e7d32;
+}
+
+.tainacan-ai-feature-badge.warning {
+    background: rgba(255, 152, 0, 0.15);
+    color: #e65100;
+}
+
+/* Provider status indicator */
+.tainacan-ai-provider-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tainacan-ai-provider-status {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+
+.tainacan-ai-provider-status.configured .dashicons {
+    color: var(--tcgpt-success);
+}
