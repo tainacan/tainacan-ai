@@ -1,6 +1,10 @@
 <?php
 namespace Tainacan\AI;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 /**
  * Admin page for the plugin using Tainacan Pages API (1.0+)
  */

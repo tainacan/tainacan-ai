@@ -1,6 +1,10 @@
 <?php
 namespace Tainacan\AI;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 /**
  * Custom prompts manager per collection
  *

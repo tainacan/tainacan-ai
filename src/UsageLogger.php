@@ -1,6 +1,10 @@
 <?php
 namespace Tainacan\AI;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 /**
  * Usage and statistics logger
  *

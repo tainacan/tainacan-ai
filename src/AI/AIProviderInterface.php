@@ -1,6 +1,10 @@
 <?php
 namespace Tainacan\AI\AI;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 /**
  * Interface para provedores de IA
  *

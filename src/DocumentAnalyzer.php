@@ -1,6 +1,10 @@
 <?php
 namespace Tainacan\AI;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 use Tainacan\AI\AI\AIProviderFactory;
 use Tainacan\AI\AI\AIProviderInterface;
 use Tainacan\AI\PdfParser\PdfParser;

@@ -1,6 +1,10 @@
 <?php
 namespace Tainacan\AI\AI\Providers;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 use Tainacan\AI\AI\AbstractAIProvider;
 
 /**

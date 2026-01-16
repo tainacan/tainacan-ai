@@ -1,4 +1,10 @@
 <?php
+namespace Tainacan\AI\PdfParser;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 /**
  * Lightweight PDF Parser - PDF Text Extraction
  *
@@ -8,8 +14,6 @@
  * @package Tainacan_AI
  * @since 1.0.0
  */
-
-namespace Tainacan\AI\PdfParser;
 
 class PdfParser {
 
