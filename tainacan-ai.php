@@ -94,7 +94,6 @@ final class Tainacan_AI {
         register_activation_hook(__FILE__, [$this, 'activate']);
         register_deactivation_hook(__FILE__, [$this, 'deactivate']);
 
-        add_action('plugins_loaded', [$this, 'load_textdomain']);
         add_action('plugins_loaded', [$this, 'init'], 20);
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), [$this, 'add_settings_link']);
 
@@ -408,17 +407,6 @@ PROMPT;
 
         // Fallback: always allow for admins
         return current_user_can('manage_options');
-    }
-
-    /**
-     * Load translations
-     */
-    public function load_textdomain(): void {
-        load_plugin_textdomain(
-            'tainacan-ai',
-            false,
-            dirname(plugin_basename(__FILE__)) . '/languages/'
-        );
     }
 
     /**
