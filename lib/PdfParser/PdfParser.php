@@ -26,7 +26,7 @@ class PdfParser {
      */
     public function parseFile(string $filePath): self {
         if (!file_exists($filePath)) {
-            throw new \Exception("File not found: {$filePath}");
+            throw new \Exception(sprintf('File not found: %s', esc_html($filePath)));
         }
 
         $this->content = file_get_contents($filePath);

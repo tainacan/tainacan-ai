@@ -44,7 +44,7 @@ class AIProviderFactory {
     public static function register(string $id, string $class): void {
         if (!is_subclass_of($class, AIProviderInterface::class)) {
             throw new \InvalidArgumentException(
-                sprintf('Provider class %s must implement AIProviderInterface', $class)
+                sprintf('Provider class %s must implement AIProviderInterface', esc_html($class))
             );
         }
         self::$providers[$id] = $class;

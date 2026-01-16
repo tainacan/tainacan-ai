@@ -109,8 +109,8 @@ final class Tainacan_AI {
         if (version_compare(PHP_VERSION, '8.0', '<')) {
             deactivate_plugins(plugin_basename(__FILE__));
             wp_die(
-                __('Tainacan AI requires PHP 8.0 or higher.', 'tainacan-ai'),
-                __('Activation Error', 'tainacan-ai'),
+                esc_html__('Tainacan AI requires PHP 8.0 or higher.', 'tainacan-ai'),
+                esc_html__('Activation Error', 'tainacan-ai'),
                 ['back_link' => true]
             );
         }

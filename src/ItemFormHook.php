@@ -57,17 +57,17 @@ class ItemFormHook {
                     <svg class="tainacan-ai-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                         <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/>
                     </svg>
-                    <h4><?php _e('AI Metadata Extractor', 'tainacan-ai'); ?></h4>
+                    <h4><?php esc_html_e('AI Metadata Extractor', 'tainacan-ai'); ?></h4>
                 </div>
                 <?php if ($is_configured): ?>
                     <span class="tainacan-ai-status-badge success">
                         <span class="dashicons dashicons-yes-alt"></span>
-                        <?php _e('Configured', 'tainacan-ai'); ?>
+                        <?php esc_html_e('Configured', 'tainacan-ai'); ?>
                     </span>
                 <?php else: ?>
                     <span class="tainacan-ai-status-badge warning">
                         <span class="dashicons dashicons-warning"></span>
-                        <?php _e('Not configured', 'tainacan-ai'); ?>
+                        <?php esc_html_e('Not configured', 'tainacan-ai'); ?>
                     </span>
                 <?php endif; ?>
             </div>
@@ -78,9 +78,9 @@ class ItemFormHook {
                 <div class="tainacan-ai-notice warning">
                     <p>
                         <?php
-                        /* translators: %s: link to AI Tools settings page */
                         echo wp_kses_post(
                             sprintf(
+                                /* translators: %s: link to AI Tools settings page */
                                 __('Configure your API key in <a href="%s">Tainacan > AI</a> to use automatic extraction.', 'tainacan-ai'),
                                 esc_url(admin_url('admin.php?page=tainacan_ai'))
                             )
@@ -89,7 +89,7 @@ class ItemFormHook {
                 </div>
             <?php else: ?>
                 <p class="tainacan-ai-description">
-                    <?php _e('Analyze this item\'s document with artificial intelligence to automatically extract metadata.', 'tainacan-ai'); ?>
+                    <?php esc_html_e('Analyze this item\'s document with artificial intelligence to automatically extract metadata.', 'tainacan-ai'); ?>
                 </p>
 
                 <!-- Detected document info -->
@@ -106,7 +106,7 @@ class ItemFormHook {
                                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                             </svg>
                         </span>
-                        <span class="tainacan-ai-btn-text"><?php _e('Analyze Document', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-btn-text"><?php esc_html_e('Analyze Document', 'tainacan-ai'); ?></span>
                     </button>
 
                     <button type="button" class="button tainacan-ai-refresh-btn" id="tainacan-ai-refresh" title="<?php esc_attr_e('Force new analysis (ignore cache)', 'tainacan-ai'); ?>">
@@ -119,8 +119,8 @@ class ItemFormHook {
                     <div class="tainacan-ai-loading">
                         <div class="tainacan-ai-spinner"></div>
                         <div class="tainacan-ai-loading-text">
-                            <span class="tainacan-ai-loading-title"><?php _e('Analyzing document...', 'tainacan-ai'); ?></span>
-                            <span class="tainacan-ai-loading-subtitle"><?php _e('This may take a few seconds', 'tainacan-ai'); ?></span>
+                            <span class="tainacan-ai-loading-title"><?php esc_html_e('Analyzing document...', 'tainacan-ai'); ?></span>
+                            <span class="tainacan-ai-loading-subtitle"><?php esc_html_e('This may take a few seconds', 'tainacan-ai'); ?></span>
                         </div>
                     </div>
                 </div>
@@ -130,7 +130,7 @@ class ItemFormHook {
                     <div class="tainacan-ai-tabs" id="tainacan-ai-tab-exif" style="display: none;">
                         <button type="button" class="tainacan-ai-tab active" data-tab="exif">
                             <span class="dashicons dashicons-camera"></span>
-                            <?php _e('EXIF Data', 'tainacan-ai'); ?>
+                            <?php esc_html_e('EXIF Data', 'tainacan-ai'); ?>
                         </button>
                     </div>
                     <div class="tainacan-ai-tab-content active" id="tainacan-ai-content-exif">

@@ -54,7 +54,7 @@ class PdfToImage {
      */
     public function convert(string $pdfPath): array {
         if (!file_exists($pdfPath)) {
-            throw new \Exception("PDF file not found: {$pdfPath}");
+            throw new \Exception(sprintf('PDF file not found: %s', esc_html($pdfPath)));
         }
 
         // Try different methods in order of preference
@@ -139,7 +139,7 @@ class PdfToImage {
             $imagick->destroy();
 
         } catch (\Exception $e) {
-            throw new \Exception('Error converting PDF with Imagick: ' . $e->getMessage());
+            throw new \Exception(sprintf('Error converting PDF with Imagick: %s', esc_html($e->getMessage())));
         }
 
         return $images;
@@ -180,7 +180,7 @@ class PdfToImage {
         exec($command, $output, $returnCode);
 
         if ($returnCode !== 0) {
-            throw new \Exception('Error executing Ghostscript: ' . implode("\n", $output));
+            throw new \Exception(sprintf('Error executing Ghostscript: %s', esc_html(implode("\n", $output))));
         }
 
         // Find generated images

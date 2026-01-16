@@ -73,8 +73,8 @@ $has_builtin_parser = true;
             <svg class="tainacan-ai-title-icon" viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
                 <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z"/>
             </svg>
-            <?php _e('Tainacan AI Tools', 'tainacan-ai'); ?>
-            <span class="tainacan-ai-version">v<?php echo TAINACAN_AI_VERSION; ?></span>
+            <?php esc_html_e('Tainacan AI Tools', 'tainacan-ai'); ?>
+            <span class="tainacan-ai-version">v<?php echo esc_html(TAINACAN_AI_VERSION); ?></span>
         </h1>
     </div>
 
@@ -87,7 +87,7 @@ $has_builtin_parser = true;
             </div>
             <div class="tainacan-ai-stat-content">
                 <span class="tainacan-ai-stat-value"><?php echo number_format($stats['total_analyses']); ?></span>
-                <span class="tainacan-ai-stat-label"><?php _e('Analyses (30 days)', 'tainacan-ai'); ?></span>
+                <span class="tainacan-ai-stat-label"><?php esc_html_e('Analyses (30 days)', 'tainacan-ai'); ?></span>
             </div>
         </div>
 
@@ -97,7 +97,7 @@ $has_builtin_parser = true;
             </div>
             <div class="tainacan-ai-stat-content">
                 <span class="tainacan-ai-stat-value"><?php echo number_format($stats['total_tokens']); ?></span>
-                <span class="tainacan-ai-stat-label"><?php _e('Tokens Used', 'tainacan-ai'); ?></span>
+                <span class="tainacan-ai-stat-label"><?php esc_html_e('Tokens Used', 'tainacan-ai'); ?></span>
             </div>
         </div>
 
@@ -106,8 +106,8 @@ $has_builtin_parser = true;
                 <span class="dashicons dashicons-yes-alt"></span>
             </div>
             <div class="tainacan-ai-stat-content">
-                <span class="tainacan-ai-stat-value"><?php echo $stats['success_rate']; ?>%</span>
-                <span class="tainacan-ai-stat-label"><?php _e('Taxa de Sucesso', 'tainacan-ai'); ?></span>
+                <span class="tainacan-ai-stat-value"><?php echo esc_html($stats['success_rate']); ?>%</span>
+                <span class="tainacan-ai-stat-label"><?php esc_html_e('Taxa de Sucesso', 'tainacan-ai'); ?></span>
             </div>
         </div>
 
@@ -117,7 +117,7 @@ $has_builtin_parser = true;
             </div>
             <div class="tainacan-ai-stat-content">
                 <span class="tainacan-ai-stat-value">$<?php echo number_format($stats['total_cost'], 4); ?></span>
-                <span class="tainacan-ai-stat-label"><?php _e('Custo Estimado', 'tainacan-ai'); ?></span>
+                <span class="tainacan-ai-stat-label"><?php esc_html_e('Custo Estimado', 'tainacan-ai'); ?></span>
             </div>
         </div>
     </div>
@@ -132,7 +132,7 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-cloud"></span>
-                        <h2><?php _e('Provedor de IA', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Provedor de IA', 'tainacan-ai'); ?></h2>
                     </div>
                 </div>
                 <div class="tainacan-ai-card-body">
@@ -151,12 +151,12 @@ $has_builtin_parser = true;
                                     <?php if ($provider['supports_vision']): ?>
                                         <span class="tainacan-ai-feature-badge success" title="<?php esc_attr_e('Suporta análise de imagens', 'tainacan-ai'); ?>">
                                             <span class="dashicons dashicons-format-image"></span>
-                                            <?php _e('Vision', 'tainacan-ai'); ?>
+                                            <?php esc_html_e('Vision', 'tainacan-ai'); ?>
                                         </span>
                                     <?php else: ?>
                                         <span class="tainacan-ai-feature-badge warning" title="<?php esc_attr_e('Apenas texto', 'tainacan-ai'); ?>">
                                             <span class="dashicons dashicons-text"></span>
-                                            <?php _e('Texto', 'tainacan-ai'); ?>
+                                            <?php esc_html_e('Texto', 'tainacan-ai'); ?>
                                         </span>
                                     <?php endif; ?>
                                 </span>
@@ -177,18 +177,18 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-network"></span>
-                        <h2><?php _e('Configuração OpenAI', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Configuração OpenAI', 'tainacan-ai'); ?></h2>
                     </div>
                     <?php if ($provider_status['openai']): ?>
-                        <span class="tainacan-ai-badge success"><?php _e('Configurado', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-badge success"><?php esc_html_e('Configurado', 'tainacan-ai'); ?></span>
                     <?php else: ?>
-                        <span class="tainacan-ai-badge warning"><?php _e('Pendente', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-badge warning"><?php esc_html_e('Pendente', 'tainacan-ai'); ?></span>
                     <?php endif; ?>
                 </div>
                 <div class="tainacan-ai-card-body">
                     <div class="tainacan-ai-field">
                         <label for="api_key">
-                            <?php _e('Chave da API OpenAI', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Chave da API OpenAI', 'tainacan-ai'); ?>
                             <span class="required">*</span>
                         </label>
                         <div class="tainacan-ai-input-group">
@@ -206,22 +206,24 @@ $has_builtin_parser = true;
                             </button>
                             <button type="button" class="button button-secondary test-api-btn" data-provider="openai">
                                 <span class="dashicons dashicons-update"></span>
-                                <?php _e('Testar', 'tainacan-ai'); ?>
+                                <?php esc_html_e('Testar', 'tainacan-ai'); ?>
                             </button>
                         </div>
                         <p class="description">
                             <?php
-                            printf(
-                                /* translators: %s: link to OpenAI platform */
-                                __('Obtenha sua chave em %s.', 'tainacan-ai'),
-                                '<a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>'
+                            echo wp_kses_post(
+                                sprintf(
+                                    /* translators: %s: link to OpenAI platform */
+                                    esc_html__('Obtenha sua chave em %s.', 'tainacan-ai'),
+                                    '<a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>'
+                                )
                             ); ?>
                         </p>
                         <div class="api-test-result" data-provider="openai" style="display: none;"></div>
                     </div>
 
                     <div class="tainacan-ai-field">
-                        <label for="model"><?php _e('Modelo', 'tainacan-ai'); ?></label>
+                        <label for="model"><?php esc_html_e('Modelo', 'tainacan-ai'); ?></label>
                         <select id="model" name="tainacan_ai_options[model]">
                             <?php
                             $openai_models = $providers['openai']['models'] ?? [];
@@ -245,18 +247,18 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-network"></span>
-                        <h2><?php _e('Configuração Google Gemini', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Configuração Google Gemini', 'tainacan-ai'); ?></h2>
                     </div>
                     <?php if ($provider_status['gemini']): ?>
-                        <span class="tainacan-ai-badge success"><?php _e('Configurado', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-badge success"><?php esc_html_e('Configurado', 'tainacan-ai'); ?></span>
                     <?php else: ?>
-                        <span class="tainacan-ai-badge warning"><?php _e('Pendente', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-badge warning"><?php esc_html_e('Pendente', 'tainacan-ai'); ?></span>
                     <?php endif; ?>
                 </div>
                 <div class="tainacan-ai-card-body">
                     <div class="tainacan-ai-field">
                         <label for="gemini_api_key">
-                            <?php _e('Chave da API Google AI', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Chave da API Google AI', 'tainacan-ai'); ?>
                             <span class="required">*</span>
                         </label>
                         <div class="tainacan-ai-input-group">
@@ -274,22 +276,24 @@ $has_builtin_parser = true;
                             </button>
                             <button type="button" class="button button-secondary test-api-btn" data-provider="gemini">
                                 <span class="dashicons dashicons-update"></span>
-                                <?php _e('Testar', 'tainacan-ai'); ?>
+                                <?php esc_html_e('Testar', 'tainacan-ai'); ?>
                             </button>
                         </div>
                         <p class="description">
                             <?php
-                            printf(
-                                /* translators: %s: link to Google AI Studio */
-                                __('Obtenha sua chave em %s.', 'tainacan-ai'),
-                                '<a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>'
+                            echo wp_kses_post(
+                                sprintf(
+                                    /* translators: %s: link to Google AI Studio */
+                                    esc_html__('Obtenha sua chave em %s.', 'tainacan-ai'),
+                                    '<a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>'
+                                )
                             ); ?>
                         </p>
                         <div class="api-test-result" data-provider="gemini" style="display: none;"></div>
                     </div>
 
                     <div class="tainacan-ai-field">
-                        <label for="gemini_model"><?php _e('Modelo', 'tainacan-ai'); ?></label>
+                        <label for="gemini_model"><?php esc_html_e('Modelo', 'tainacan-ai'); ?></label>
                         <select id="gemini_model" name="tainacan_ai_options[gemini_model]">
                             <?php
                             $gemini_models = $providers['gemini']['models'] ?? [];
@@ -313,25 +317,25 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-network"></span>
-                        <h2><?php _e('Configuração DeepSeek', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Configuração DeepSeek', 'tainacan-ai'); ?></h2>
                     </div>
                     <?php if ($provider_status['deepseek']): ?>
-                        <span class="tainacan-ai-badge success"><?php _e('Configurado', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-badge success"><?php esc_html_e('Configurado', 'tainacan-ai'); ?></span>
                     <?php else: ?>
-                        <span class="tainacan-ai-badge warning"><?php _e('Pendente', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-badge warning"><?php esc_html_e('Pendente', 'tainacan-ai'); ?></span>
                     <?php endif; ?>
                 </div>
                 <div class="tainacan-ai-card-body">
                     <div class="tainacan-ai-prompt-info warning">
                         <span class="dashicons dashicons-warning"></span>
                         <p>
-                            <?php _e('<strong>Atenção:</strong> O DeepSeek não suporta análise de imagens. Apenas documentos com texto extraível (PDFs com texto, TXT) podem ser analisados.', 'tainacan-ai'); ?>
+                            <?php esc_html_e('<strong>Atenção:</strong> O DeepSeek não suporta análise de imagens. Apenas documentos com texto extraível (PDFs com texto, TXT) podem ser analisados.', 'tainacan-ai'); ?>
                         </p>
                     </div>
 
                     <div class="tainacan-ai-field">
                         <label for="deepseek_api_key">
-                            <?php _e('Chave da API DeepSeek', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Chave da API DeepSeek', 'tainacan-ai'); ?>
                             <span class="required">*</span>
                         </label>
                         <div class="tainacan-ai-input-group">
@@ -349,22 +353,24 @@ $has_builtin_parser = true;
                             </button>
                             <button type="button" class="button button-secondary test-api-btn" data-provider="deepseek">
                                 <span class="dashicons dashicons-update"></span>
-                                <?php _e('Testar', 'tainacan-ai'); ?>
+                                <?php esc_html_e('Testar', 'tainacan-ai'); ?>
                             </button>
                         </div>
                         <p class="description">
                             <?php
-                            printf(
-                                /* translators: %s: link to DeepSeek platform */
-                                __('Obtenha sua chave em %s.', 'tainacan-ai'),
-                                '<a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com</a>'
+                            echo wp_kses_post(
+                                sprintf(
+                                    /* translators: %s: link to DeepSeek platform */
+                                    esc_html__('Obtenha sua chave em %s.', 'tainacan-ai'),
+                                    '<a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com</a>'
+                                )
                             ); ?>
                         </p>
                         <div class="api-test-result" data-provider="deepseek" style="display: none;"></div>
                     </div>
 
                     <div class="tainacan-ai-field">
-                        <label for="deepseek_model"><?php _e('Modelo', 'tainacan-ai'); ?></label>
+                        <label for="deepseek_model"><?php esc_html_e('Modelo', 'tainacan-ai'); ?></label>
                         <select id="deepseek_model" name="tainacan_ai_options[deepseek_model]">
                             <?php
                             $deepseek_models = $providers['deepseek']['models'] ?? [];
@@ -388,32 +394,34 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-desktop"></span>
-                        <h2><?php _e('Configuração Ollama (Local)', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Configuração Ollama (Local)', 'tainacan-ai'); ?></h2>
                     </div>
                     <?php if ($provider_status['ollama']): ?>
-                        <span class="tainacan-ai-badge success"><?php _e('Configurado', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-badge success"><?php esc_html_e('Configurado', 'tainacan-ai'); ?></span>
                     <?php else: ?>
-                        <span class="tainacan-ai-badge warning"><?php _e('Pendente', 'tainacan-ai'); ?></span>
+                        <span class="tainacan-ai-badge warning"><?php esc_html_e('Pendente', 'tainacan-ai'); ?></span>
                     <?php endif; ?>
                 </div>
                 <div class="tainacan-ai-card-body">
                     <div class="tainacan-ai-prompt-info">
                         <span class="dashicons dashicons-info"></span>
                         <p>
-                            <?php _e('<strong>Ollama</strong> permite executar modelos de IA localmente, sem custos de API. Você precisa ter o Ollama instalado e rodando no servidor.', 'tainacan-ai'); ?>
+                            <?php esc_html_e('<strong>Ollama</strong> permite executar modelos de IA localmente, sem custos de API. Você precisa ter o Ollama instalado e rodando no servidor.', 'tainacan-ai'); ?>
                             <br>
                             <?php
-                            printf(
-                                /* translators: %s: link to Ollama download page */
-                                __('Instale em: %s', 'tainacan-ai'),
-                                '<a href="https://ollama.com/download" target="_blank">ollama.com/download</a>'
+                            echo wp_kses_post(
+                                sprintf(
+                                    /* translators: %s: link to Ollama download page */
+                                    esc_html__('Instale em: %s', 'tainacan-ai'),
+                                    '<a href="https://ollama.com/download" target="_blank">ollama.com/download</a>'
+                                )
                             ); ?>
                         </p>
                     </div>
 
                     <div class="tainacan-ai-field">
                         <label for="ollama_url">
-                            <?php _e('URL do Ollama', 'tainacan-ai'); ?>
+                            <?php esc_html_e('URL do Ollama', 'tainacan-ai'); ?>
                             <span class="required">*</span>
                         </label>
                         <div class="tainacan-ai-input-group">
@@ -427,17 +435,17 @@ $has_builtin_parser = true;
                             />
                             <button type="button" class="button button-secondary test-api-btn" data-provider="ollama">
                                 <span class="dashicons dashicons-update"></span>
-                                <?php _e('Testar', 'tainacan-ai'); ?>
+                                <?php esc_html_e('Testar', 'tainacan-ai'); ?>
                             </button>
                         </div>
                         <p class="description">
-                            <?php _e('URL onde o Ollama está rodando. Padrão: http://localhost:11434', 'tainacan-ai'); ?>
+                            <?php esc_html_e('URL onde o Ollama está rodando. Padrão: http://localhost:11434', 'tainacan-ai'); ?>
                         </p>
                         <div class="api-test-result" data-provider="ollama" style="display: none;"></div>
                     </div>
 
                     <div class="tainacan-ai-field">
-                        <label for="ollama_model"><?php _e('Modelo', 'tainacan-ai'); ?></label>
+                        <label for="ollama_model"><?php esc_html_e('Modelo', 'tainacan-ai'); ?></label>
                         <select id="ollama_model" name="tainacan_ai_options[ollama_model]">
                             <?php
                             $ollama_models = $providers['ollama']['models'] ?? [];
@@ -453,14 +461,14 @@ $has_builtin_parser = true;
                             ?>
                         </select>
                         <p class="description">
-                            <?php _e('Use <code>llama3.2-vision</code> ou <code>llava</code> para análise de imagens.', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Use <code>llama3.2-vision</code> ou <code>llava</code> para análise de imagens.', 'tainacan-ai'); ?>
                         </p>
                     </div>
 
                     <div class="tainacan-ai-prompt-info warning">
                         <span class="dashicons dashicons-warning"></span>
                         <p>
-                            <?php _e('Certifique-se de que o modelo está instalado. Execute no terminal: <code>ollama pull llama3.2</code>', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Certifique-se de que o modelo está instalado. Execute no terminal: <code>ollama pull llama3.2</code>', 'tainacan-ai'); ?>
                         </p>
                     </div>
                 </div>
@@ -471,7 +479,7 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-edit-page"></span>
-                        <h2><?php _e('Prompts de Análise Padrão', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Prompts de Análise Padrão', 'tainacan-ai'); ?></h2>
                     </div>
                     <button type="button" class="tainacan-ai-toggle-card">
                         <span class="dashicons dashicons-arrow-down-alt2"></span>
@@ -481,14 +489,14 @@ $has_builtin_parser = true;
                     <div class="tainacan-ai-prompt-info">
                         <span class="dashicons dashicons-info"></span>
                         <p>
-                            <?php _e('Os prompts definem como a IA deve analisar os documentos. Use instruções claras e especifique os campos JSON que deseja extrair.', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Os prompts definem como a IA deve analisar os documentos. Use instruções claras e especifique os campos JSON que deseja extrair.', 'tainacan-ai'); ?>
                         </p>
                     </div>
 
                     <div class="tainacan-ai-field">
                         <label for="default_image_prompt">
                             <span class="dashicons dashicons-format-image"></span>
-                            <?php _e('Prompt para Imagens', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Prompt para Imagens', 'tainacan-ai'); ?>
                         </label>
                         <textarea
                             id="default_image_prompt"
@@ -501,7 +509,7 @@ $has_builtin_parser = true;
                     <div class="tainacan-ai-field">
                         <label for="default_document_prompt">
                             <span class="dashicons dashicons-media-document"></span>
-                            <?php _e('Prompt para Documentos', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Prompt para Documentos', 'tainacan-ai'); ?>
                         </label>
                         <textarea
                             id="default_document_prompt"
@@ -518,7 +526,7 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-category"></span>
-                        <h2><?php _e('Prompts por Coleção', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Prompts por Coleção', 'tainacan-ai'); ?></h2>
                     </div>
                     <button type="button" class="tainacan-ai-toggle-card">
                         <span class="dashicons dashicons-arrow-down-alt2"></span>
@@ -528,32 +536,32 @@ $has_builtin_parser = true;
                     <div class="tainacan-ai-prompt-info">
                         <span class="dashicons dashicons-lightbulb"></span>
                         <p>
-                            <?php _e('Configure prompts específicos para cada coleção.', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Configure prompts específicos para cada coleção.', 'tainacan-ai'); ?>
                         </p>
                     </div>
 
                     <div class="tainacan-ai-collection-prompts" id="collection-prompts-container">
                         <div class="tainacan-ai-field">
-                            <label for="collection-select"><?php _e('Selecione uma Coleção', 'tainacan-ai'); ?></label>
+                            <label for="collection-select"><?php esc_html_e('Selecione uma Coleção', 'tainacan-ai'); ?></label>
                             <select id="collection-select" class="regular-text">
-                                <option value=""><?php _e('-- Selecione --', 'tainacan-ai'); ?></option>
+                                <option value=""><?php esc_html_e('-- Selecione --', 'tainacan-ai'); ?></option>
                             </select>
                         </div>
 
                         <div id="collection-prompt-editor" style="display: none;">
                             <div class="tainacan-ai-field-row">
                                 <div class="tainacan-ai-field">
-                                    <label><?php _e('Tipo de Prompt', 'tainacan-ai'); ?></label>
+                                    <label><?php esc_html_e('Tipo de Prompt', 'tainacan-ai'); ?></label>
                                     <div class="tainacan-ai-radio-group">
                                         <label>
                                             <input type="radio" name="collection_prompt_type" value="image" checked>
                                             <span class="dashicons dashicons-format-image"></span>
-                                            <?php _e('Imagem', 'tainacan-ai'); ?>
+                                            <?php esc_html_e('Imagem', 'tainacan-ai'); ?>
                                         </label>
                                         <label>
                                             <input type="radio" name="collection_prompt_type" value="document">
                                             <span class="dashicons dashicons-media-document"></span>
-                                            <?php _e('Documento', 'tainacan-ai'); ?>
+                                            <?php esc_html_e('Documento', 'tainacan-ai'); ?>
                                         </label>
                                     </div>
                                 </div>
@@ -561,10 +569,10 @@ $has_builtin_parser = true;
 
                             <div class="tainacan-ai-field">
                                 <div class="tainacan-ai-field-header">
-                                    <label for="collection-prompt-text"><?php _e('Prompt Personalizado', 'tainacan-ai'); ?></label>
+                                    <label for="collection-prompt-text"><?php esc_html_e('Prompt Personalizado', 'tainacan-ai'); ?></label>
                                     <button type="button" class="button button-small" id="generate-prompt-suggestion">
                                         <span class="dashicons dashicons-lightbulb"></span>
-                                        <?php _e('Gerar Sugestão', 'tainacan-ai'); ?>
+                                        <?php esc_html_e('Gerar Sugestão', 'tainacan-ai'); ?>
                                     </button>
                                 </div>
                                 <textarea
@@ -578,11 +586,11 @@ $has_builtin_parser = true;
                             <div class="tainacan-ai-collection-actions">
                                 <button type="button" class="button button-primary" id="save-collection-prompt">
                                     <span class="dashicons dashicons-saved"></span>
-                                    <?php _e('Salvar Prompt', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Salvar Prompt', 'tainacan-ai'); ?>
                                 </button>
                                 <button type="button" class="button" id="reset-collection-prompt">
                                     <span class="dashicons dashicons-undo"></span>
-                                    <?php _e('Resetar para Padrão', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Resetar para Padrão', 'tainacan-ai'); ?>
                                 </button>
                             </div>
                         </div>
@@ -595,7 +603,7 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-networking"></span>
-                        <h2><?php _e('Mapeamento de Campos', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Mapeamento de Campos', 'tainacan-ai'); ?></h2>
                     </div>
                     <button type="button" class="tainacan-ai-toggle-card">
                         <span class="dashicons dashicons-arrow-down-alt2"></span>
@@ -605,14 +613,14 @@ $has_builtin_parser = true;
                     <div class="tainacan-ai-prompt-info">
                         <span class="dashicons dashicons-info"></span>
                         <p>
-                            <?php _e('Configure o mapeamento entre os campos extraídos pela IA e os metadados da sua coleção. Isso permite que o botão "Preencher Campos" funcione corretamente.', 'tainacan-ai'); ?>
+                            <?php esc_html_e('Configure o mapeamento entre os campos extraídos pela IA e os metadados da sua coleção. Isso permite que o botão "Preencher Campos" funcione corretamente.', 'tainacan-ai'); ?>
                         </p>
                     </div>
 
                     <div class="tainacan-ai-field">
-                        <label for="mapping-collection-select"><?php _e('Selecione uma Coleção', 'tainacan-ai'); ?></label>
+                        <label for="mapping-collection-select"><?php esc_html_e('Selecione uma Coleção', 'tainacan-ai'); ?></label>
                         <select id="mapping-collection-select" class="regular-text">
-                            <option value=""><?php _e('-- Selecione --', 'tainacan-ai'); ?></option>
+                            <option value=""><?php esc_html_e('-- Selecione --', 'tainacan-ai'); ?></option>
                             <?php
                             // Popula coleções diretamente no PHP
                             if (class_exists('\Tainacan\Repositories\Collections')) {
@@ -622,7 +630,7 @@ $has_builtin_parser = true;
                                     foreach ($collections as $collection) {
                                         printf(
                                             '<option value="%d">%s</option>',
-                                            $collection->get_id(),
+                                            esc_attr($collection->get_id()),
                                             esc_html($collection->get_name())
                                         );
                                     }
@@ -634,8 +642,8 @@ $has_builtin_parser = true;
 
                     <div id="metadata-mapping-editor" style="display: none;">
                         <div class="tainacan-ai-mapping-header">
-                            <div class="tainacan-ai-mapping-col"><?php _e('Campo da IA', 'tainacan-ai'); ?></div>
-                            <div class="tainacan-ai-mapping-col"><?php _e('Metadado do Tainacan', 'tainacan-ai'); ?></div>
+                            <div class="tainacan-ai-mapping-col"><?php esc_html_e('Campo da IA', 'tainacan-ai'); ?></div>
+                            <div class="tainacan-ai-mapping-col"><?php esc_html_e('Metadado do Tainacan', 'tainacan-ai'); ?></div>
                         </div>
                         <div id="metadata-mapping-list" class="tainacan-ai-mapping-list">
                             <!-- Preenchido via JavaScript -->
@@ -644,22 +652,22 @@ $has_builtin_parser = true;
                         <div class="tainacan-ai-mapping-actions">
                             <button type="button" class="button button-primary" id="save-metadata-mapping">
                                 <span class="dashicons dashicons-saved"></span>
-                                <?php _e('Salvar Mapeamento', 'tainacan-ai'); ?>
+                                <?php esc_html_e('Salvar Mapeamento', 'tainacan-ai'); ?>
                             </button>
                             <button type="button" class="button" id="auto-detect-mapping">
                                 <span class="dashicons dashicons-admin-generic"></span>
-                                <?php _e('Auto-detectar', 'tainacan-ai'); ?>
+                                <?php esc_html_e('Auto-detectar', 'tainacan-ai'); ?>
                             </button>
                             <button type="button" class="button" id="clear-mapping">
                                 <span class="dashicons dashicons-trash"></span>
-                                <?php _e('Limpar Mapeamento', 'tainacan-ai'); ?>
+                                <?php esc_html_e('Limpar Mapeamento', 'tainacan-ai'); ?>
                             </button>
                         </div>
 
                         <div class="tainacan-ai-prompt-info" style="margin-top: 15px;">
                             <span class="dashicons dashicons-lightbulb"></span>
                             <p>
-                                <?php _e('<strong>Dica:</strong> Os campos da IA são definidos no seu prompt. Configure o prompt para retornar os campos desejados e mapeie-os aqui.', 'tainacan-ai'); ?>
+                                <?php esc_html_e('<strong>Dica:</strong> Os campos da IA são definidos no seu prompt. Configure o prompt para retornar os campos desejados e mapeie-os aqui.', 'tainacan-ai'); ?>
                             </p>
                         </div>
                     </div>
@@ -671,7 +679,7 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-plugins"></span>
-                        <h2><?php _e('Capacidades do Sistema', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Capacidades do Sistema', 'tainacan-ai'); ?></h2>
                     </div>
                     <button type="button" class="tainacan-ai-toggle-card">
                         <span class="dashicons dashicons-arrow-down-alt2"></span>
@@ -686,11 +694,11 @@ $has_builtin_parser = true;
                             </div>
                             <div class="tainacan-ai-dep-content">
                                 <div class="tainacan-ai-dep-header">
-                                    <span class="tainacan-ai-dep-name"><?php _e('Extração de Texto (Embutido)', 'tainacan-ai'); ?></span>
-                                    <span class="tainacan-ai-dep-status"><?php _e('Ativo', 'tainacan-ai'); ?></span>
+                                    <span class="tainacan-ai-dep-name"><?php esc_html_e('Extração de Texto (Embutido)', 'tainacan-ai'); ?></span>
+                                    <span class="tainacan-ai-dep-status"><?php esc_html_e('Ativo', 'tainacan-ai'); ?></span>
                                 </div>
                                 <p class="tainacan-ai-dep-desc">
-                                    <?php _e('Parser PDF nativo do plugin.', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Parser PDF nativo do plugin.', 'tainacan-ai'); ?>
                                 </p>
                             </div>
                         </div>
@@ -703,17 +711,17 @@ $has_builtin_parser = true;
                             </div>
                             <div class="tainacan-ai-dep-content">
                                 <div class="tainacan-ai-dep-header">
-                                    <span class="tainacan-ai-dep-name"><?php _e('Análise Visual de PDFs', 'tainacan-ai'); ?></span>
+                                    <span class="tainacan-ai-dep-name"><?php esc_html_e('Análise Visual de PDFs', 'tainacan-ai'); ?></span>
                                     <span class="tainacan-ai-dep-status">
-                                        <?php echo $has_visual ? __('Disponível', 'tainacan-ai') : __('Indisponível', 'tainacan-ai'); ?>
+                                        <?php echo $has_visual ? esc_html__('Disponível', 'tainacan-ai') : esc_html__('Indisponível', 'tainacan-ai'); ?>
                                     </span>
                                 </div>
                                 <p class="tainacan-ai-dep-desc">
-                                    <?php _e('Converte PDFs escaneados em imagens.', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Converte PDFs escaneados em imagens.', 'tainacan-ai'); ?>
                                 </p>
                                 <div class="tainacan-ai-dep-methods">
                                     <small>
-                                        <strong><?php _e('Backends:', 'tainacan-ai'); ?></strong>
+                                        <strong><?php esc_html_e('Backends:', 'tainacan-ai'); ?></strong>
                                         <?php if ($has_imagick_pdf): ?>
                                             <span class="tainacan-ai-method-available">Imagick</span>
                                         <?php else: ?>
@@ -736,13 +744,13 @@ $has_builtin_parser = true;
                             </div>
                             <div class="tainacan-ai-dep-content">
                                 <div class="tainacan-ai-dep-header">
-                                    <span class="tainacan-ai-dep-name"><?php _e('Extração EXIF', 'tainacan-ai'); ?></span>
+                                    <span class="tainacan-ai-dep-name"><?php esc_html_e('Extração EXIF', 'tainacan-ai'); ?></span>
                                     <span class="tainacan-ai-dep-status">
-                                        <?php echo $has_exif ? __('Ativo', 'tainacan-ai') : __('Ausente', 'tainacan-ai'); ?>
+                                        <?php echo $has_exif ? esc_html__('Ativo', 'tainacan-ai') : esc_html__('Ausente', 'tainacan-ai'); ?>
                                     </span>
                                 </div>
                                 <p class="tainacan-ai-dep-desc">
-                                    <?php _e('Extrai metadados técnicos de imagens.', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Extrai metadados técnicos de imagens.', 'tainacan-ai'); ?>
                                 </p>
                             </div>
                         </div>
@@ -755,7 +763,7 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-tools"></span>
-                        <h2><?php _e('Funcionalidades', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Funcionalidades', 'tainacan-ai'); ?></h2>
                     </div>
                 </div>
                 <div class="tainacan-ai-card-body">
@@ -770,10 +778,10 @@ $has_builtin_parser = true;
                             <span class="tainacan-ai-checkbox-content">
                                 <span class="tainacan-ai-checkbox-title">
                                     <span class="dashicons dashicons-camera"></span>
-                                    <?php _e('Extrair Dados EXIF', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Extrair Dados EXIF', 'tainacan-ai'); ?>
                                 </span>
                                 <span class="tainacan-ai-checkbox-desc">
-                                    <?php _e('Extrai metadados técnicos de imagens', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Extrai metadados técnicos de imagens', 'tainacan-ai'); ?>
                                 </span>
                             </span>
                         </label>
@@ -788,10 +796,10 @@ $has_builtin_parser = true;
                             <span class="tainacan-ai-checkbox-content">
                                 <span class="tainacan-ai-checkbox-title">
                                     <span class="dashicons dashicons-list-view"></span>
-                                    <?php _e('Registrar Uso', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Registrar Uso', 'tainacan-ai'); ?>
                                 </span>
                                 <span class="tainacan-ai-checkbox-desc">
-                                    <?php _e('Mantém histórico de análises', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Mantém histórico de análises', 'tainacan-ai'); ?>
                                 </span>
                             </span>
                         </label>
@@ -806,10 +814,10 @@ $has_builtin_parser = true;
                             <span class="tainacan-ai-checkbox-content">
                                 <span class="tainacan-ai-checkbox-title">
                                     <span class="dashicons dashicons-money-alt"></span>
-                                    <?php _e('Rastrear Custos', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Rastrear Custos', 'tainacan-ai'); ?>
                                 </span>
                                 <span class="tainacan-ai-checkbox-desc">
-                                    <?php _e('Calcula custo estimado das análises', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Calcula custo estimado das análises', 'tainacan-ai'); ?>
                                 </span>
                             </span>
                         </label>
@@ -824,10 +832,10 @@ $has_builtin_parser = true;
                             <span class="tainacan-ai-checkbox-content">
                                 <span class="tainacan-ai-checkbox-title">
                                     <span class="dashicons dashicons-shield"></span>
-                                    <?php _e('Requer Consentimento', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Requer Consentimento', 'tainacan-ai'); ?>
                                 </span>
                                 <span class="tainacan-ai-checkbox-desc">
-                                    <?php _e('Integra com WP Consent API', 'tainacan-ai'); ?>
+                                    <?php esc_html_e('Integra com WP Consent API', 'tainacan-ai'); ?>
                                 </span>
                             </span>
                         </label>
@@ -840,7 +848,7 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-header">
                     <div class="tainacan-ai-card-title">
                         <span class="dashicons dashicons-admin-settings"></span>
-                        <h2><?php _e('Configurações Avançadas', 'tainacan-ai'); ?></h2>
+                        <h2><?php esc_html_e('Configurações Avançadas', 'tainacan-ai'); ?></h2>
                     </div>
                     <button type="button" class="tainacan-ai-toggle-card">
                         <span class="dashicons dashicons-arrow-down-alt2"></span>
@@ -849,7 +857,7 @@ $has_builtin_parser = true;
                 <div class="tainacan-ai-card-body tainacan-ai-collapsible collapsed">
                     <div class="tainacan-ai-field-grid">
                         <div class="tainacan-ai-field">
-                            <label for="max_tokens"><?php _e('Máximo de Tokens', 'tainacan-ai'); ?></label>
+                            <label for="max_tokens"><?php esc_html_e('Máximo de Tokens', 'tainacan-ai'); ?></label>
                             <input
                                 type="number"
                                 id="max_tokens"
@@ -858,11 +866,11 @@ $has_builtin_parser = true;
                                 min="100"
                                 max="8000"
                             />
-                            <p class="description"><?php _e('Limite de tokens na resposta (100-8000).', 'tainacan-ai'); ?></p>
+                            <p class="description"><?php esc_html_e('Limite de tokens na resposta (100-8000).', 'tainacan-ai'); ?></p>
                         </div>
 
                         <div class="tainacan-ai-field">
-                            <label for="temperature"><?php _e('Temperatura', 'tainacan-ai'); ?></label>
+                            <label for="temperature"><?php esc_html_e('Temperatura', 'tainacan-ai'); ?></label>
                             <input
                                 type="number"
                                 id="temperature"
@@ -872,11 +880,11 @@ $has_builtin_parser = true;
                                 max="2"
                                 step="0.1"
                             />
-                            <p class="description"><?php _e('0 = determinístico, 2 = criativo.', 'tainacan-ai'); ?></p>
+                            <p class="description"><?php esc_html_e('0 = determinístico, 2 = criativo.', 'tainacan-ai'); ?></p>
                         </div>
 
                         <div class="tainacan-ai-field">
-                            <label for="request_timeout"><?php _e('Timeout (segundos)', 'tainacan-ai'); ?></label>
+                            <label for="request_timeout"><?php esc_html_e('Timeout (segundos)', 'tainacan-ai'); ?></label>
                             <input
                                 type="number"
                                 id="request_timeout"
@@ -888,7 +896,7 @@ $has_builtin_parser = true;
                         </div>
 
                         <div class="tainacan-ai-field">
-                            <label for="cache_duration"><?php _e('Duração do Cache (segundos)', 'tainacan-ai'); ?></label>
+                            <label for="cache_duration"><?php esc_html_e('Duração do Cache (segundos)', 'tainacan-ai'); ?></label>
                             <input
                                 type="number"
                                 id="cache_duration"
@@ -897,7 +905,7 @@ $has_builtin_parser = true;
                                 min="0"
                                 max="604800"
                             />
-                            <p class="description"><?php _e('0 para desativar.', 'tainacan-ai'); ?></p>
+                            <p class="description"><?php esc_html_e('0 para desativar.', 'tainacan-ai'); ?></p>
                         </div>
                     </div>
                 </div>
@@ -905,10 +913,10 @@ $has_builtin_parser = true;
 
             <!-- Ações -->
             <div class="tainacan-ai-actions-bar">
-                <?php submit_button(__('Salvar Configurações', 'tainacan-ai'), 'primary large', 'submit', false); ?>
+                <?php submit_button(esc_html__('Salvar Configurações', 'tainacan-ai'), 'primary large', 'submit', false); ?>
                 <button type="button" class="button button-secondary" id="clear-all-cache">
                     <span class="dashicons dashicons-trash"></span>
-                    <?php _e('Limpar Cache', 'tainacan-ai'); ?>
+                    <?php esc_html_e('Limpar Cache', 'tainacan-ai'); ?>
                 </button>
             </div>
         </form>
@@ -918,42 +926,42 @@ $has_builtin_parser = true;
             <div class="tainacan-ai-info-box">
                 <h3>
                     <span class="dashicons dashicons-cloud"></span>
-                    <?php _e('Provedores de IA', 'tainacan-ai'); ?>
+                    <?php esc_html_e('Provedores de IA', 'tainacan-ai'); ?>
                 </h3>
                 <ul>
-                    <li><strong>OpenAI:</strong> <?php _e('GPT-4o com Vision (imagens e texto)', 'tainacan-ai'); ?></li>
-                    <li><strong>Gemini:</strong> <?php _e('Google AI com Vision (imagens e texto)', 'tainacan-ai'); ?></li>
-                    <li><strong>DeepSeek:</strong> <?php _e('Alternativa econômica (apenas texto)', 'tainacan-ai'); ?></li>
-                    <li><strong>Ollama:</strong> <?php _e('IA local gratuita (Llama, Mistral, etc)', 'tainacan-ai'); ?></li>
+                    <li><strong>OpenAI:</strong> <?php esc_html_e('GPT-4o com Vision (imagens e texto)', 'tainacan-ai'); ?></li>
+                    <li><strong>Gemini:</strong> <?php esc_html_e('Google AI com Vision (imagens e texto)', 'tainacan-ai'); ?></li>
+                    <li><strong>DeepSeek:</strong> <?php esc_html_e('Alternativa econômica (apenas texto)', 'tainacan-ai'); ?></li>
+                    <li><strong>Ollama:</strong> <?php esc_html_e('IA local gratuita (Llama, Mistral, etc)', 'tainacan-ai'); ?></li>
                 </ul>
             </div>
 
             <div class="tainacan-ai-info-box">
                 <h3>
                     <span class="dashicons dashicons-book"></span>
-                    <?php _e('Como Usar', 'tainacan-ai'); ?>
+                    <?php esc_html_e('Como Usar', 'tainacan-ai'); ?>
                 </h3>
                 <ol>
-                    <li><?php _e('Escolha um provedor de IA', 'tainacan-ai'); ?></li>
-                    <li><?php _e('Configure a chave API', 'tainacan-ai'); ?></li>
-                    <li><?php _e('Personalize os prompts', 'tainacan-ai'); ?></li>
-                    <li><?php _e('Edite um item no Tainacan', 'tainacan-ai'); ?></li>
-                    <li><?php _e('Clique em "Analisar Documento"', 'tainacan-ai'); ?></li>
+                    <li><?php esc_html_e('Escolha um provedor de IA', 'tainacan-ai'); ?></li>
+                    <li><?php esc_html_e('Configure a chave API', 'tainacan-ai'); ?></li>
+                    <li><?php esc_html_e('Personalize os prompts', 'tainacan-ai'); ?></li>
+                    <li><?php esc_html_e('Edite um item no Tainacan', 'tainacan-ai'); ?></li>
+                    <li><?php esc_html_e('Clique em "Analisar Documento"', 'tainacan-ai'); ?></li>
                 </ol>
             </div>
 
             <div class="tainacan-ai-info-box">
                 <h3>
                     <span class="dashicons dashicons-media-default"></span>
-                    <?php _e('Formatos Suportados', 'tainacan-ai'); ?>
+                    <?php esc_html_e('Formatos Suportados', 'tainacan-ai'); ?>
                 </h3>
                 <div class="tainacan-ai-formats">
                     <div class="tainacan-ai-format-group">
-                        <strong><?php _e('Imagens:', 'tainacan-ai'); ?></strong>
+                        <strong><?php esc_html_e('Imagens:', 'tainacan-ai'); ?></strong>
                         <span>JPG, PNG, GIF, WebP</span>
                     </div>
                     <div class="tainacan-ai-format-group">
-                        <strong><?php _e('Documentos:', 'tainacan-ai'); ?></strong>
+                        <strong><?php esc_html_e('Documentos:', 'tainacan-ai'); ?></strong>
                         <span>PDF, TXT, HTML</span>
                     </div>
                 </div>
