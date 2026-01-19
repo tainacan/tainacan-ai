@@ -1,0 +1,25 @@
+{
+	"name": "tainacan-ai",
+	"version": "0.0.1",
+	"description": "Automated metadata extraction in Tainacan using AI APIs",
+	"author": "Sigismundo",
+	"license": "GPL-2.0-or-later",
+	"scripts": {
+		"build": "wp-scripts build",
+		"start": "wp-scripts start",
+		"lint:js": "wp-scripts lint-js",
+		"lint:js:fix": "wp-scripts lint-js --fix",
+		"lint:css": "wp-scripts lint-style",
+		"format:js": "wp-scripts format-js",
+		"format": "wp-scripts format",
+		"plugin-zip": "wp-scripts plugin-zip",
+		"packages-update": "wp-scripts packages-update"
+	},
+	"devDependencies": {
+		"@wordpress/scripts": "^31.3.0"
+	},
+	"engines": {
+		"node": ">=20.0.0",
+		"npm": ">=10.0.0"
+	}
+}

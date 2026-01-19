@@ -148,6 +148,7 @@ class ItemFormHook {
         return ob_get_clean();
     }
 
+
     /**
      * Carrega assets
      */
@@ -157,18 +158,24 @@ class ItemFormHook {
             return;
         }
 
+        $css_asset_file = TAINACAN_AI_PLUGIN_DIR . 'build/item-form-style.asset.php';
+        $css_asset = file_exists($css_asset_file) ? require $css_asset_file : ['dependencies' => [], 'version' => TAINACAN_AI_VERSION];
+        
         wp_enqueue_style(
             'tainacan-ai-item',
-            TAINACAN_AI_PLUGIN_URL . 'assets/css/item-form.css',
-            [],
-            TAINACAN_AI_VERSION
+            TAINACAN_AI_PLUGIN_URL . 'build/item-form-style.css',
+            $css_asset['dependencies'],
+            $css_asset['version']
         );
 
+        $js_asset_file = TAINACAN_AI_PLUGIN_DIR . 'build/item-form.asset.php';
+        $js_asset = file_exists($js_asset_file) ? require $js_asset_file : ['dependencies' => [], 'version' => TAINACAN_AI_VERSION];
+        
         wp_enqueue_script(
             'tainacan-ai-item',
-            TAINACAN_AI_PLUGIN_URL . 'assets/js/item-form.js',
-            ['jquery'],
-            TAINACAN_AI_VERSION,
+            TAINACAN_AI_PLUGIN_URL . 'build/item-form.js',
+            $js_asset['dependencies'],
+            $js_asset['version'],
             true
         );
 

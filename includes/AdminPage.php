@@ -66,11 +66,14 @@ class AdminPage extends \Tainacan\Pages {
      * Enqueue CSS
      */
     public function admin_enqueue_css() {
+        $asset_file = TAINACAN_AI_PLUGIN_DIR . 'build/admin-style.asset.php';
+        $asset = file_exists($asset_file) ? require $asset_file : ['dependencies' => [], 'version' => TAINACAN_AI_VERSION];
+        
         wp_enqueue_style(
             'tainacan-ai-admin',
-            TAINACAN_AI_PLUGIN_URL . 'assets/css/admin.css',
-            [],
-            TAINACAN_AI_VERSION
+            TAINACAN_AI_PLUGIN_URL . 'build/admin-style.css',
+            $asset['dependencies'],
+            $asset['version']
         );
     }
 
@@ -78,11 +81,14 @@ class AdminPage extends \Tainacan\Pages {
      * Enqueue JavaScript
      */
     public function admin_enqueue_js() {
+        $asset_file = TAINACAN_AI_PLUGIN_DIR . 'build/admin.asset.php';
+        $asset = file_exists($asset_file) ? require $asset_file : ['dependencies' => [], 'version' => TAINACAN_AI_VERSION];
+        
         wp_enqueue_script(
             'tainacan-ai-admin',
-            TAINACAN_AI_PLUGIN_URL . 'assets/js/admin.js',
-            ['jquery'],
-            TAINACAN_AI_VERSION,
+            TAINACAN_AI_PLUGIN_URL . 'build/admin.js',
+            $asset['dependencies'],
+            $asset['version'],
             true
         );
 
@@ -221,7 +227,7 @@ class AdminPage extends \Tainacan\Pages {
         $logger = new UsageLogger();
         $stats = $logger->get_stats('month');
 
-        include TAINACAN_AI_PLUGIN_DIR . 'templates/admin-page.php';
+        include TAINACAN_AI_PLUGIN_DIR . 'includes/admin/admin-page.php';
     }
 
     /**
