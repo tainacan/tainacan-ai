@@ -148,27 +148,6 @@ class ItemFormHook {
         return ob_get_clean();
     }
 
-    /**
-     * Get asset URL (checks for built assets first, falls back to source)
-     *
-     * @param string $type 'css' or 'js'
-     * @param string $name Asset name without extension
-     * @return string Asset URL
-     */
-    private function get_asset_url(string $type, string $name): string {
-        $base_path = TAINACAN_AI_PLUGIN_DIR;
-        $base_url = TAINACAN_AI_PLUGIN_URL;
-        $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
-
-        // Check if built asset exists
-        $built_path = "build/{$type}/{$name}{$suffix}.{$type}";
-        if (file_exists($base_path . $built_path)) {
-            return $base_url . $built_path;
-        }
-
-        // Fallback to source asset
-        return $base_url . "src/{$type}/{$name}.{$type}";
-    }
 
     /**
      * Carrega assets
@@ -179,18 +158,24 @@ class ItemFormHook {
             return;
         }
 
+        $css_asset_file = TAINACAN_AI_PLUGIN_DIR . 'build/item-form-style.asset.php';
+        $css_asset = file_exists($css_asset_file) ? require $css_asset_file : ['dependencies' => [], 'version' => TAINACAN_AI_VERSION];
+        
         wp_enqueue_style(
             'tainacan-ai-item',
-            $this->get_asset_url('css', 'item-form'),
-            [],
-            TAINACAN_AI_VERSION
+            TAINACAN_AI_PLUGIN_URL . 'build/item-form-style.css',
+            $css_asset['dependencies'],
+            $css_asset['version']
         );
 
+        $js_asset_file = TAINACAN_AI_PLUGIN_DIR . 'build/item-form.asset.php';
+        $js_asset = file_exists($js_asset_file) ? require $js_asset_file : ['dependencies' => [], 'version' => TAINACAN_AI_VERSION];
+        
         wp_enqueue_script(
             'tainacan-ai-item',
-            $this->get_asset_url('js', 'item-form'),
-            ['jquery'],
-            TAINACAN_AI_VERSION,
+            TAINACAN_AI_PLUGIN_URL . 'build/item-form.js',
+            $js_asset['dependencies'],
+            $js_asset['version'],
             true
         );
 

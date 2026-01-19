@@ -63,36 +63,17 @@ class AdminPage extends \Tainacan\Pages {
     }
 
     /**
-     * Get asset URL (checks for built assets first, falls back to source)
-     *
-     * @param string $type 'css' or 'js'
-     * @param string $name Asset name without extension
-     * @return string Asset URL
-     */
-    private function get_asset_url(string $type, string $name): string {
-        $base_path = TAINACAN_AI_PLUGIN_DIR;
-        $base_url = TAINACAN_AI_PLUGIN_URL;
-        $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
-
-        // Check if built asset exists
-        $built_path = "build/{$type}/{$name}{$suffix}.{$type}";
-        if (file_exists($base_path . $built_path)) {
-            return $base_url . $built_path;
-        }
-
-        // Fallback to source asset
-        return $base_url . "src/{$type}/{$name}.{$type}";
-    }
-
-    /**
      * Enqueue CSS
      */
     public function admin_enqueue_css() {
+        $asset_file = TAINACAN_AI_PLUGIN_DIR . 'build/admin-style.asset.php';
+        $asset = file_exists($asset_file) ? require $asset_file : ['dependencies' => [], 'version' => TAINACAN_AI_VERSION];
+        
         wp_enqueue_style(
             'tainacan-ai-admin',
-            $this->get_asset_url('css', 'admin'),
-            [],
-            TAINACAN_AI_VERSION
+            TAINACAN_AI_PLUGIN_URL . 'build/admin-style.css',
+            $asset['dependencies'],
+            $asset['version']
         );
     }
 
@@ -100,11 +81,14 @@ class AdminPage extends \Tainacan\Pages {
      * Enqueue JavaScript
      */
     public function admin_enqueue_js() {
+        $asset_file = TAINACAN_AI_PLUGIN_DIR . 'build/admin.asset.php';
+        $asset = file_exists($asset_file) ? require $asset_file : ['dependencies' => [], 'version' => TAINACAN_AI_VERSION];
+        
         wp_enqueue_script(
             'tainacan-ai-admin',
-            $this->get_asset_url('js', 'admin'),
-            ['jquery'],
-            TAINACAN_AI_VERSION,
+            TAINACAN_AI_PLUGIN_URL . 'build/admin.js',
+            $asset['dependencies'],
+            $asset['version'],
             true
         );
 
