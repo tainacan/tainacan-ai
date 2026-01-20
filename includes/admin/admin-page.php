@@ -332,7 +332,14 @@ $tainacan_ai_has_builtin_parser = true;
                     <div class="tainacan-ai-prompt-info warning">
                         <span class="dashicons dashicons-warning"></span>
                         <p>
-                            <?php esc_html_e('<strong>Warning:</strong> DeepSeek does not support image analysis. Only documents with extractable text (PDFs with text, TXT) can be analyzed.', 'tainacan-ai'); ?>
+                            <?php
+                                echo wp_kses(
+                                    __(' <strong>Warning:</strong> DeepSeek does not support image analysis. Only documents with extractable text (PDFs with text, TXT) can be analyzed.', 'tainacan-ai'),
+                                    array(
+                                        'strong' => array()
+                                    )
+                                );
+                            ?>
                         </p>
                     </div>
 
@@ -409,7 +416,12 @@ $tainacan_ai_has_builtin_parser = true;
                     <div class="tainacan-ai-prompt-info">
                         <span class="dashicons dashicons-info"></span>
                         <p>
-                            <?php esc_html_e('<strong>Ollama</strong> allows you to run AI models locally, without API costs. You need to have Ollama installed and running on the server.', 'tainacan-ai'); ?>
+                            <?php
+                                echo wp_kses(
+                                    __('<strong>Ollama</strong> allows you to run AI models locally, without API costs. You need to have Ollama installed and running on the server.', 'tainacan-ai'),
+                                    array( 'strong' => array() )
+                                );
+                            ?>
                             <br>
                             <?php
                             echo wp_kses_post(
@@ -670,7 +682,12 @@ $tainacan_ai_has_builtin_parser = true;
                         <div class="tainacan-ai-prompt-info" style="margin-top: 15px;">
                             <span class="dashicons dashicons-lightbulb"></span>
                             <p>
-                                <?php esc_html_e('<strong>Tip:</strong> AI fields are defined in your prompt. Configure the prompt to return the desired fields and map them here.', 'tainacan-ai'); ?>
+                                <?php
+                                echo wp_kses(
+                                    __('<strong>Tip:</strong> AI fields are defined in your prompt. Configure the prompt to return the desired fields and map them here.', 'tainacan-ai'),
+                                    array( 'strong' => array() )
+                                );
+                            ?>
                             </p>
                         </div>
                     </div>
