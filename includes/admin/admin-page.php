@@ -476,14 +476,24 @@ $tainacan_ai_has_builtin_parser = true;
                             ?>
                         </select>
                         <p class="description">
-                            <?php esc_html_e('Use <code>llama3.2-vision</code> or <code>llava</code> for image analysis.', 'tainacan-ai'); ?>
+                            <?php
+                            echo wp_kses(
+                                __('Use <code>llama3.2-vision</code> or <code>llava</code> for image analysis.', 'tainacan-ai'),
+                                array( 'code' => array() )
+                            );
+                            ?>
                         </p>
                     </div>
 
                     <div class="tainacan-ai-prompt-info warning">
                         <span class="dashicons dashicons-warning"></span>
                         <p>
-                            <?php esc_html_e('Make sure the model is installed. Run in terminal: <code>ollama pull llama3.2</code>', 'tainacan-ai'); ?>
+                            <?php
+                            echo wp_kses(
+                                __('Make sure the model is installed. Run in terminal: <code>ollama pull llama3.2</code>', 'tainacan-ai'),
+                                array( 'code' => array() )
+                            );
+                            ?>
                         </p>
                     </div>
                 </div>
