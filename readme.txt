@@ -4,7 +4,7 @@ Tags: tainacan, ai, cataloging, museums, image-analysis
 Requires at least: 6.5
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.0.1
+Stable tag: 0.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -131,6 +131,10 @@ Yes, you can switch between providers at any time in the plugin settings. Each p
 
 == Changelog ==
 
+= 0.0.2 =
+* UI improvements to match Tainacan Admin Style
+* Detects if document is of type attachment before showing the analyze button
+
 = 0.0.1 =
 * Initial release
 * Support for OpenAI, Google Gemini, DeepSeek, and Ollama
@@ -144,6 +148,9 @@ Yes, you can switch between providers at any time in the plugin settings. Each p
 * WP Consent API integration
 
 == Upgrade Notice ==
+
+= 0.0.2 =
+Better integration with Tainacan Admin Style.
 
 = 0.0.1 =
 Initial release. Requires WordPress 6.5+, PHP 8.0+, and Tainacan 1.0+.
