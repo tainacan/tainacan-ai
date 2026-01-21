@@ -1156,7 +1156,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: #fff;
+            background: var(--tainacan-ai-white);
             padding: 12px 20px;
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
@@ -1173,16 +1173,16 @@
             opacity: 1;
         }
         .tainacan-ai-toast.success {
-            border-left: 4px solid #4caf50;
+            border-left: 4px solid var(--tainacan-ai-success);
         }
         .tainacan-ai-toast.success .dashicons {
-            color: #4caf50;
+            color: var(--tainacan-ai-success);
         }
         .tainacan-ai-toast.error {
-            border-left: 4px solid #e53935;
+            border-left: 4px solid var(--tainacan-ai-error);
         }
         .tainacan-ai-toast.error .dashicons {
-            color: #e53935;
+            color: var(--tainacan-ai-error);
         }
         .dashicons.spin {
             animation: tcgpt-spin 1s linear infinite;
