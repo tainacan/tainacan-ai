@@ -33,7 +33,8 @@ class ItemFormHook {
             tainacan_register_admin_hook(
                 'item',
                 [$this, 'render_form'],
-                'begin-right'
+                'begin-left',
+                [ 'document_type' => 'attachment' ]
             );
         }
     }
