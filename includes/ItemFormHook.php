@@ -200,6 +200,7 @@ class ItemFormHook {
                 'analyzing' => __('Analyzing...', 'tainacan-ai'),
                 'analyzeBtn' => __('Analyze Document', 'tainacan-ai'),
                 'error' => __('Error analyzing. Please try again.', 'tainacan-ai'),
+                'errorLabel' => __('Error', 'tainacan-ai'),
                 'noDocument' => __('No document found in this item. Add an image or file first.', 'tainacan-ai'),
                 'copy' => __('Copy', 'tainacan-ai'),
                 'copied' => __('Copied!', 'tainacan-ai'),
@@ -227,6 +228,15 @@ class ItemFormHook {
                 'noResults' => __('No results available', 'tainacan-ai'),
                 'noMapping' => __('Field not mapped', 'tainacan-ai'),
                 'fieldNotFound' => __('Field not found on page', 'tainacan-ai'),
+                'openResults' => __('Open analysis results', 'tainacan-ai'),
+                'close' => __('Close', 'tainacan-ai'),
+                'clickToAnalyze' => __('Click "Analyze Document" to extract metadata', 'tainacan-ai'),
+                'mappedTo' => __('Mapped to:', 'tainacan-ai'),
+                'viewOnGoogleMaps' => __('View on Google Maps', 'tainacan-ai'),
+                'camera' => __('Camera', 'tainacan-ai'),
+                'capture' => __('Capture', 'tainacan-ai'),
+                'location' => __('Location', 'tainacan-ai'),
+                'authorship' => __('Authorship', 'tainacan-ai'),
             ]
         ]);
     }

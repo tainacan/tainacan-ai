@@ -6,7 +6,7 @@
 	'use strict';
 
 	const TainacanAIApp = {
-		// Estado
+		// State
 		state: {
 			itemId: null,
 			collectionId: null,
@@ -17,11 +17,11 @@
 			panelOpen: false,
 		},
 
-		// Elementos DOM
+		// DOM elements
 		elements: {},
 
 		/**
-		 * Inicializa a aplicação
+		 * Initialize the application
 		 */
 		init() {
 			this.cacheElements();
@@ -36,7 +36,7 @@
 		},
 
 		/**
-		 * Cache de elementos DOM
+		 * Cache DOM elements
 		 */
 		cacheElements() {
 			this.elements = {
@@ -59,10 +59,10 @@
 		},
 
 		/**
-		 * Cria o painel lateral
+		 * Create the sidebar panel
 		 */
 		createSidebarPanel() {
-			// Remove se já existir
+			// Remove if already exists
 			$( '.tainacan-ai-sidebar-panel' ).remove();
 			$( '.tainacan-ai-sidebar-overlay' ).remove();
 			$( '.tainacan-ai-panel-indicator' ).remove();
@@ -72,14 +72,14 @@
 				'<div class="tainacan-ai-sidebar-overlay"></div>'
 			);
 
-			// Indicador lateral (aparece quando o painel está fechado e há resultados)
+			// Side indicator (appears when panel is closed and there are results)
 			$( 'body' ).append( `
-                <div class="tainacan-ai-panel-indicator" title="Abrir resultados da análise">
+                <div class="tainacan-ai-panel-indicator" title="${ TainacanAI.texts?.openResults || 'Open analysis results' }">
                     <span class="dashicons dashicons-arrow-left-alt2"></span>
                 </div>
             ` );
 
-			// Painel lateral
+			// Sidebar panel
 			const panelHtml = `
                 <div class="tainacan-ai-sidebar-panel">
                     <div class="tainacan-ai-sidebar-header">
@@ -87,32 +87,32 @@
                             <span class="dashicons dashicons-format-aside"></span>
                             ${
 								TainacanAI.texts?.analysisResults ||
-								'Resultados da Análise'
+								'Analysis Results'
 							}
                         </h3>
-                        <button type="button" class="tainacan-ai-sidebar-close" title="Fechar">
+                        <button type="button" class="tainacan-ai-sidebar-close" title="${ TainacanAI.texts?.close || 'Close' }">
                             <span class="dashicons dashicons-no-alt"></span>
                         </button>
                     </div>
                     <div class="tainacan-ai-sidebar-actions">
                         <button type="button" class="button button-primary" id="tainacan-ai-fill-all" title="${
 							TainacanAI.texts?.fillAllTooltip ||
-							'Preenche automaticamente os campos do Tainacan com os valores extraídos'
+							'Automatically fills Tainacan fields with extracted values'
 						}">
                             <span class="dashicons dashicons-download"></span>
-                            ${ TainacanAI.texts?.fillAll || 'Preencher Campos' }
+                            ${ TainacanAI.texts?.fillAll || 'Fill Fields' }
                         </button>
                         <button type="button" class="button button-secondary" id="tainacan-ai-panel-copy-all">
                             <span class="dashicons dashicons-admin-page"></span>
-                            ${ TainacanAI.texts?.copyAll || 'Copiar Tudo' }
+                            ${ TainacanAI.texts?.copyAll || 'Copy All' }
                         </button>
                         <button type="button" class="button button-secondary" id="tainacan-ai-panel-refresh">
                             <span class="dashicons dashicons-update"></span>
-                            ${ TainacanAI.texts?.newAnalysis || 'Nova Análise' }
+                            ${ TainacanAI.texts?.newAnalysis || 'New Analysis' }
                         </button>
                     </div>
                     <div class="tainacan-ai-sidebar-body" id="tainacan-ai-sidebar-content">
-                        <!-- Conteúdo será inserido aqui -->
+                        <!-- Content will be inserted here -->
                     </div>
                     <div class="tainacan-ai-sidebar-footer">
                         <span id="tainacan-ai-panel-model">
@@ -129,7 +129,7 @@
 
 			$( 'body' ).append( panelHtml );
 
-			// Cache dos novos elementos
+			// Cache new elements
 			this.elements.sidebarPanel = $( '.tainacan-ai-sidebar-panel' );
 			this.elements.sidebarOverlay = $( '.tainacan-ai-sidebar-overlay' );
 			this.elements.sidebarContent = $( '#tainacan-ai-sidebar-content' );
@@ -137,16 +137,16 @@
 		},
 
 		/**
-		 * Binding de eventos
+		 * Bind events
 		 */
 		bindEvents() {
-			// Botão de análise
+			// Analyze button
 			$( document ).on( 'click', '#tainacan-ai-analyze', ( e ) => {
 				e.preventDefault();
 				this.analyze( false );
 			} );
 
-			// Botão de refresh (força nova análise)
+			// Refresh button (forces new analysis)
 			$( document ).on( 'click', '#tainacan-ai-refresh', ( e ) => {
 				e.preventDefault();
 				this.analyze( true );
@@ -157,7 +157,7 @@
 				this.switchTab( $( e.currentTarget ).data( 'tab' ) );
 			} );
 
-			// Copiar valor individual
+			// Copy individual value
 			$( document ).on(
 				'click',
 				'.tainacan-ai-copy-btn, .tainacan-ai-copy-mini',
@@ -166,7 +166,7 @@
 				}
 			);
 
-			// Copiar todos
+			// Copy all
 			$( document ).on(
 				'click',
 				'#tainacan-ai-copy-all, #tainacan-ai-panel-copy-all',
@@ -175,12 +175,12 @@
 				}
 			);
 
-			// Fechar painel lateral (apenas pelo botão X, não pelo overlay)
+			// Close sidebar panel (only via X button, not via overlay)
 			$( document ).on( 'click', '.tainacan-ai-sidebar-close', () => {
 				this.closeSidebarPanel();
 			} );
 
-			// Preencher campo individual
+			// Fill individual field
 			$( document ).on( 'click', '.tainacan-ai-fill-field', ( e ) => {
 				const $btn = $( e.currentTarget );
 				const metadataKey = $btn.data( 'metadata-key' );
@@ -188,23 +188,23 @@
 				this.fillTainacanField( metadataKey, value, $btn );
 			} );
 
-			// Preencher todos os campos mapeados
+			// Fill all mapped fields
 			$( document ).on( 'click', '#tainacan-ai-fill-all', () => {
 				this.fillAllMappedFields();
 			} );
 
-			// Abrir painel via indicador
+			// Open panel via indicator
 			$( document ).on( 'click', '.tainacan-ai-panel-indicator', () => {
 				this.openSidebarPanel();
 			} );
 
-			// Nova análise do painel
+			// New analysis from panel
 			$( document ).on( 'click', '#tainacan-ai-panel-refresh', ( e ) => {
 				e.preventDefault();
 				this.analyze( true );
 			} );
 
-			// Tecla ESC para fechar
+			// ESC key to close
 			$( document ).on( 'keydown', ( e ) => {
 				if ( e.key === 'Escape' && this.state.panelOpen ) {
 					this.closeSidebarPanel();
@@ -213,10 +213,10 @@
 		},
 
 		/**
-		 * Abre o painel lateral
+		 * Open the sidebar panel
 		 */
 		openSidebarPanel() {
-			// Garante que o painel existe
+			// Ensure panel exists
 			if (
 				! this.elements.sidebarPanel ||
 				! this.elements.sidebarPanel.length
@@ -237,7 +237,7 @@
 		},
 
 		/**
-		 * Fecha o painel lateral
+		 * Close the sidebar panel
 		 */
 		closeSidebarPanel() {
 			if ( this.elements.sidebarPanel ) {
@@ -248,49 +248,49 @@
 			}
 			this.state.panelOpen = false;
 
-			// Mostra indicador se há resultados
+			// Show indicator if there are results
 			if ( this.state.lastResult && this.elements.panelIndicator ) {
 				this.elements.panelIndicator.addClass( 'visible' );
 			}
 		},
 
 		/**
-		 * Reseta o estado da análise (ao mudar de item)
+		 * Reset analysis state (when changing items)
 		 */
 		resetAnalysisState() {
 			this.state.lastResult = null;
 			this.state.attachmentId = null;
 			this.state.documentInfo = null;
 
-			// Esconde indicador
+			// Hide indicator
 			if ( this.elements.panelIndicator ) {
 				this.elements.panelIndicator.removeClass( 'visible' );
 			}
 
-			// Limpa conteúdo do painel
+			// Clear panel content
 			if ( this.elements.sidebarPanel ) {
 				this.elements.sidebarPanel.find( '.tainacan-ai-panel-body' )
 					.html( `
                     <div class="tainacan-ai-panel-placeholder">
                         <span class="dashicons dashicons-search"></span>
-                        <p>Clique em "Analisar Documento" para extrair metadados</p>
+                        <p>${ TainacanAI.texts?.clickToAnalyze || 'Click "Analyze Document" to extract metadata' }</p>
                     </div>
                 ` );
 			}
 
 			if ( TainacanAI.debug ) {
-				console.log( '[TainacanAI] Estado de análise resetado' );
+				console.log( '[TainacanAI] Analysis state reset' );
 			}
 		},
 
 		/**
-		 * Observa mudanças na URL (navegação SPA)
+		 * Observe URL changes (SPA navigation)
 		 */
 		observeUrlChanges() {
-			// Guarda o item atual para detectar mudanças
+			// Store current item to detect changes
 			let currentHash = window.location.hash;
 
-			// Hash change - detecta mudança de item ou navegação
+			// Hash change - detect item change or navigation
 			$( window ).on( 'hashchange', () => {
 				const newHash = window.location.hash;
 				const oldItemMatch = currentHash.match( /items\/(\d+)/ );
@@ -299,7 +299,7 @@
 				const oldItemId = oldItemMatch ? oldItemMatch[ 1 ] : null;
 				const newItemId = newItemMatch ? newItemMatch[ 1 ] : null;
 
-				// Se mudou de item ou saiu da edição, fecha o painel e limpa resultados
+				// If item changed or left edit mode, close panel and clear results
 				if ( oldItemId !== newItemId || ! newItemMatch ) {
 					this.closeSidebarPanel();
 					this.resetAnalysisState();
@@ -309,19 +309,19 @@
 				this.extractContext();
 			} );
 
-			// Detecta clique no botão salvar do Tainacan
+			// Detect click on Tainacan save button
 			$( document ).on(
 				'click',
 				'.tainacan-form button[type="submit"], .item-page button.is-success, [class*="submit-button"]',
 				() => {
-					// Fecha o painel após um pequeno delay para permitir o salvamento
+					// Close panel after a small delay to allow saving
 					setTimeout( () => {
 						this.closeSidebarPanel();
 					}, 500 );
 				}
 			);
 
-			// MutationObserver para detectar mudanças no DOM
+			// MutationObserver to detect DOM changes
 			const observer = new MutationObserver( ( mutations ) => {
 				let shouldUpdate = false;
 
@@ -355,7 +355,7 @@
 		},
 
 		/**
-		 * Extrai contexto da página (item_id, collection_id)
+		 * Extract context from page (item_id, collection_id)
 		 */
 		extractContext() {
 			// Reset
@@ -363,7 +363,7 @@
 			this.state.collectionId = null;
 			this.state.documentInfo = null;
 
-			// Método 1: URL hash (#/collections/X/items/Y/edit)
+			// Method 1: URL hash (#/collections/X/items/Y/edit)
 			const hash = window.location.hash;
 			const hashMatch = hash.match( /collections\/(\d+)\/items\/(\d+)/ );
 			if ( hashMatch ) {
@@ -371,7 +371,7 @@
 				this.state.itemId = parseInt( hashMatch[ 2 ] );
 			}
 
-			// Método 1b: URL hash alternativo (#/collections/X/items/new)
+			// Method 1b: Alternative URL hash (#/collections/X/items/new)
 			if ( ! this.state.collectionId ) {
 				const collectionMatch = hash.match( /collections\/(\d+)/ );
 				if ( collectionMatch ) {
@@ -379,7 +379,7 @@
 				}
 			}
 
-			// Método 2: Query params
+			// Method 2: Query params
 			const urlParams = new URLSearchParams( window.location.search );
 			if ( urlParams.get( 'item' ) ) {
 				this.state.itemId = parseInt( urlParams.get( 'item' ) );
@@ -388,7 +388,7 @@
 				this.state.itemId = parseInt( urlParams.get( 'post' ) );
 			}
 
-			// Método 3: Data attributes
+			// Method 3: Data attributes
 			const $container = $( '[data-item-id]' );
 			if ( $container.length ) {
 				this.state.itemId = parseInt( $container.data( 'item-id' ) );
@@ -400,7 +400,7 @@
 				);
 			}
 
-			// Método 4: tainacan_plugin global
+			// Method 4: tainacan_plugin global
 			if ( typeof window.tainacan_plugin !== 'undefined' ) {
 				if ( window.tainacan_plugin.item_id ) {
 					this.state.itemId = parseInt(
@@ -414,7 +414,7 @@
 				}
 			}
 
-			// Método 5: Buscar na URL completa
+			// Method 5: Search in full URL
 			if ( ! this.state.collectionId ) {
 				const fullUrl = window.location.href;
 				const urlCollectionMatch = fullUrl.match(
@@ -431,19 +431,19 @@
 				console.log( '[TainacanAI] Context extracted:', this.state );
 			}
 
-			// Busca mapeamento se temos collection_id
+			// Fetch mapping if we have collection_id
 			if ( this.state.collectionId ) {
 				this.fetchMetadataMapping();
 			}
 
-			// Detecta documento se temos item_id
+			// Detect document if we have item_id
 			if ( this.state.itemId ) {
 				this.detectDocument();
 			}
 		},
 
 		/**
-		 * Busca mapeamento de metadados via AJAX
+		 * Fetch metadata mapping via AJAX
 		 */
 		async fetchMetadataMapping() {
 			if ( ! this.state.collectionId ) return;
@@ -463,21 +463,21 @@
 					TainacanAI.metadataMapping = response.data;
 					if ( TainacanAI.debug ) {
 						console.log(
-							'[TainacanAI] Mapeamento atualizado via AJAX:',
+							'[TainacanAI] Mapping updated via AJAX:',
 							response.data
 						);
 					}
 				}
 			} catch ( error ) {
 				console.error(
-					'[TainacanAI] Erro ao buscar mapeamento:',
+					'[TainacanAI] Error fetching mapping:',
 					error
 				);
 			}
 		},
 
 		/**
-		 * Detecta documento do item
+		 * Detect item document
 		 */
 		async detectDocument() {
 			if ( ! this.state.itemId ) return;
@@ -506,7 +506,7 @@
 		},
 
 		/**
-		 * Exibe informações do documento detectado
+		 * Display detected document information
 		 */
 		showDocumentInfo( doc ) {
 			if ( ! doc ) return;
@@ -533,12 +533,12 @@
 		},
 
 		/**
-		 * Executa análise
+		 * Execute analysis
 		 */
 		async analyze( forceRefresh = false ) {
 			if ( this.state.isAnalyzing ) return;
 
-			// Verifica se temos item ou attachment
+			// Check if we have item or attachment
 			if ( ! this.state.itemId && ! this.state.attachmentId ) {
 				this.showError( TainacanAI.texts.noDocument );
 				return;
@@ -588,7 +588,7 @@
 		},
 
 		/**
-		 * Exibe resultados
+		 * Display results
 		 */
 		displayResults( result, fromCache ) {
 			// Cache badge
@@ -598,12 +598,12 @@
 				this.elements.cacheBadge.hide();
 			}
 
-			// Metadados AI - renderiza no painel lateral
+			// AI metadata - render in sidebar panel
 			if ( result.ai_metadata ) {
 				this.renderMetadataInPanel( result.ai_metadata );
 			}
 
-			// EXIF (mostra na área abaixo do botão se disponível)
+			// EXIF (show in area below button if available)
 			if ( result.exif && Object.keys( result.exif ).length > 0 ) {
 				this.elements.tabExif.show();
 				this.elements.results.show();
@@ -613,7 +613,7 @@
 				this.elements.results.hide();
 			}
 
-			// Info da análise no painel lateral
+			// Analysis info in sidebar panel
 			if ( result.model ) {
 				$( '#tainacan-ai-panel-model .model-name' ).text(
 					result.model
@@ -621,19 +621,19 @@
 			}
 			if ( result.tokens_used ) {
 				$( '#tainacan-ai-panel-tokens .tokens-count' ).text(
-					`${ result.tokens_used } tokens`
+					`${ result.tokens_used } ${ TainacanAI.texts?.tokens || 'tokens' }`
 				);
 			}
 
-			// Abre o painel lateral automaticamente
+			// Open sidebar panel automatically
 			this.openSidebarPanel();
 		},
 
 		/**
-		 * Renderiza metadados no painel lateral com evidências
+		 * Render metadata in sidebar panel with evidence
 		 */
 		renderMetadataInPanel( metadata ) {
-			// Garante que o painel existe
+			// Ensure panel exists
 			if (
 				! this.elements.sidebarContent ||
 				! this.elements.sidebarContent.length
@@ -654,7 +654,7 @@
 			Object.entries( metadata ).forEach( ( [ key, data ], index ) => {
 				const formattedLabel = this.formatLabel( key );
 
-				// Verifica se o dado tem o novo formato com evidência
+				// Check if data has new format with evidence
 				let value, evidence;
 				if ( data && typeof data === 'object' && 'valor' in data ) {
 					value = data.valor;
@@ -665,7 +665,7 @@
 				}
 
 				const formattedValue = this.formatValue( value );
-				// Converte arrays para string separada por vírgulas para preenchimento de campos
+				// Convert arrays to comma-separated string for field filling
 				let rawValue;
 				if ( Array.isArray( value ) ) {
 					rawValue = value.join( ', ' );
@@ -682,7 +682,7 @@
 					( Array.isArray( value ) && value.length === 0 ) ||
 					value === '';
 
-				// Verifica se há mapeamento para este campo
+				// Check if there's mapping for this field
 				const mapping = TainacanAI.metadataMapping || {};
 				const mappedField = mapping[ key ];
 				const hasMappedField = mappedField && ! isEmpty;
@@ -699,7 +699,7 @@
                                     <span class="tainacan-ai-metadata-label">${ formattedLabel }</span>
                                     ${
 										hasMappedField
-											? `<span class="tainacan-ai-mapped-badge" title="Mapeado para: ${ this.escapeHtml(
+											? `<span class="tainacan-ai-mapped-badge" title="${ TainacanAI.texts?.mappedTo || 'Mapped to: ' }${ this.escapeHtml(
 													mappedField.name ||
 														mappedField
 											  ) }">
@@ -721,7 +721,7 @@
 											) }"
                                             title="${
 												TainacanAI.texts?.fillField ||
-												'Preencher campo'
+												'Fill field'
 											}">
                                         <span class="dashicons dashicons-download"></span>
                                     </button>
@@ -734,7 +734,7 @@
 											) }"
                                             title="${
 												TainacanAI.texts?.copy ||
-												'Copiar'
+												'Copy'
 											}">
                                         <span class="dashicons dashicons-clipboard"></span>
                                     </button>
@@ -750,7 +750,7 @@
                         <div class="tainacan-ai-metadata-evidence">
                             <div class="tainacan-ai-evidence-label">
                                 <span class="dashicons dashicons-search"></span>
-                                ${ TainacanAI.texts?.evidence || 'Evidência' }
+                                ${ TainacanAI.texts?.evidence || 'Evidence' }
                             </div>
                             <div class="tainacan-ai-evidence-text">${ this.escapeHtml(
 								evidence
@@ -767,7 +767,7 @@
 		},
 
 		/**
-		 * Renderiza dados EXIF
+		 * Render EXIF data
 		 */
 		renderExif( exif ) {
 			const $container = this.elements.exifContent;
@@ -804,11 +804,11 @@
 			};
 
 			const sectionTitles = {
-				camera: 'Camera',
-				captura: 'Captura',
-				imagem: 'Imagem',
-				gps: 'Localização',
-				autoria: 'Autoria',
+				camera: TainacanAI.texts?.camera || 'Camera',
+				captura: TainacanAI.texts?.capture || 'Capture',
+				imagem: TainacanAI.texts?.image || 'Image',
+				gps: TainacanAI.texts?.location || 'Location',
+				autoria: TainacanAI.texts?.authorship || 'Authorship',
 			};
 
 			Object.entries( exif ).forEach( ( [ section, data ] ) => {
@@ -820,7 +820,7 @@
                     <div class="tainacan-ai-exif-map">
                         <a href="${ exif.gps.google_maps_link }" target="_blank" class="button">
                             <span class="dashicons dashicons-location"></span>
-                            Ver no Google Maps
+                            ${ TainacanAI.texts?.viewOnGoogleMaps || 'View on Google Maps' }
                         </a>
                     </div>
                 ` );
@@ -828,7 +828,7 @@
 		},
 
 		/**
-		 * Alterna entre tabs
+		 * Switch between tabs
 		 */
 		switchTab( tabId ) {
 			$( '.tainacan-ai-tab' ).removeClass( 'active' );
@@ -839,7 +839,7 @@
 		},
 
 		/**
-		 * Copia valor para clipboard
+		 * Copy value to clipboard
 		 */
 		async copyValue( $btn ) {
 			const value = $btn.data( 'value' );
@@ -859,7 +859,7 @@
 		},
 
 		/**
-		 * Copia todos os valores
+		 * Copy all values
 		 */
 		async copyAllValues() {
 			if ( ! this.state.lastResult?.ai_metadata ) return;
@@ -895,7 +895,7 @@
 		},
 
 		/**
-		 * Feedback visual de cópia
+		 * Visual feedback for copy
 		 */
 		showCopySuccess( $btn ) {
 			const $icon = $btn.find( '.dashicons' );
@@ -913,7 +913,7 @@
 		},
 
 		/**
-		 * Mostra estado de loading
+		 * Show loading state
 		 */
 		showLoading() {
 			this.elements.analyzeBtn.prop( 'disabled', true );
@@ -923,7 +923,7 @@
 		},
 
 		/**
-		 * Esconde loading
+		 * Hide loading
 		 */
 		hideLoading() {
 			this.elements.analyzeBtn.prop( 'disabled', false );
@@ -932,7 +932,7 @@
 		},
 
 		/**
-		 * Mostra erro
+		 * Show error
 		 */
 		showError( message ) {
 			this.elements.analyzeBtn.prop( 'disabled', false );
@@ -944,7 +944,7 @@
                 <div class="tainacan-ai-error">
                     <span class="dashicons dashicons-warning"></span>
                     <div class="tainacan-ai-error-text">
-                        <strong>Erro</strong>
+                        <strong>${ TainacanAI.texts?.errorLabel || 'Error' }</strong>
                         <span>${ message }</span>
                     </div>
                 </div>
@@ -958,7 +958,7 @@
 		},
 
 		/**
-		 * Mostra toast notification
+		 * Show toast notification
 		 */
 		showToast( message ) {
 			const $toast = $( `
@@ -979,7 +979,7 @@
 		},
 
 		/**
-		 * Formata label do metadado
+		 * Format metadata label
 		 */
 		formatLabel( key ) {
 			return key
@@ -990,7 +990,7 @@
 		},
 
 		/**
-		 * Formata valor para exibição
+		 * Format value for display
 		 */
 		formatValue( value ) {
 			if ( value === null || value === undefined || value === '' ) {
@@ -1021,7 +1021,7 @@
 		},
 
 		/**
-		 * Preenche um campo do Tainacan com o valor extraído
+		 * Fill a Tainacan field with extracted value
 		 */
 		fillTainacanField( metadataKey, value, $btn = null ) {
 			const mapping = TainacanAI.metadataMapping || {};
@@ -1029,36 +1029,36 @@
 
 			if ( ! fieldInfo ) {
 				console.log(
-					`[TainacanAI] Campo "${ metadataKey }" não tem mapeamento`
+					`[TainacanAI] Field "${ metadataKey }" has no mapping`
 				);
 				return false;
 			}
 
-			// Tenta encontrar o campo do Tainacan
+			// Try to find the Tainacan field
 			const metadataId = fieldInfo.id || fieldInfo;
 			console.log(
-				`[TainacanAI] Tentando preencher "${ metadataKey }" -> id=${ metadataId }, slug=${ fieldInfo.slug }`
+				`[TainacanAI] Attempting to fill "${ metadataKey }" -> id=${ metadataId }, slug=${ fieldInfo.slug }`
 			);
 
 			const $field = this.findTainacanField( metadataId, fieldInfo.slug );
 
 			if ( ! $field || ! $field.length ) {
 				console.log(
-					`[TainacanAI] Campo "${ metadataKey }" NÃO encontrado no DOM`
+					`[TainacanAI] Field "${ metadataKey }" NOT found in DOM`
 				);
 				return false;
 			}
 
 			console.log(
-				`[TainacanAI] Campo "${ metadataKey }" ENCONTRADO:`,
+				`[TainacanAI] Field "${ metadataKey }" FOUND:`,
 				$field[ 0 ]
 			);
 
-			// Preenche o campo baseado no tipo
+			// Fill field based on type
 			const success = this.setFieldValue( $field, value, fieldInfo.type );
 
 			if ( success ) {
-				// Feedback visual
+				// Visual feedback
 				if ( $btn ) {
 					const $icon = $btn.find( '.dashicons' );
 					$icon
@@ -1073,7 +1073,7 @@
 					}, 2000 );
 				}
 
-				// Destaca o campo preenchido
+				// Highlight filled field
 				$field.addClass( 'tainacan-ai-field-filled' );
 				setTimeout( () => {
 					$field.removeClass( 'tainacan-ai-field-filled' );
@@ -1086,77 +1086,77 @@
 		},
 
 		/**
-		 * Encontra o campo do Tainacan no DOM
+		 * Find Tainacan field in DOM
 		 */
 		findTainacanField( metadataId, slug ) {
-			// Tenta várias estratégias para encontrar o campo
+			// Try several strategies to find the field
 			let $field;
 
-			// 1. PRINCIPAL: Por ID do input no formato Tainacan (tainacan-item-metadatum_id-{ID})
+			// 1. MAIN: By input ID in Tainacan format (tainacan-item-metadatum_id-{ID})
 			$field = $( `#tainacan-item-metadatum_id-${ metadataId }` );
 			if ( $field.length ) {
-				// Se for um container (div), busca o input/textarea dentro dele
+				// If it's a container (div), find input/textarea inside it
 				if ( $field.is( 'div, span, section' ) ) {
 					const $innerField = $field
 						.find( 'input:not([type="hidden"]), textarea' )
 						.first();
 					if ( $innerField.length ) {
 						console.log(
-							'[findField] Encontrado via tainacan-item-metadatum_id (inner)'
+							'[findField] Found via tainacan-item-metadatum_id (inner)'
 						);
 						return $innerField;
 					}
 				}
-				// Se for input/textarea diretamente
+				// If it's input/textarea directly
 				if ( $field.is( 'input, textarea' ) ) {
 					console.log(
-						'[findField] Encontrado via tainacan-item-metadatum_id'
+						'[findField] Found via tainacan-item-metadatum_id'
 					);
 					return $field;
 				}
 			}
 
-			// 2. Por ID do metadado no Vue/Tainacan (vários formatos)
+			// 2. By metadata ID in Vue/Tainacan (various formats)
 			$field = $(
 				`[data-metadatum-id="${ metadataId }"] input:not([type="hidden"]), [data-metadatum-id="${ metadataId }"] textarea`
 			).first();
 			if ( $field.length ) {
-				console.log( '[findField] Encontrado via data-metadatum-id' );
+				console.log( '[findField] Found via data-metadatum-id' );
 				return $field;
 			}
 
-			// 3. Por atributo tainacan-metadatum-id (Vue)
+			// 3. By tainacan-metadatum-id attribute (Vue)
 			$field = $(
 				`[tainacan-metadatum-id="${ metadataId }"] input, [tainacan-metadatum-id="${ metadataId }"] textarea`
 			).first();
 			if ( $field.length ) {
 				console.log(
-					'[findField] Encontrado via tainacan-metadatum-id attr'
+					'[findField] Found via tainacan-metadatum-id attr'
 				);
 				return $field;
 			}
 
-			// 4. Por outros formatos de ID
+			// 4. By other ID formats
 			$field = $(
 				`#tainacan-metadata-${ metadataId }, #metadatum-${ metadataId }, #metadata-${ metadataId }`
 			);
 			if ( $field.length ) {
-				console.log( '[findField] Encontrado via ID alternativo' );
+				console.log( '[findField] Found via alternative ID' );
 				return $field;
 			}
 
-			// 4. Por name do campo
+			// 4. By field name
 			$field = $(
 				`[name="metadata[${ metadataId }]"], [name="tainacan_metadatum[${ metadataId }]"], [name="metadatum_id_${ metadataId }"]`
 			);
 			if ( $field.length ) {
-				console.log( '[findField] Encontrado via estratégia 4' );
+				console.log( '[findField] Found via strategy 4' );
 				return $field;
 			}
 
-			// 5. Por slug/classe - com várias variações
+			// 5. By slug/class - with several variations
 			if ( slug ) {
-				// Tenta com slug exato e parcial
+				// Try with exact and partial slug
 				const slugVariations = [
 					slug,
 					slug.replace( /-\d+$/, '' ),
@@ -1168,7 +1168,7 @@
 					).first();
 					if ( $field.length ) {
 						console.log(
-							'[findField] Encontrado via slug classe:',
+							'[findField] Found via slug class:',
 							s
 						);
 						return $field;
@@ -1179,7 +1179,7 @@
 					).first();
 					if ( $field.length ) {
 						console.log(
-							'[findField] Encontrado via data-slug:',
+							'[findField] Found via data-slug:',
 							s
 						);
 						return $field;
@@ -1187,30 +1187,30 @@
 				}
 			}
 
-			// 6. Busca no formulário Vue do Tainacan
+			// 6. Search in Tainacan Vue form
 			$field = $(
 				`.tainacan-item-metadatum[data-metadatum-id="${ metadataId }"]`
 			)
 				.find( 'input:not([type="hidden"]), textarea' )
 				.first();
 			if ( $field.length ) {
-				console.log( '[findField] Encontrado via estratégia 6' );
+				console.log( '[findField] Found via strategy 6' );
 				return $field;
 			}
 
-			// 7. Busca por aria-label ou placeholder contendo o slug
+			// 7. Search by aria-label or placeholder containing slug
 			if ( slug ) {
 				const slugBase = slug.replace( /-\d+$/, '' );
 				$field = $(
 					`input[aria-label*="${ slugBase }"], textarea[aria-label*="${ slugBase }"]`
 				).first();
 				if ( $field.length ) {
-					console.log( '[findField] Encontrado via aria-label' );
+					console.log( '[findField] Found via aria-label' );
 					return $field;
 				}
 			}
 
-			// 8. Busca por label (pelo nome do metadado)
+			// 8. Search by label (by metadata name)
 			if ( slug ) {
 				const $labels = $( 'label' );
 				$labels.each( function () {
@@ -1228,13 +1228,13 @@
 							$field = $( `#${ forId }` );
 							if ( $field.length ) {
 								console.log(
-									'[findField] Encontrado via label for:',
+									'[findField] Found via label for:',
 									labelText
 								);
 								return false; // break
 							}
 						}
-						// Tenta pegar input/textarea no mesmo container
+						// Try to get input/textarea in same container
 						$field = $( this )
 							.closest(
 								'.field, .tainacan-metadatum, .form-group, [class*="metadatum"]'
@@ -1243,7 +1243,7 @@
 							.first();
 						if ( $field.length ) {
 							console.log(
-								'[findField] Encontrado via label container:',
+								'[findField] Found via label container:',
 								labelText
 							);
 							return false; // break
@@ -1253,13 +1253,13 @@
 				if ( $field && $field.length ) return $field;
 			}
 
-			// 9. Debug: mostra todos os inputs/textareas disponíveis
+			// 9. Debug: show all available inputs/textareas
 			if ( TainacanAI.debug ) {
-				console.log( '[findField] Inputs disponíveis no DOM:' );
+				console.log( '[findField] Available inputs in DOM:' );
 				$( 'input:not([type="hidden"]), textarea' ).each(
 					function ( i ) {
 						if ( i < 20 ) {
-							// limita a 20 para não poluir
+							// limit to 20 to avoid clutter
 							console.log( `  - ${ this.tagName }`, {
 								id: this.id,
 								name: this.name,
@@ -1275,11 +1275,11 @@
 		},
 
 		/**
-		 * Define o valor de um campo
+		 * Set field value
 		 */
 		setFieldValue( $field, value, fieldType ) {
 			try {
-				// Converte arrays para string se necessário
+				// Convert arrays to string if necessary
 				let finalValue = value;
 				if ( Array.isArray( value ) ) {
 					finalValue = value.join( ', ' );
@@ -1290,25 +1290,25 @@
 				const tagName = $field.prop( 'tagName' ).toLowerCase();
 				const inputType = $field.attr( 'type' );
 
-				// Campos de texto/textarea
+				// Text/textarea fields
 				if (
 					tagName === 'textarea' ||
 					inputType === 'text' ||
 					! inputType
 				) {
-					// Para Vue/React, dispara eventos para atualizar o estado
+					// For Vue/React, trigger events to update state
 					$field.val( finalValue );
 					$field.trigger( 'input' );
 					$field.trigger( 'change' );
 
-					// Tenta disparar evento nativo para frameworks reativos
+					// Try to dispatch native event for reactive frameworks
 					const nativeEvent = new Event( 'input', { bubbles: true } );
 					$field[ 0 ].dispatchEvent( nativeEvent );
 
 					return true;
 				}
 
-				// Campos de seleção
+				// Selection fields
 				if ( tagName === 'select' ) {
 					$field.val( finalValue ).trigger( 'change' );
 					return true;
@@ -1324,7 +1324,7 @@
 					return true;
 				}
 
-				// Outros tipos de input
+				// Other input types
 				$field.val( finalValue ).trigger( 'input' ).trigger( 'change' );
 				return true;
 			} catch ( error ) {
@@ -1337,12 +1337,12 @@
 		},
 
 		/**
-		 * Preenche todos os campos mapeados
+		 * Fill all mapped fields
 		 */
 		fillAllMappedFields() {
 			if ( ! this.state.lastResult?.ai_metadata ) {
 				this.showToast(
-					TainacanAI.texts?.noResults || 'Nenhum resultado disponível'
+					TainacanAI.texts?.noResults || 'No results available'
 				);
 				return;
 			}
@@ -1351,24 +1351,24 @@
 			let filledCount = 0;
 			let totalMapped = 0;
 
-			// Debug: mostra mapeamento e resultado da IA
-			console.log( '[TainacanAI] Mapeamento disponível:', mapping );
+			// Debug: show mapping and AI result
+			console.log( '[TainacanAI] Available mapping:', mapping );
 			console.log(
-				'[TainacanAI] Resultado da IA:',
+				'[TainacanAI] AI result:',
 				this.state.lastResult.ai_metadata
 			);
 
 			Object.entries( this.state.lastResult.ai_metadata ).forEach(
 				( [ key, data ] ) => {
 					console.log(
-						`[TainacanAI] Verificando chave: "${ key }" -> existe no mapeamento:`,
+						`[TainacanAI] Checking key: "${ key }" -> exists in mapping:`,
 						!! mapping[ key ]
 					);
 					if ( ! mapping[ key ] ) return;
 
 					totalMapped++;
 
-					// Extrai o valor (formato novo ou antigo)
+					// Extract value (new or old format)
 					let value;
 					if ( data && typeof data === 'object' && 'valor' in data ) {
 						value = data.valor;
@@ -1376,7 +1376,7 @@
 						value = data;
 					}
 
-					// Pula valores vazios
+					// Skip empty values
 					if (
 						value === null ||
 						value === undefined ||
@@ -1396,18 +1396,18 @@
 				this.showToast(
 					(
 						TainacanAI.texts?.fieldsFilled ||
-						'{count} campos preenchidos'
+						'{count} fields filled'
 					).replace( '{count}', filledCount )
 				);
 			} else if ( totalMapped === 0 ) {
 				this.showToast(
 					TainacanAI.texts?.noMappedFields ||
-						'Nenhum campo mapeado encontrado'
+						'No mapped fields found'
 				);
 			} else {
 				this.showToast(
 					TainacanAI.texts?.noFieldsToFill ||
-						'Nenhum campo para preencher'
+						'No fields to fill'
 				);
 			}
 		},
@@ -1422,7 +1422,7 @@
 		},
 	};
 
-	// Inicializa quando DOM estiver pronto
+	// Initialize when DOM is ready
 	$( document ).ready( () => {
 		TainacanAIApp.init();
 	} );
