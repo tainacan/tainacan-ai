@@ -81,20 +81,18 @@
     height: 14px;
 }
 
-/* Divider */
-.tainacan-ai-divider {
-    border: none;
-    height: 2px;
-    background: linear-gradient(90deg, var(--tainacan-ai-accent) 0%, transparent 100%);
-    margin: 12px 0 16px;
-}
-
 /* Description */
 .tainacan-ai-description {
     color: var(--tainacan-ai-text-light);
     font-size: 13px;
     line-height: 1.5;
     margin: 0 0 16px;
+}
+
+/* Override external .button display when hiding; use this class instead of .hide() */
+.tainacan-ai-forced-hidden {
+    display: none !important;
+    visibility: hidden !important;
 }
 
 /* Notice */

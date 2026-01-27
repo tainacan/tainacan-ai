@@ -1,6 +1,6 @@
 {
 	"name": "tainacan-ai",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "Automated metadata extraction in Tainacan using AI APIs",
 	"author": "Sigismundo",
 	"license": "GPL-2.0-or-later",

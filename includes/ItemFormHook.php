@@ -33,8 +33,7 @@ class ItemFormHook {
             tainacan_register_admin_hook(
                 'item',
                 [$this, 'render_form'],
-                'begin-left',
-                [ 'document_type' => 'attachment' ]
+                'begin-left'
             );
         }
     }
@@ -76,8 +75,6 @@ class ItemFormHook {
                 <?php endif; ?>
             </div>
 
-            <hr class="tainacan-ai-divider">
-
             <?php if (!$is_configured): ?>
                 <div class="tainacan-ai-notice warning">
                     <p>
@@ -85,7 +82,7 @@ class ItemFormHook {
                         echo wp_kses_post(
                             sprintf(
                                 /* translators: %s: link to AI Tools settings page */
-                                __('Configure your API key in <a href="%s">Tainacan > AI</a> to use automatic extraction.', 'tainacan-ai'),
+                                __('Configure your API key in <a href="%s">Tainacan > AI Tools</a> to use automatic extraction.', 'tainacan-ai'),
                                 esc_url(admin_url('admin.php?page=tainacan_ai'))
                             )
                         ); ?>
@@ -154,11 +151,18 @@ class ItemFormHook {
 
 
     /**
-     * Carrega assets
+     * Load assets
      */
     public function enqueue_assets(string $hook): void {
-        // Verifica se está em páginas do Tainacan
-        if (strpos($hook, 'tainacan') === false && strpos($hook, 'post.php') === false) {
+        // Check if we're on the Tainacan Admin page
+        $screen = get_current_screen();
+        if (!$screen) {
+            return;
+        }
+
+        // Check if current screen matches Tainacan admin page
+        // WordPress uses 'admin_page_{page_slug}' format for submenu pages
+        if ($screen->base !== 'admin_page_tainacan_admin') {
             return;
         }
 
@@ -201,7 +205,7 @@ class ItemFormHook {
                 'analyzeBtn' => __('Analyze Document', 'tainacan-ai'),
                 'error' => __('Error analyzing. Please try again.', 'tainacan-ai'),
                 'errorLabel' => __('Error', 'tainacan-ai'),
-                'noDocument' => __('No document found in this item. Add an image or file first.', 'tainacan-ai'),
+                'noDocument' => __('No document found in this item.', 'tainacan-ai'),
                 'copy' => __('Copy', 'tainacan-ai'),
                 'copied' => __('Copied!', 'tainacan-ai'),
                 'copyAll' => __('Copy All', 'tainacan-ai'),

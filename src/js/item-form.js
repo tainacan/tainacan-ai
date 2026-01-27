@@ -2,6 +2,8 @@
  * Tainacan AI - Item Form JavaScript
  * @version 1.0.0
  */
+import { addAction } from '@wordpress/hooks';
+
 ( function ( $ ) {
 	'use strict';
 
@@ -15,20 +17,25 @@
 			isAnalyzing: false,
 			lastResult: null,
 			panelOpen: false,
+			isItemEditContext: false,
 		},
 
 		// DOM elements
 		elements: {},
 
+		// Scoped observer for .document-field (disconnect when leaving item edit)
+		documentFieldObserver: null,
+		documentFieldObservedNode: null,
+		documentFieldDebounceMs: 750,
+		documentFieldDebounceTimer: null,
+
 		/**
 		 * Initialize the application
 		 */
 		init() {
-			this.cacheElements();
 			this.bindEvents();
-			this.observeUrlChanges();
-			this.extractContext();
 			this.createSidebarPanel();
+			this.registerHooks();
 
 			if ( TainacanAI.debug ) {
 				console.log( '[TainacanAI] Initialized', this.state );
@@ -210,6 +217,15 @@
 					this.closeSidebarPanel();
 				}
 			} );
+
+			// Close panel when Tainacan save is clicked
+			$( document ).on(
+				'click',
+				'.tainacan-form button[type="submit"], .item-page button.is-success, [class*="submit-button"]',
+				() => {
+					setTimeout( () => this.closeSidebarPanel(), 500 );
+				}
+			);
 		},
 
 		/**
@@ -284,161 +300,119 @@
 		},
 
 		/**
-		 * Observe URL changes (SPA navigation)
+		 * Register Tainacan wp.hooks listeners for item-edit context and document updates.
+		 * Replaces body-wide MutationObserver and hashchange; "left item edit" is detected
+		 * from tainacan_navigation_path_updated payload.
 		 */
-		observeUrlChanges() {
-			// Store current item to detect changes
-			let currentHash = window.location.hash;
+		registerHooks() {
+			if ( typeof addAction !== 'function' ) {
+				return;
+			}
 
-			// Hash change - detect item change or navigation
-			$( window ).on( 'hashchange', () => {
-				const newHash = window.location.hash;
-				const oldItemMatch = currentHash.match( /items\/(\d+)/ );
-				const newItemMatch = newHash.match( /items\/(\d+)/ );
+			addAction(
+				'tainacan_navigation_path_updated',
+				'tainacan_ai_item_form',
+				( payload ) => {
+					const path = payload?.childEntity?.defaultLink || payload?.currentRoute?.path || '';
+					const editMatch = path.match( /collections\/(\d+)\/items\/(\d+)\/edit/ );
+					const isItemEdit = Boolean( editMatch );
 
-				const oldItemId = oldItemMatch ? oldItemMatch[ 1 ] : null;
-				const newItemId = newItemMatch ? newItemMatch[ 1 ] : null;
-
-				// If item changed or left edit mode, close panel and clear results
-				if ( oldItemId !== newItemId || ! newItemMatch ) {
-					this.closeSidebarPanel();
-					this.resetAnalysisState();
-				}
-
-				currentHash = newHash;
-				this.extractContext();
-			} );
-
-			// Detect click on Tainacan save button
-			$( document ).on(
-				'click',
-				'.tainacan-form button[type="submit"], .item-page button.is-success, [class*="submit-button"]',
-				() => {
-					// Close panel after a small delay to allow saving
-					setTimeout( () => {
-						this.closeSidebarPanel();
-					}, 500 );
+					if ( isItemEdit ) {
+						const prevCollectionId = this.state.collectionId;
+						this.state.isItemEditContext = true;
+						this.state.collectionId = parseInt( editMatch[ 1 ], 10 );
+						this.state.itemId = parseInt( editMatch[ 2 ], 10 );
+						if ( this.state.collectionId && this.state.collectionId !== prevCollectionId ) {
+							this.fetchMetadataMapping();
+						}
+					} else {
+						this.leaveItemEditContext();
+					}
 				}
 			);
 
-			// MutationObserver to detect DOM changes
-			const observer = new MutationObserver( ( mutations ) => {
-				let shouldUpdate = false;
-
-				mutations.forEach( ( mutation ) => {
-					if ( mutation.addedNodes.length ) {
-						mutation.addedNodes.forEach( ( node ) => {
-							if (
-								node.nodeType === 1 &&
-								( node.classList?.contains( 'tainacan-form' ) ||
-									node.id === 'tainacan-ai-widget' ||
-									node.querySelector?.(
-										'#tainacan-ai-widget'
-									) )
-							) {
-								shouldUpdate = true;
-							}
-						} );
+			addAction(
+				'tainacan_item_edition_item_loaded',
+				'tainacan_ai_item_form',
+				( collection, item ) => {
+					if ( ! collection || ! item ) {
+						return;
 					}
-				} );
+					const prevCollectionId = this.state.collectionId;
+					const newCollectionId = collection.id ? parseInt( collection.id, 10 ) : null;
+					this.state.isItemEditContext = true;
+					this.state.collectionId = newCollectionId;
+					this.state.itemId = item.id ? parseInt( item.id, 10 ) : null;
+					this.state.documentInfo = null;
+					this.state.attachmentId = null;
 
-				if ( shouldUpdate ) {
 					this.cacheElements();
-					this.extractContext();
-				}
-			} );
 
-			observer.observe( document.body, {
-				childList: true,
-				subtree: true,
-			} );
+					if ( newCollectionId && newCollectionId !== prevCollectionId ) {
+						this.fetchMetadataMapping();
+					}
+					this.detectDocument();
+					this.startDocumentFieldObserver();
+				}
+			);
 		},
 
 		/**
-		 * Extract context from page (item_id, collection_id)
+		 * Clear state and disconnect observer when we leave item-edit context.
 		 */
-		extractContext() {
-			// Reset
+		leaveItemEditContext() {
+			this.state.isItemEditContext = false;
 			this.state.itemId = null;
 			this.state.collectionId = null;
 			this.state.documentInfo = null;
+			this.state.attachmentId = null;
+			this.closeSidebarPanel();
+			this.resetAnalysisState();
+			this.stopDocumentFieldObserver();
+		},
 
-			// Method 1: URL hash (#/collections/X/items/Y/edit)
-			const hash = window.location.hash;
-			const hashMatch = hash.match( /collections\/(\d+)\/items\/(\d+)/ );
-			if ( hashMatch ) {
-				this.state.collectionId = parseInt( hashMatch[ 1 ] );
-				this.state.itemId = parseInt( hashMatch[ 2 ] );
+		/**
+		 * Start a MutationObserver on .document-field to re-run detectDocument when
+		 * the document UI changes (edit/delete/add). Debounced so that rapid mutations
+		 * (e.g. empty shell then async document content) result in a single call.
+		 */
+		startDocumentFieldObserver() {
+			this.stopDocumentFieldObserver();
+			const node = document.querySelector( '.document-field' );
+			if ( ! node ) {
+				return;
 			}
-
-			// Method 1b: Alternative URL hash (#/collections/X/items/new)
-			if ( ! this.state.collectionId ) {
-				const collectionMatch = hash.match( /collections\/(\d+)/ );
-				if ( collectionMatch ) {
-					this.state.collectionId = parseInt( collectionMatch[ 1 ] );
+			const app = this;
+			const delay = app.documentFieldDebounceMs;
+			this.documentFieldObserver = new MutationObserver( () => {
+				if ( ! app.state.isItemEditContext || ! app.state.itemId ) {
+					return;
 				}
-			}
+				clearTimeout( app.documentFieldDebounceTimer );
+				app.documentFieldDebounceTimer = setTimeout( () => {
+					app.documentFieldDebounceTimer = null;
+					app.detectDocument();
+				}, delay );
+			} );
+			this.documentFieldObserver.observe( node, {
+				childList: true,
+				subtree: true,
+			} );
+			this.documentFieldObservedNode = node;
+		},
 
-			// Method 2: Query params
-			const urlParams = new URLSearchParams( window.location.search );
-			if ( urlParams.get( 'item' ) ) {
-				this.state.itemId = parseInt( urlParams.get( 'item' ) );
+		/**
+		 * Disconnect the .document-field observer when leaving item-edit context.
+		 */
+		stopDocumentFieldObserver() {
+			if ( this.documentFieldDebounceTimer ) {
+				clearTimeout( this.documentFieldDebounceTimer );
+				this.documentFieldDebounceTimer = null;
 			}
-			if ( urlParams.get( 'post' ) ) {
-				this.state.itemId = parseInt( urlParams.get( 'post' ) );
-			}
-
-			// Method 3: Data attributes
-			const $container = $( '[data-item-id]' );
-			if ( $container.length ) {
-				this.state.itemId = parseInt( $container.data( 'item-id' ) );
-			}
-			const $collection = $( '[data-collection-id]' );
-			if ( $collection.length ) {
-				this.state.collectionId = parseInt(
-					$collection.data( 'collection-id' )
-				);
-			}
-
-			// Method 4: tainacan_plugin global
-			if ( typeof window.tainacan_plugin !== 'undefined' ) {
-				if ( window.tainacan_plugin.item_id ) {
-					this.state.itemId = parseInt(
-						window.tainacan_plugin.item_id
-					);
-				}
-				if ( window.tainacan_plugin.collection_id ) {
-					this.state.collectionId = parseInt(
-						window.tainacan_plugin.collection_id
-					);
-				}
-			}
-
-			// Method 5: Search in full URL
-			if ( ! this.state.collectionId ) {
-				const fullUrl = window.location.href;
-				const urlCollectionMatch = fullUrl.match(
-					/collections[\/=](\d+)/i
-				);
-				if ( urlCollectionMatch ) {
-					this.state.collectionId = parseInt(
-						urlCollectionMatch[ 1 ]
-					);
-				}
-			}
-
-			if ( TainacanAI.debug ) {
-				console.log( '[TainacanAI] Context extracted:', this.state );
-			}
-
-			// Fetch mapping if we have collection_id
-			if ( this.state.collectionId ) {
-				this.fetchMetadataMapping();
-			}
-
-			// Detect document if we have item_id
-			if ( this.state.itemId ) {
-				this.detectDocument();
+			if ( this.documentFieldObserver && this.documentFieldObservedNode ) {
+				this.documentFieldObserver.disconnect();
+				this.documentFieldObserver = null;
+				this.documentFieldObservedNode = null;
 			}
 		},
 
@@ -497,12 +471,37 @@
 					this.state.documentInfo = response.data;
 					this.state.attachmentId = response.data.id;
 					this.showDocumentInfo( response.data );
+
+					if ( TainacanAI.debug ) {
+						console.log( '[TainacanAI] Document detected:', response.data );
+					}
+				} else {
+					this.state.documentInfo = null;
+					this.state.attachmentId = null;
+					this.showNoDocumentInfo();
 				}
 			} catch ( error ) {
 				if ( TainacanAI.debug ) {
-					console.log( '[TainacanAI] No document found' );
+					console.error( '[TainacanAI] No document found' );
 				}
+				this.state.documentInfo = null;
+				this.state.attachmentId = null;
+				this.showNoDocumentInfo();
 			}
+		},
+
+		/**
+		 * Show message in document info section when no document was detected yet.
+		 */
+		showNoDocumentInfo() {
+			const msg = TainacanAI.texts?.noDocument || 'No document found in this item.';
+			this.elements.docType.html(
+				'<span class="dashicons dashicons-info"></span> ' + msg
+			);
+			this.elements.docName.text( '' );
+			this.elements.documentInfo.show();
+			this.elements.analyzeBtn.addClass( 'tainacan-ai-forced-hidden' );
+			this.elements.refreshBtn.addClass( 'tainacan-ai-forced-hidden' );
 		},
 
 		/**
@@ -530,6 +529,8 @@
 			);
 			this.elements.docName.text( doc.title || '' );
 			this.elements.documentInfo.show();
+			this.elements.analyzeBtn.removeClass( 'tainacan-ai-forced-hidden' );
+			this.elements.refreshBtn.removeClass( 'tainacan-ai-forced-hidden' );
 		},
 
 		/**

@@ -3,7 +3,7 @@
  * Plugin Name: Tainacan AI
  * Plugin URI: https://github.com/tainacan/tainacan-ai
  * Description: Automated metadata extraction in Tainacan using AI (OpenAI, Gemini, DeepSeek). Supports image analysis, PDF documents, EXIF extraction and custom prompts per collection.
- * Version: 0.0.2
+ * Version: 0.0.3
  * Author: Sigismundo
  * Author URI: https://seu-site.com
  * Text Domain: tainacan-ai
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('TAINACAN_AI_VERSION', '0.0.2');
+define('TAINACAN_AI_VERSION', '0.0.3');
 define('TAINACAN_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('TAINACAN_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('TAINACAN_AI_DOMAIN', 'tainacan-ai');

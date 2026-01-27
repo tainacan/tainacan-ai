@@ -4,7 +4,7 @@ Tags: tainacan, ai, cataloging, museums, image-analysis
 Requires at least: 6.5
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.0.2
+Stable tag: 0.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -131,6 +131,11 @@ Yes, you can switch between providers at any time in the plugin settings. Each p
 
 == Changelog ==
 
+= 0.0.3 =
+* Improved document detection in item edit form (less DOM mutations using Tainacan hooks)
+* Added no document found message to item edit form
+* Makes more strings translatable in the Javascript side
+
 = 0.0.2 =
 * UI improvements to match Tainacan Admin Style
 * Detects if document is of type attachment before showing the analyze button
@@ -148,6 +153,9 @@ Yes, you can switch between providers at any time in the plugin settings. Each p
 * WP Consent API integration
 
 == Upgrade Notice ==
+
+= 0.0.3 =
+* Improved document detection in item edit form.
 
 = 0.0.2 =
 Better integration with Tainacan Admin Style.
