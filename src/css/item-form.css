@@ -118,6 +118,12 @@
     font-weight: 600;
 }
 
+.wp-core-ui #tainacan-ai-widget .button .dashicons,
+.wp-core-ui .tainacan-ai-sidebar-panel .button .dashicons {
+    line-height: 1;
+    vertical-align: middle;
+}
+
 /* Document Info */
 .tainacan-ai-document-info {
     display: flex;
@@ -212,7 +218,7 @@
     height: 38px !important;
     padding: 0 !important;
     background: var(--tainacan-ai-white) !important;
-    border: 2px solid var(--tainacan-ai-accent) !important;
+    border: 1px solid var(--tainacan-ai-accent) !important;
     border-radius: var(--tainacan-button-border-radius, 8px) !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
@@ -320,7 +326,7 @@
     margin-top: 16px;
     background: var(--tainacan-ai-white);
     border-radius: 10px;
-    border: 2px solid var(--tainacan-ai-accent);
+    border: 1px solid var(--tainacan-ai-accent);
     overflow: hidden;
     box-shadow: 0 2px 12px var(--tainacan-ai-shadow);
 }
@@ -375,94 +381,11 @@
     display: block;
 }
 
-/* Results Header */
-.tainacan-ai-results-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    background: linear-gradient(135deg, var(--tainacan-ai-primary) 0%, var(--tainacan-ai-primary-light) 100%);
-    color: var(--tainacan-ai-white);
-}
-
-.tainacan-ai-results-header h5 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.tainacan-ai-results-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tainacan-ai-cache-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 10px;
-    background: rgba(255, 255, 255, 0.2);
-    color: var(--tainacan-ai-white);
-    border-radius: 12px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.tainacan-ai-results-actions .button {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border: none !important;
-    color: var(--tainacan-ai-white) !important;
-    padding: 4px 8px !important;
-    height: auto !important;
-    line-height: 1 !important;
-}
-
-.tainacan-ai-results-actions .button:hover {
-    background: rgba(255, 255, 255, 0.3) !important;
-}
-
-.tainacan-ai-results-actions .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-}
-
 /* Results Content */
 .tainacan-ai-results-content {
     padding: 16px;
     max-height: 450px;
     overflow-y: auto;
-}
-
-/* Metadata Item */
-.tainacan-ai-metadata-item {
-    background: var(--tainacan-ai-bg-light);
-    border-radius: 8px;
-    margin-bottom: 10px;
-    border: 1px solid var(--tainacan-ai-border);
-    overflow: hidden;
-    transition: all 0.2s ease;
-    animation: tcgpt-fadeIn 0.3s ease forwards;
-    opacity: 0;
-}
-
-.tainacan-ai-metadata-item:last-child {
-    margin-bottom: 0;
-}
-
-.tainacan-ai-metadata-item:hover {
-    border-color: var(--tainacan-ai-accent-dark);
-    box-shadow: 0 2px 8px var(--tainacan-ai-shadow);
-}
-
-.tainacan-ai-metadata-item.empty {
-    opacity: 0.6;
-}
-
-.tainacan-ai-metadata-header {
-    padding: 10px 14px 6px;
 }
 
 .tainacan-ai-metadata-label {
@@ -471,26 +394,6 @@
     color: var(--tainacan-ai-primary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-}
-
-.tainacan-ai-metadata-body {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 0 14px 12px;
-}
-
-.tainacan-ai-metadata-value {
-    flex: 1;
-    font-size: 14px;
-    color: var(--tainacan-ai-text);
-    line-height: 1.5;
-    word-break: break-word;
-}
-
-.tainacan-ai-metadata-actions {
-    flex-shrink: 0;
 }
 
 /* Empty Value */
@@ -614,46 +517,6 @@
     display: inline-flex !important;
     align-items: center !important;
     gap: 6px !important;
-}
-
-/* Analysis Info */
-.tainacan-ai-analysis-info {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 16px;
-    padding: 10px 16px;
-    background: var(--tainacan-ai-bg);
-    border-top: 1px solid var(--tainacan-ai-border);
-    font-size: 12px;
-    color: var(--tainacan-ai-text-light);
-}
-
-.tainacan-ai-analysis-info span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.tainacan-ai-analysis-info .dashicons {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-}
-
-/* Method Badge */
-.tainacan-ai-method-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    background: var(--tainacan-ai-accent);
-    color: var(--tainacan-ai-primary);
-    border-radius: 10px;
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-left: 6px;
 }
 
 /* Toast */
@@ -901,14 +764,6 @@
     gap: 8px;
 }
 
-.tainacan-ai-metadata-label-with-copy .tainacan-ai-metadata-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--tainacan-ai-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
 .tainacan-ai-metadata-value-box {
     background: var(--tainacan-ai-white);
     border-radius: 6px;
@@ -1090,7 +945,7 @@
     padding: 8px 14px !important;
     background: var(--tainacan-ai-accent) !important;
     color: var(--tainacan-ai-primary) !important;
-    border: 2px solid var(--tainacan-ai-accent-dark) !important;
+    border: 1px solid var(--tainacan-ai-accent-dark) !important;
     border-radius: var(--tainacan-button-border-radius, 6px) !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
@@ -1167,23 +1022,8 @@
         gap: 8px;
     }
 
-    .tainacan-ai-metadata-body {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .tainacan-ai-metadata-actions {
-        align-self: flex-end;
-    }
-
     .tainacan-ai-exif-grid {
         grid-template-columns: 1fr;
-    }
-
-    .tainacan-ai-analysis-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
     }
 
     .tainacan-ai-sidebar-panel {

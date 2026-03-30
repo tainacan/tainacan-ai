@@ -25,10 +25,7 @@ class AdminPage extends \Tainacan\Pages {
         parent::init();
 
         add_action('admin_init', [$this, 'register_settings']);
-        add_action('wp_ajax_tainacan_ai_test_api', [$this, 'ajax_test_api']);
         add_action('wp_ajax_tainacan_ai_clear_cache', [$this, 'ajax_clear_cache']);
-        add_action('wp_ajax_tainacan_ai_get_stats', [$this, 'ajax_get_stats']);
-        add_action('wp_ajax_tainacan_ai_export_logs', [$this, 'ajax_export_logs']);
         add_action('wp_ajax_tainacan_ai_get_collection_metadata', [$this, 'ajax_get_collection_metadata']);
         add_action('wp_ajax_tainacan_ai_save_mapping', [$this, 'ajax_save_mapping']);
         add_action('wp_ajax_tainacan_ai_get_mapping', [$this, 'ajax_get_mapping']);
@@ -40,7 +37,7 @@ class AdminPage extends \Tainacan\Pages {
      */
     public function add_admin_menu() {
         $page_suffix = add_submenu_page(
-            $this->tainacan_root_menu_slug,
+            $this->tainacan_other_links_slug,
             __('AI Tools', 'tainacan-ai'),
             '<span class="icon">' . $this->get_ai_icon() . '</span>' .
             '<span class="menu-text">' . __('AI Tools', 'tainacan-ai') . '</span>',
@@ -100,9 +97,7 @@ class AdminPage extends \Tainacan\Pages {
             'nonce' => wp_create_nonce('tainacan_ai_admin_nonce'),
             'collections' => $collections,
             'texts' => [
-                'testing' => __('Testing API...', 'tainacan-ai'),
-                'success' => __('Connection successful!', 'tainacan-ai'),
-                'error' => __('Connection failed. Check your API key.', 'tainacan-ai'),
+                'error' => __('Something went wrong. Please try again.', 'tainacan-ai'),
                 'clearing' => __('Clearing cache...', 'tainacan-ai'),
                 'cacheCleared' => __('Cache cleared successfully!', 'tainacan-ai'),
                 'saving' => __('Saving...', 'tainacan-ai'),
@@ -126,9 +121,6 @@ class AdminPage extends \Tainacan\Pages {
                 'useDefaultPrompt' => __('Leave blank to use default prompt...', 'tainacan-ai'),
                 'suggestionGenerated' => __('Suggestion generated! Review, adjust and click "Save Prompt".', 'tainacan-ai'),
                 'errorGeneratingSuggestion' => __('Error generating suggestion.', 'tainacan-ai'),
-                'close' => __('Close', 'tainacan-ai'),
-                'copy' => __('Copy', 'tainacan-ai'),
-                'copied' => __('Copied!', 'tainacan-ai'),
                 'title' => __('Title', 'tainacan-ai'),
                 'description' => __('Description', 'tainacan-ai'),
                 'author' => __('Author', 'tainacan-ai'),
@@ -199,31 +191,6 @@ class AdminPage extends \Tainacan\Pages {
     public function validate_options($input) {
         $options = get_option('tainacan_ai_options', []);
 
-        // AI Provider
-        if (isset($input['ai_provider'])) {
-            $valid_providers = ['openai', 'gemini', 'deepseek', 'ollama'];
-            $options['ai_provider'] = in_array($input['ai_provider'], $valid_providers)
-                ? $input['ai_provider']
-                : 'openai';
-        }
-
-        // Text fields (API keys and models)
-        $text_fields = [
-            'api_key',           // OpenAI
-            'model',             // OpenAI
-            'gemini_api_key',    // Gemini
-            'gemini_model',      // Gemini
-            'deepseek_api_key',  // DeepSeek
-            'deepseek_model',    // DeepSeek
-            'ollama_url',        // Ollama
-            'ollama_model',      // Ollama
-        ];
-        foreach ($text_fields as $field) {
-            if (isset($input[$field])) {
-                $options[$field] = sanitize_text_field($input[$field]);
-            }
-        }
-
         // Long text fields (prompts)
         $textarea_fields = ['default_image_prompt', 'default_document_prompt'];
         foreach ($textarea_fields as $field) {
@@ -246,7 +213,7 @@ class AdminPage extends \Tainacan\Pages {
         }
 
         // Checkboxes
-        $checkbox_fields = ['extract_exif', 'auto_map_metadata', 'consent_required', 'log_enabled', 'cost_tracking'];
+        $checkbox_fields = ['extract_exif', 'auto_map_metadata', 'consent_required'];
         foreach ($checkbox_fields as $field) {
             $options[$field] = !empty($input[$field]);
         }
@@ -259,63 +226,8 @@ class AdminPage extends \Tainacan\Pages {
      */
     public function render_page_content() {
         $options = get_option('tainacan_ai_options', []);
-        $logger = new UsageLogger();
-        $stats = $logger->get_stats('month');
 
         include TAINACAN_AI_PLUGIN_DIR . 'includes/admin/admin-page.php';
-    }
-
-    /**
-     * Test API connection
-     */
-    public function ajax_test_api() {
-        check_ajax_referer('tainacan_ai_admin_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        $provider = sanitize_text_field($_POST['provider'] ?? 'openai');
-        $options = get_option('tainacan_ai_options', []);
-
-        // Determine which key and model to use based on provider
-        switch ($provider) {
-            case 'gemini':
-                $api_key = $options['gemini_api_key'] ?? '';
-                $model = $options['gemini_model'] ?? 'gemini-1.5-pro';
-                break;
-            case 'deepseek':
-                $api_key = $options['deepseek_api_key'] ?? '';
-                $model = $options['deepseek_model'] ?? 'deepseek-chat';
-                break;
-            case 'ollama':
-                $api_key = $options['ollama_url'] ?? 'http://localhost:11434';
-                $model = $options['ollama_model'] ?? 'llama3.2';
-                break;
-            case 'openai':
-            default:
-                $api_key = $options['api_key'] ?? '';
-                $model = $options['model'] ?? 'gpt-4o';
-                break;
-        }
-
-        // Ollama doesn't need API key, but needs URL
-        if ($provider !== 'ollama' && empty($api_key)) {
-            wp_send_json_error(__('API key not configured. Save settings first.', 'tainacan-ai'));
-        }
-
-        if ($provider === 'ollama' && empty($api_key)) {
-            $api_key = 'http://localhost:11434';
-        }
-
-        // Use factory to test provider
-        $result = \Tainacan\AI\AI\AIProviderFactory::test_provider($provider, $api_key, $model);
-
-        if ($result['success']) {
-            wp_send_json_success(['message' => $result['message']]);
-        } else {
-            wp_send_json_error(['message' => $result['message']]);
-        }
     }
 
     /**
@@ -336,41 +248,6 @@ class AdminPage extends \Tainacan\Pages {
             /* translators: %d: number of cache entries removed */
             sprintf(__('Cache cleared! %d entries removed.', 'tainacan-ai'), $deleted)
         );
-    }
-
-    /**
-     * Get statistics
-     */
-    public function ajax_get_stats() {
-        check_ajax_referer('tainacan_ai_admin_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        $period = sanitize_text_field($_POST['period'] ?? 'month');
-        $logger = new UsageLogger();
-
-        wp_send_json_success([
-            'stats' => $logger->get_stats($period),
-            'daily' => $logger->get_daily_usage(30),
-        ]);
-    }
-
-    /**
-     * Export logs
-     */
-    public function ajax_export_logs() {
-        check_ajax_referer('tainacan_ai_admin_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        $logger = new UsageLogger();
-        $csv = $logger->export_csv();
-
-        wp_send_json_success(['csv' => $csv]);
     }
 
     /**

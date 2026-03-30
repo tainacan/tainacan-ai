@@ -26,7 +26,9 @@ abstract class AbstractAIProvider implements AIProviderInterface {
      */
     public function configure(array $options): void {
         $this->api_key = $options['api_key'] ?? '';
-        $this->model = $options['model'] ?? $this->get_default_model();
+        $this->model = !empty($options['model'])
+            ? (string) $options['model']
+            : $this->get_default_model();
         $this->max_tokens = (int) ($options['max_tokens'] ?? 2000);
         $this->temperature = (float) ($options['temperature'] ?? 0.1);
         $this->timeout = (int) ($options['timeout'] ?? 120);

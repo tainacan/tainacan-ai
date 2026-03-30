@@ -18,3 +18,6 @@ $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_time
 
 // Remove custom mappings
 $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE 'tainacan_ai_mapping_%'");
+
+// Legacy alpha table (no longer created on activate)
+$wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}tainacan_ai_logs");

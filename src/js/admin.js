@@ -8,44 +8,14 @@
 	const Admin = {
 		init() {
 			this.bindEvents();
+			this.syncCollapsedCardStates();
 			this.populateCollections();
 			this.populateMappingCollections();
-			this.initProviderSelector();
 			this.collectionMetadata = [];
 			this.currentMapping = {};
 		},
 
 		bindEvents() {
-			// Provider selection
-			$( 'input[name="tainacan_ai_options[ai_provider]"]' ).on(
-				'change',
-				this.handleProviderChange.bind( this )
-			);
-
-			// Provider option click (to select via label)
-			$( '.tainacan-ai-provider-option' ).on( 'click', function () {
-				$( this )
-					.find( 'input[type="radio"]' )
-					.prop( 'checked', true )
-					.trigger( 'change' );
-				$( '.tainacan-ai-provider-option' ).removeClass( 'selected' );
-				$( this ).addClass( 'selected' );
-			} );
-
-			// API Key toggles (multiple)
-			$( document ).on(
-				'click',
-				'.toggle-password',
-				this.toggleApiKeyVisibility
-			);
-
-			// Test API (multiple providers)
-			$( document ).on(
-				'click',
-				'.test-api-btn',
-				this.testProviderConnection.bind( this )
-			);
-
 			// Clear cache
 			$( '#clear-all-cache' ).on(
 				'click',
@@ -77,13 +47,6 @@
 				this.generatePromptSuggestion.bind( this )
 			);
 
-			// Dependencies help buttons
-			$( document ).on(
-				'click',
-				'.tainacan-ai-dep-help',
-				this.showInstallHelp.bind( this )
-			);
-
 			// Field Mapping
 			$( '#mapping-collection-select' ).on(
 				'change',
@@ -107,133 +70,6 @@
 				'.remove-mapping-row',
 				this.removeMappingRow.bind( this )
 			);
-
-			// Modal close
-			$( document ).on(
-				'click',
-				'.tainacan-ai-modal-close, .tainacan-ai-modal-overlay',
-				this.closeModal.bind( this )
-			);
-			$( document ).on( 'click', '.tainacan-ai-modal', function ( e ) {
-				e.stopPropagation();
-			} );
-
-			// Install tabs
-			$( document ).on(
-				'click',
-				'.tainacan-ai-install-tab',
-				this.switchInstallTab.bind( this )
-			);
-
-			// Copy code
-			$( document ).on(
-				'click',
-				'.tainacan-ai-copy-code',
-				this.copyCode.bind( this )
-			);
-		},
-
-		initProviderSelector() {
-			// Show selected provider configuration
-			const selectedProvider = $(
-				'input[name="tainacan_ai_options[ai_provider]"]:checked'
-			).val();
-			if ( selectedProvider ) {
-				this.showProviderConfig( selectedProvider );
-			}
-		},
-
-		handleProviderChange( e ) {
-			const provider = $( e.target ).val();
-			this.showProviderConfig( provider );
-		},
-
-		showProviderConfig( provider ) {
-			// Hide all provider configurations
-			$( '.tainacan-ai-provider-config' ).hide();
-
-			// Show only the selected provider's configuration
-			$( `#provider-config-${ provider }` ).show();
-		},
-
-		toggleApiKeyVisibility( e ) {
-			e.preventDefault();
-			const $btn = $( e.currentTarget );
-			const targetId = $btn.data( 'target' );
-			const $input = targetId
-				? $( `#${ targetId }` )
-				: $btn.siblings( 'input[type="password"], input[type="text"]' );
-			const $icon = $btn.find( '.dashicons' );
-
-			if ( $input.attr( 'type' ) === 'password' ) {
-				$input.attr( 'type', 'text' );
-				$icon
-					.removeClass( 'dashicons-visibility' )
-					.addClass( 'dashicons-hidden' );
-			} else {
-				$input.attr( 'type', 'password' );
-				$icon
-					.removeClass( 'dashicons-hidden' )
-					.addClass( 'dashicons-visibility' );
-			}
-		},
-
-		testProviderConnection( e ) {
-			e.preventDefault();
-			const $btn = $( e.currentTarget );
-			const provider = $btn.data( 'provider' );
-			const $result = $(
-				`.api-test-result[data-provider="${ provider }"]`
-			);
-			const originalHtml = $btn.html();
-
-			$btn.prop( 'disabled', true ).html(
-				'<span class="dashicons dashicons-update spin"></span> ' +
-					TainacanAIAdmin.texts.testing
-			);
-			$result
-				.removeClass( 'success error' )
-				.addClass( 'loading' )
-				.html(
-					'<span class="tainacan-ai-spinner"></span> ' +
-						TainacanAIAdmin.texts.testing
-				)
-				.show();
-
-			$.ajax( {
-				url: TainacanAIAdmin.ajaxUrl,
-				type: 'POST',
-				data: {
-					action: 'tainacan_ai_test_api',
-					nonce: TainacanAIAdmin.nonce,
-					provider: provider,
-				},
-				success( response ) {
-					$result.removeClass( 'loading' );
-					if ( response.success ) {
-						const message =
-							typeof response.data === 'object'
-								? response.data.message
-								: response.data;
-						$result.addClass( 'success' ).html( '✓ ' + message );
-					} else {
-						const message =
-							typeof response.data === 'object'
-								? response.data.message || response.data
-								: response.data;
-						$result.addClass( 'error' ).html( '✗ ' + message );
-					}
-				},
-				error() {
-					$result
-						.removeClass( 'loading' )
-						.addClass( 'error' )
-						.html( '✗ ' + TainacanAIAdmin.texts.error );
-				},
-				complete() {
-					$btn.prop( 'disabled', false ).html( originalHtml );
-				},
-			} );
 		},
 
 		clearAllCache() {
@@ -286,9 +122,20 @@
 			const $icon = $( this ).find( '.dashicons' );
 
 			$body.toggleClass( 'collapsed' );
+			$card.toggleClass( 'is-collapsed', $body.hasClass( 'collapsed' ) );
 			$icon.toggleClass(
 				'dashicons-arrow-down-alt2 dashicons-arrow-up-alt2'
 			);
+		},
+
+		syncCollapsedCardStates() {
+			$( '.tainacan-ai-card' ).each( function () {
+				const $card = $( this );
+				const isCollapsed = $card
+					.find( '.tainacan-ai-collapsible' )
+					.hasClass( 'collapsed' );
+				$card.toggleClass( 'is-collapsed', isCollapsed );
+			} );
 		},
 
 		populateCollections() {
@@ -455,7 +302,7 @@
 								? `<button type="button" class="button button-small remove-mapping-row" title="${ TainacanAIAdmin.texts.remove || 'Remove' }">
                                 <span class="dashicons dashicons-no-alt"></span>
                             </button>`
-								: ''
+								: '<span class="tainacan-ai-mapping-action-slot" aria-hidden="true"></span>'
 						}
                     </div>
                 `;
@@ -817,318 +664,6 @@
 				complete() {
 					$btn.prop( 'disabled', false ).html( originalHtml );
 				},
-			} );
-		},
-
-		showInstallHelp( e ) {
-			const depType = $( e.currentTarget ).data( 'dep' );
-			const modal = this.getInstallModal( depType );
-			$( 'body' ).append( modal );
-		},
-
-		getInstallModal( depType ) {
-			const instructions = {
-				pdfparser: {
-					title: 'Instalar PDF Parser (smalot/pdfparser)',
-					description:
-						'Biblioteca PHP para extração de texto de PDFs. Necessária para análise de documentos PDF.',
-					tabs: [
-						{
-							id: 'localhost',
-							name: 'Localhost (XAMPP/WAMP)',
-							content: `
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">1</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Abra o terminal/CMD na pasta do plugin</h4>
-                                        <p>Navegue até a pasta do plugin no seu computador.</p>
-                                        <div class="tainacan-ai-code-block">
-                                            <button class="tainacan-ai-copy-code">${ TainacanAIAdmin.texts.copy || 'Copy' }</button>
-                                            <code>cd C:\\xampp\\htdocs\\seu-site\\wp-content\\plugins\\tainacan-ai</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">2</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Execute o Composer</h4>
-                                        <p>Se não tiver o Composer, baixe em <a href="https://getcomposer.org/download/" target="_blank">getcomposer.org</a></p>
-                                        <div class="tainacan-ai-code-block">
-                                            <button class="tainacan-ai-copy-code">${ TainacanAIAdmin.texts.copy || 'Copy' }</button>
-                                            <code>composer require smalot/pdfparser</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">3</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Verifique a instalação</h4>
-                                        <p>Uma pasta "vendor" será criada no plugin. Recarregue esta página para verificar.</p>
-                                    </div>
-                                </div>
-                            `,
-						},
-						{
-							id: 'hostinger',
-							name: 'Hostinger',
-							content: `
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">1</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Acesse o Terminal SSH</h4>
-                                        <p>No painel da Hostinger, vá em <strong>Avançado → Terminal SSH</strong> ou use um cliente SSH como PuTTY.</p>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">2</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Navegue até a pasta do plugin</h4>
-                                        <div class="tainacan-ai-code-block">
-                                            <button class="tainacan-ai-copy-code">${ TainacanAIAdmin.texts.copy || 'Copy' }</button>
-                                            <code>cd ~/public_html/wp-content/plugins/tainacan-ai</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">3</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Execute o Composer</h4>
-                                        <p>A Hostinger já possui o Composer instalado.</p>
-                                        <div class="tainacan-ai-code-block">
-                                            <button class="tainacan-ai-copy-code">${ TainacanAIAdmin.texts.copy || 'Copy' }</button>
-                                            <code>composer require smalot/pdfparser</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-warning-box">
-                                    <span class="dashicons dashicons-warning"></span>
-                                    <p>Se receber erro de memória, tente: <code>php -d memory_limit=512M /usr/bin/composer require smalot/pdfparser</code></p>
-                                </div>
-                            `,
-						},
-						{
-							id: 'cpanel',
-							name: 'cPanel / Outros',
-							content: `
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">1</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Acesse o Terminal SSH</h4>
-                                        <p>No cPanel, procure por "Terminal" ou use um cliente SSH.</p>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">2</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Navegue até a pasta do plugin</h4>
-                                        <div class="tainacan-ai-code-block">
-                                            <button class="tainacan-ai-copy-code">${ TainacanAIAdmin.texts.copy || 'Copy' }</button>
-                                            <code>cd public_html/wp-content/plugins/tainacan-ai</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">3</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Instale o Composer (se necessário)</h4>
-                                        <div class="tainacan-ai-code-block">
-                                            <button class="tainacan-ai-copy-code">${ TainacanAIAdmin.texts.copy || 'Copy' }</button>
-                                            <code>curl -sS https://getcomposer.org/installer | php</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">4</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Execute o Composer</h4>
-                                        <div class="tainacan-ai-code-block">
-                                            <button class="tainacan-ai-copy-code">${ TainacanAIAdmin.texts.copy || 'Copy' }</button>
-                                            <code>php composer.phar require smalot/pdfparser</code>
-                                        </div>
-                                    </div>
-                                </div>
-                            `,
-						},
-						{
-							id: 'manual',
-							name: 'Manual (FTP)',
-							content: `
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">1</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Instale localmente no seu computador</h4>
-                                        <p>Execute em uma pasta temporária:</p>
-                                        <div class="tainacan-ai-code-block">
-                                            <button class="tainacan-ai-copy-code">${ TainacanAIAdmin.texts.copy || 'Copy' }</button>
-                                            <code>composer require smalot/pdfparser</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">2</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Envie a pasta "vendor" via FTP</h4>
-                                        <p>Use FileZilla ou outro cliente FTP para enviar a pasta "vendor" gerada para:</p>
-                                        <div class="tainacan-ai-code-block">
-                                            <code>/wp-content/plugins/tainacan-ai/vendor/</code>
-                                        </div>
-                                    </div>
-                                </div>
-                            `,
-						},
-					],
-				},
-				exif: {
-					title: 'Habilitar Extensão EXIF do PHP',
-					description:
-						'A extensão EXIF permite extrair metadados técnicos de imagens (câmera, data, GPS, etc).',
-					tabs: [
-						{
-							id: 'localhost',
-							name: 'Localhost (XAMPP)',
-							content: `
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">1</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Abra o arquivo php.ini</h4>
-                                        <p>Localização típica no XAMPP:</p>
-                                        <div class="tainacan-ai-code-block">
-                                            <code>C:\\xampp\\php\\php.ini</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">2</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Descomente a linha da extensão EXIF</h4>
-                                        <p>Procure por <code>;extension=exif</code> e remova o ponto-e-vírgula:</p>
-                                        <div class="tainacan-ai-code-block">
-                                            <code>extension=exif</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">3</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Reinicie o Apache</h4>
-                                        <p>Pare e inicie novamente o Apache no Painel de Controle do XAMPP.</p>
-                                    </div>
-                                </div>
-                            `,
-						},
-						{
-							id: 'hostinger',
-							name: 'Hostinger',
-							content: `
-                                <div class="tainacan-ai-prompt-info">
-                                    <span class="dashicons dashicons-yes-alt"></span>
-                                    <p><strong>Boa notícia!</strong> A Hostinger geralmente já tem a extensão EXIF habilitada por padrão.</p>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">1</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Verifique no painel</h4>
-                                        <p>Acesse <strong>Avançado → Configuração PHP</strong> e procure pela extensão EXIF.</p>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">2</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Se não estiver habilitada</h4>
-                                        <p>Entre em contato com o suporte da Hostinger para solicitar a ativação da extensão EXIF.</p>
-                                    </div>
-                                </div>
-                            `,
-						},
-						{
-							id: 'cpanel',
-							name: 'cPanel',
-							content: `
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">1</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Acesse o Seletor de PHP</h4>
-                                        <p>No cPanel, procure por <strong>"Select PHP Version"</strong> ou <strong>"MultiPHP INI Editor"</strong>.</p>
-                                    </div>
-                                </div>
-                                <div class="tainacan-ai-step">
-                                    <div class="tainacan-ai-step-number">2</div>
-                                    <div class="tainacan-ai-step-content">
-                                        <h4>Habilite a extensão EXIF</h4>
-                                        <p>Na lista de extensões, marque a caixa <strong>exif</strong> e salve.</p>
-                                    </div>
-                                </div>
-                            `,
-						},
-					],
-				},
-			};
-
-			const dep = instructions[ depType ];
-			if ( ! dep ) return '';
-
-			let tabsHtml = '';
-			let contentHtml = '';
-
-			dep.tabs.forEach( ( tab, index ) => {
-				tabsHtml += `<button class="tainacan-ai-install-tab ${
-					index === 0 ? 'active' : ''
-				}" data-tab="${ tab.id }">${ tab.name }</button>`;
-				contentHtml += `<div class="tainacan-ai-install-content ${
-					index === 0 ? 'active' : ''
-				}" data-content="${ tab.id }">${ tab.content }</div>`;
-			} );
-
-			return `
-                <div class="tainacan-ai-modal-overlay">
-                    <div class="tainacan-ai-modal">
-                        <div class="tainacan-ai-modal-header">
-                            <h3><span class="dashicons dashicons-admin-tools"></span> ${ dep.title }</h3>
-                            <button class="tainacan-ai-modal-close">&times;</button>
-                        </div>
-                        <div class="tainacan-ai-modal-body">
-                            <p>${ dep.description }</p>
-                            <div class="tainacan-ai-install-tabs">${ tabsHtml }</div>
-                            ${ contentHtml }
-                        </div>
-                        <div class="tainacan-ai-modal-footer">
-                            <button class="button tainacan-ai-modal-close">${ TainacanAIAdmin.texts.close || 'Close' }</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-		},
-
-		closeModal( e ) {
-			if (
-				$( e.target ).hasClass( 'tainacan-ai-modal-overlay' ) ||
-				$( e.target ).hasClass( 'tainacan-ai-modal-close' ) ||
-				$( e.target ).parent().hasClass( 'tainacan-ai-modal-close' )
-			) {
-				$( '.tainacan-ai-modal-overlay' ).remove();
-			}
-		},
-
-		switchInstallTab( e ) {
-			const tabId = $( e.currentTarget ).data( 'tab' );
-			$( '.tainacan-ai-install-tab' ).removeClass( 'active' );
-			$( e.currentTarget ).addClass( 'active' );
-			$( '.tainacan-ai-install-content' ).removeClass( 'active' );
-			$(
-				`.tainacan-ai-install-content[data-content="${ tabId }"]`
-			).addClass( 'active' );
-		},
-
-		copyCode( e ) {
-			const $block = $( e.currentTarget ).closest(
-				'.tainacan-ai-code-block'
-			);
-			const code = $block.find( 'code' ).text();
-
-			navigator.clipboard.writeText( code ).then( () => {
-				const $btn = $( e.currentTarget );
-				$btn.text( TainacanAIAdmin.texts.copied || 'Copied!' );
-				setTimeout( () => $btn.text( TainacanAIAdmin.texts.copy || 'Copy' ), 2000 );
 			} );
 		},
 
