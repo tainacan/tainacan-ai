@@ -47,7 +47,7 @@ class ItemFormHook {
         }
 
         $options = \Tainacan_AI::get_options();
-        $is_configured = !empty($options['api_key']);
+        $is_configured = CoreAI::is_supported_text_generation();
 
         ob_start();
         ?>
@@ -81,9 +81,9 @@ class ItemFormHook {
                         <?php
                         echo wp_kses_post(
                             sprintf(
-                                /* translators: %s: link to AI Tools settings page */
-                                __('Configure your API key in <a href="%s">Tainacan > AI Tools</a> to use automatic extraction.', 'tainacan-ai'),
-                                esc_url(admin_url('admin.php?page=tainacan_ai'))
+                                /* translators: %s: link to WordPress Connectors screen */
+                                __('Configure AI connectors in <a href="%s">WordPress Settings &rarr; Connectors</a> to use automatic extraction.', 'tainacan-ai'),
+                                esc_url(admin_url('options-connectors.php'))
                             )
                         ); ?>
                     </p>
@@ -139,7 +139,6 @@ class ItemFormHook {
                     </div>
                     <!-- Hidden elements for compatibility -->
                     <span id="tainacan-ai-cache-badge" style="display: none;"></span>
-                    <span id="tainacan-ai-model" style="display: none;"></span>
                     <span id="tainacan-ai-tokens" style="display: none;"></span>
                     <div id="tainacan-ai-results-content" style="display: none;"></div>
                 </div>
@@ -215,7 +214,6 @@ class ItemFormHook {
                 'cacheCleared' => __('Cache cleared!', 'tainacan-ai'),
                 'clearing' => __('Clearing...', 'tainacan-ai'),
                 'tokens' => __('tokens', 'tainacan-ai'),
-                'model' => __('Model', 'tainacan-ai'),
                 'image' => __('Image', 'tainacan-ai'),
                 'pdf' => __('PDF', 'tainacan-ai'),
                 'text' => __('Text', 'tainacan-ai'),

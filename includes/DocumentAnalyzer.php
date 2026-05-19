@@ -5,16 +5,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use Tainacan\AI\AI\AIProviderFactory;
-use Tainacan\AI\AI\AIProviderInterface;
 use Tainacan\AI\PdfParser\PdfParser;
 use Tainacan\AI\PdfParser\PdfToImage;
 
 /**
- * Document analyzer using multiple AI providers
+ * Document analyzer using WordPress Core AI Client
  *
  * Analyzes images and documents extracting metadata via AI.
- * Supports OpenAI, Google Gemini and DeepSeek.
+ * Uses `wp_ai_client_prompt()` through `CoreAI`.
  *
  * @since 1.0.0 - Support for multiple AI providers
  */
@@ -25,8 +23,6 @@ class DocumentAnalyzer {
     private ?int $item_id = null;
     private ExifExtractor $exif_extractor;
     private CollectionPrompts $collection_prompts;
-    private UsageLogger $logger;
-    private ?AIProviderInterface $provider = null;
 
     /**
      * Supported MIME types
@@ -51,7 +47,6 @@ class DocumentAnalyzer {
         $this->options = \Tainacan_AI::get_options();
         $this->exif_extractor = new ExifExtractor();
         $this->collection_prompts = new CollectionPrompts();
-        $this->logger = new UsageLogger();
     }
 
     /**
@@ -64,37 +59,13 @@ class DocumentAnalyzer {
     }
 
     /**
-     * Get configured AI provider
-     */
-    private function get_provider(): ?AIProviderInterface {
-        if ($this->provider === null) {
-            $this->provider = AIProviderFactory::create_from_options();
-        }
-        return $this->provider;
-    }
-
-    /**
      * Analyze an attachment
      */
     public function analyze(int $attachment_id, bool $include_exif = true): array|\WP_Error {
-        // Get provider
-        $provider = $this->get_provider();
-
-        if (!$provider) {
+        if (!CoreAI::is_supported_text_generation()) {
             return new \WP_Error(
-                'no_provider',
-                __('No AI provider configured. Go to Tainacan > AI Tools to configure.', 'tainacan-ai')
-            );
-        }
-
-        if (!$provider->is_configured()) {
-            return new \WP_Error(
-                'no_api_key',
-                sprintf(
-                    /* translators: %s: provider name */
-                    __('%s API key not configured. Go to Tainacan > AI Tools to configure.', 'tainacan-ai'),
-                    $provider->get_name()
-                )
+                'no_core_ai',
+                __('WordPress Core AI Client is not available or not configured.', 'tainacan-ai')
             );
         }
 
@@ -174,7 +145,15 @@ class DocumentAnalyzer {
 
         // Check for error in AI analysis
         if (is_wp_error($ai_result)) {
-            $this->log_analysis($attachment_id, $document_type, 'error', $ai_result->get_error_message());
+            $this->debug_log_request_summary(
+                $attachment_id,
+                $document_type,
+                'error',
+                0,
+                '',
+                '',
+                $ai_result->get_error_message()
+            );
             return $ai_result;
         }
 
@@ -183,51 +162,65 @@ class DocumentAnalyzer {
         $result['document_type'] = $document_type;
         $result['extraction_method'] = $extraction_method;
         $result['tokens_used'] = $ai_result['usage']['total_tokens'] ?? 0;
-        $result['model'] = $ai_result['model'] ?? '';
-        $result['provider'] = $ai_result['provider'] ?? $provider->get_id();
         $result['analyzed_at'] = current_time('mysql');
 
-        // Success log
-        $cost = $provider->calculate_cost($ai_result['usage'] ?? [], $result['model']);
-        $this->log_analysis($attachment_id, $document_type, 'success', null, $result['tokens_used'], $cost, $result['model']);
+        $this->debug_log_request_summary(
+            $attachment_id,
+            $document_type,
+            'success',
+            (int) $result['tokens_used'],
+            (string) ($ai_result['model'] ?? ''),
+            (string) ($ai_result['provider'] ?? ''),
+            null
+        );
 
         return $result;
     }
 
     /**
-     * Log analysis
+     * One-line server log when WP_DEBUG is on (no prompt or response body).
      */
-    private function log_analysis(
+    private function debug_log_request_summary(
         int $attachment_id,
         string $document_type,
         string $status,
-        ?string $error_message = null,
-        int $tokens_used = 0,
-        float $cost = 0,
-        string $model = ''
+        int $tokens_used,
+        string $model,
+        string $provider,
+        ?string $error_message
     ): void {
-        $provider = $this->get_provider();
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
 
-        $this->logger->log([
-            'user_id' => get_current_user_id(),
-            'item_id' => $this->item_id,
-            'collection_id' => $this->collection_id,
-            'attachment_id' => $attachment_id,
-            'document_type' => $document_type,
-            'model' => $model ?: ($provider ? $provider->get_default_model() : 'unknown'),
-            'provider' => $provider ? $provider->get_id() : 'openai',
-            'tokens_used' => $tokens_used,
-            'cost' => $cost,
-            'status' => $status,
-            'error_message' => $error_message,
-        ]);
+        $parts = [
+            '[TainacanAI]',
+            'analysis',
+            'attachment_id=' . $attachment_id,
+            'item_id=' . ($this->item_id ?? '0'),
+            'collection_id=' . ($this->collection_id ?? '0'),
+            'document_type=' . $document_type,
+            'status=' . $status,
+            'tokens=' . $tokens_used,
+        ];
+        if ($provider !== '') {
+            $parts[] = 'provider=' . $provider;
+        }
+        if ($model !== '') {
+            $parts[] = 'model=' . $model;
+        }
+        if ($error_message !== null && $error_message !== '') {
+            $parts[] = 'error=' . preg_replace('/\s+/', ' ', $error_message);
+        }
+
+        error_log(implode(' ', $parts));
     }
 
     /**
      * Smart PDF analysis with multiple fallbacks
      */
     private function analyze_pdf_smart(string $file_path): array {
-        $provider = $this->get_provider();
+        $core_supports_image = CoreAI::is_supported_image_analysis();
 
         // Method 1: Text extraction (faster and cheaper)
         $text = $this->extract_pdf_text($file_path);
@@ -241,7 +234,7 @@ class DocumentAnalyzer {
         }
 
         // Method 2: Convert to image and visual analysis (if provider supports)
-        if ($provider && $provider->supports_vision()) {
+        if ($core_supports_image) {
             $visual_result = $this->analyze_pdf_visually($file_path);
 
             if (!is_wp_error($visual_result)) {
@@ -261,11 +254,9 @@ class DocumentAnalyzer {
             $error_msg .= __('PDF does not contain extractable text. ', 'tainacan-ai');
         }
 
-        if ($provider && !$provider->supports_vision()) {
+        if (!$core_supports_image) {
             $error_msg .= sprintf(
-                /* translators: %s: provider name */
-                __('Provider %s does not support visual image analysis.', 'tainacan-ai'),
-                $provider->get_name()
+                __('Core AI does not support image analysis on this site. ', 'tainacan-ai')
             );
         }
 
@@ -279,15 +270,6 @@ class DocumentAnalyzer {
      * Analyze PDF visually (for scanned PDFs)
      */
     private function analyze_pdf_visually(string $file_path): array|\WP_Error {
-        $provider = $this->get_provider();
-
-        if (!$provider || !$provider->supports_vision()) {
-            return new \WP_Error(
-                'vision_not_supported',
-                __('Current provider does not support visual analysis.', 'tainacan-ai')
-            );
-        }
-
         try {
             $converter = new PdfToImage();
             $converter->setDpi(150)
@@ -326,7 +308,16 @@ class DocumentAnalyzer {
                 ];
             }
 
-            $result = $provider->analyze_images($image_data, $promptWithContext);
+            $generation_options = [
+                'temperature' => (float) ($this->options['temperature'] ?? 0.1),
+                'max_tokens' => (int) ($this->options['max_tokens'] ?? 2000),
+            ];
+
+            $result = CoreAI::generate_json_from_text_and_files(
+                $promptWithContext,
+                $image_data,
+                $generation_options
+            );
 
             // Clean temporary files
             foreach ($images as $image) {
@@ -349,19 +340,11 @@ class DocumentAnalyzer {
      * Analyze image
      */
     private function analyze_image(int $attachment_id, string $file_path, string $mime_type): array|\WP_Error {
-        $provider = $this->get_provider();
-
-        if (!$provider) {
-            return new \WP_Error('no_provider', __('AI provider not configured.', 'tainacan-ai'));
-        }
-
-        if (!$provider->supports_vision()) {
+        if (!CoreAI::is_supported_image_analysis()) {
             return new \WP_Error(
                 'vision_not_supported',
                 sprintf(
-                    /* translators: %s: provider name */
-                    __('Provider %s does not support image analysis. Use text extraction or choose another provider.', 'tainacan-ai'),
-                    $provider->get_name()
+                    __('Core AI does not support image analysis. Use text extraction or another setup.', 'tainacan-ai')
                 )
             );
         }
@@ -408,24 +391,27 @@ class DocumentAnalyzer {
             return new \WP_Error('no_prompt', __('No prompt configured for image analysis.', 'tainacan-ai'));
         }
 
-        // Debug: Prompt log
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("[TainacanAI] Image prompt length: " . strlen($prompt));
-        }
+        $generation_options = [
+            'temperature' => (float) ($this->options['temperature'] ?? 0.1),
+            'max_tokens' => (int) ($this->options['max_tokens'] ?? 2000),
+        ];
 
-        return $provider->analyze_image($image_data, $prompt);
+        return CoreAI::generate_json_from_text_and_files(
+            $prompt,
+            [
+                [
+                    'data' => $image_data,
+                    'mime' => $mime_type,
+                ],
+            ],
+            $generation_options
+        );
     }
 
     /**
      * Analyze text
      */
     private function analyze_text(string $text): array|\WP_Error {
-        $provider = $this->get_provider();
-
-        if (!$provider) {
-            return new \WP_Error('no_provider', __('AI provider not configured.', 'tainacan-ai'));
-        }
-
         // Sanitize text to valid UTF-8
         $text = $this->sanitize_utf8_string($text);
 
@@ -443,7 +429,14 @@ class DocumentAnalyzer {
             return new \WP_Error('no_prompt', __('No prompt configured for document analysis.', 'tainacan-ai'));
         }
 
-        return $provider->analyze_text($text, $prompt);
+        $full_prompt = $prompt . "\n\n---\n\n**Documento:**\n\n" . $text;
+
+        $generation_options = [
+            'temperature' => (float) ($this->options['temperature'] ?? 0.1),
+            'max_tokens' => (int) ($this->options['max_tokens'] ?? 2000),
+        ];
+
+        return CoreAI::generate_json_from_text($full_prompt, $generation_options);
     }
 
     /**

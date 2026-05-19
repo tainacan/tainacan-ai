@@ -79,20 +79,6 @@ class API {
             'permission_callback' => [$this, 'check_permission'],
         ]);
 
-        // Estatísticas
-        register_rest_route($this->namespace, '/stats', [
-            'methods' => 'GET',
-            'callback' => [$this, 'get_stats'],
-            'permission_callback' => [$this, 'check_admin_permission'],
-            'args' => [
-                'period' => [
-                    'required' => false,
-                    'type' => 'string',
-                    'default' => 'month',
-                ],
-            ],
-        ]);
-
         // Prompts por coleção
         register_rest_route($this->namespace, '/collections/(?P<id>\d+)/prompt', [
             [
@@ -220,13 +206,10 @@ class API {
      * Plugin status
      */
     public function get_status(): \WP_REST_Response {
-        $options = \Tainacan_AI::get_options();
-
         return new \WP_REST_Response([
             'success' => true,
             'data' => [
-                'configured' => !empty($options['api_key']),
-                'model' => $options['model'] ?? 'gpt-4o',
+                'configured' => CoreAI::is_supported_text_generation(),
                 'version' => TAINACAN_AI_VERSION,
             ],
         ], 200);
@@ -254,22 +237,6 @@ class API {
         return new \WP_REST_Response([
             'success' => true,
             'data' => $analyzer->get_supported_types(),
-        ], 200);
-    }
-
-    /**
-     * Get statistics
-     */
-    public function get_stats(\WP_REST_Request $request): \WP_REST_Response {
-        $period = $request->get_param('period');
-        $logger = new UsageLogger();
-
-        return new \WP_REST_Response([
-            'success' => true,
-            'data' => [
-                'stats' => $logger->get_stats($period),
-                'daily' => $logger->get_daily_usage(30),
-            ],
         ], 200);
     }
 

@@ -3,15 +3,15 @@
  * Plugin Name: Tainacan AI
  * Plugin URI: https://github.com/tainacan/tainacan-ai
  * Description: Automated metadata extraction in Tainacan using AI (OpenAI, Gemini, DeepSeek). Supports image analysis, PDF documents, EXIF extraction and custom prompts per collection.
- * Version: 0.0.3
+ * Version: 0.1.0
  * Author: Sigismundo
  * Author URI: https://seu-site.com
  * Text Domain: tainacan-ai
  * Domain Path: /languages
  * License: GPL v2 or later
  * Requires Plugins: tainacan
- * Requires at least: 6.5
- * Tested up to: 6.9
+ * Requires at least: 7.0
+ * Tested up to: 7.0
  * Requires PHP: 8.0
  *
  * @package Tainacan_AI
@@ -22,11 +22,11 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('TAINACAN_AI_VERSION', '0.0.3');
+define('TAINACAN_AI_VERSION', '0.1.0');
 define('TAINACAN_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('TAINACAN_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('TAINACAN_AI_DOMAIN', 'tainacan-ai');
-define('TAINACAN_AI_DB_VERSION', '0.0.1');
+define('TAINACAN_AI_DB_VERSION', '0.1.0');
 
 /**
  * Plugin autoloader
@@ -142,28 +142,6 @@ final class Tainacan_AI {
 
         $charset_collate = $wpdb->get_charset_collate();
 
-        // Usage logs table
-        $table_logs = $wpdb->prefix . 'tainacan_ai_logs';
-        $sql_logs = "CREATE TABLE IF NOT EXISTS $table_logs (
-            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            user_id bigint(20) unsigned NOT NULL,
-            item_id bigint(20) unsigned DEFAULT NULL,
-            collection_id bigint(20) unsigned DEFAULT NULL,
-            attachment_id bigint(20) unsigned NOT NULL,
-            document_type varchar(50) NOT NULL,
-            model varchar(50) NOT NULL,
-            tokens_used int(11) DEFAULT 0,
-            cost decimal(10,6) DEFAULT 0,
-            status varchar(20) NOT NULL DEFAULT 'success',
-            error_message text DEFAULT NULL,
-            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY user_id (user_id),
-            KEY item_id (item_id),
-            KEY collection_id (collection_id),
-            KEY created_at (created_at)
-        ) $charset_collate;";
-
         // Collection prompts table
         $table_prompts = $wpdb->prefix . 'tainacan_ai_collection_prompts';
         $sql_prompts = "CREATE TABLE IF NOT EXISTS $table_prompts (
@@ -181,7 +159,6 @@ final class Tainacan_AI {
         ) $charset_collate;";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql_logs);
         dbDelta($sql_prompts);
 
         update_option('tainacan_ai_db_version', TAINACAN_AI_DB_VERSION);
@@ -192,24 +169,17 @@ final class Tainacan_AI {
      */
     private function set_default_options(): void {
         $default_options = [
-            // AI Provider
-            'ai_provider' => 'openai',
-
             // OpenAI
             'api_key' => '',
-            'model' => 'gpt-4o',
 
             // Google Gemini
             'gemini_api_key' => '',
-            'gemini_model' => 'gemini-1.5-pro',
 
             // DeepSeek
             'deepseek_api_key' => '',
-            'deepseek_model' => 'deepseek-chat',
 
             // Ollama (Local)
             'ollama_url' => 'http://localhost:11434',
-            'ollama_model' => 'llama3.2',
 
             // General settings
             'default_image_prompt' => $this->get_default_image_prompt(),
@@ -221,8 +191,6 @@ final class Tainacan_AI {
             'extract_exif' => true,
             'auto_map_metadata' => false,
             'consent_required' => true,
-            'log_enabled' => true,
-            'cost_tracking' => true,
         ];
 
         $existing = get_option('tainacan_ai_options', []);

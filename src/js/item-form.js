@@ -59,7 +59,6 @@ import { addAction } from '@wordpress/hooks';
 				docType: $( '#tainacan-ai-doc-type' ),
 				docName: $( '#tainacan-ai-doc-name' ),
 				tabExif: $( '#tainacan-ai-tab-exif' ),
-				modelInfo: $( '#tainacan-ai-model' ),
 				tokensInfo: $( '#tainacan-ai-tokens' ),
 				copyAllBtn: $( '#tainacan-ai-copy-all' ),
 			};
@@ -122,10 +121,6 @@ import { addAction } from '@wordpress/hooks';
                         <!-- Content will be inserted here -->
                     </div>
                     <div class="tainacan-ai-sidebar-footer">
-                        <span id="tainacan-ai-panel-model">
-                            <span class="dashicons dashicons-cloud"></span>
-                            <span class="model-name">-</span>
-                        </span>
                         <span id="tainacan-ai-panel-tokens">
                             <span class="dashicons dashicons-performance"></span>
                             <span class="tokens-count">-</span>
@@ -614,12 +609,6 @@ import { addAction } from '@wordpress/hooks';
 				this.elements.results.hide();
 			}
 
-			// Analysis info in sidebar panel
-			if ( result.model ) {
-				$( '#tainacan-ai-panel-model .model-name' ).text(
-					result.model
-				);
-			}
 			if ( result.tokens_used ) {
 				$( '#tainacan-ai-panel-tokens .tokens-count' ).text(
 					`${ result.tokens_used } ${ TainacanAI.texts?.tokens || 'tokens' }`

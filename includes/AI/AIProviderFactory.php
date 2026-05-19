@@ -70,55 +70,6 @@ class AIProviderFactory {
     }
 
     /**
-     * Create provider configured in plugin options
-     */
-    public static function create_from_options(): ?AIProviderInterface {
-        $options = \Tainacan_AI::get_options();
-        $provider_id = $options['ai_provider'] ?? 'openai';
-
-        // Build options for provider
-        $provider_options = [
-            'api_key' => self::get_api_key_for_provider($provider_id, $options),
-            'model' => self::get_model_for_provider($provider_id, $options),
-            'max_tokens' => $options['max_tokens'] ?? 2000,
-            'temperature' => $options['temperature'] ?? 0.1,
-            'timeout' => $options['request_timeout'] ?? 120,
-        ];
-
-        return self::create($provider_id, $provider_options);
-    }
-
-    /**
-     * Get API key for provider
-     */
-    private static function get_api_key_for_provider(string $provider_id, array $options): string {
-        $key_map = [
-            'openai' => 'api_key',
-            'gemini' => 'gemini_api_key',
-            'deepseek' => 'deepseek_api_key',
-            'ollama' => 'ollama_url',
-        ];
-
-        $key_name = $key_map[$provider_id] ?? 'api_key';
-        return $options[$key_name] ?? '';
-    }
-
-    /**
-     * Get model for provider
-     */
-    private static function get_model_for_provider(string $provider_id, array $options): string {
-        $model_map = [
-            'openai' => 'model',
-            'gemini' => 'gemini_model',
-            'deepseek' => 'deepseek_model',
-            'ollama' => 'ollama_model',
-        ];
-
-        $model_key = $model_map[$provider_id] ?? 'model';
-        return $options[$model_key] ?? '';
-    }
-
-    /**
      * Return list of available providers
      */
     public static function get_available_providers(): array {

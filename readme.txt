@@ -1,56 +1,53 @@
 === Tainacan AI ===
 Contributors: Sigismundo, tainacan, wetah, daltonmartins, vnmedeiros
 Tags: tainacan, ai, cataloging, museums, image-analysis
-Requires at least: 6.5
-Tested up to: 6.9
+Requires at least: 7.0
+Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.0.3
+Stable tag: 0.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automated metadata extraction in Tainacan using AI. Supports multiple providers including OpenAI, Google Gemini, DeepSeek, and Ollama (local).
+Automated metadata extraction in Tainacan using WordPress AI and Connectors. Prompts, mapping, and analysis are integrated into Tainacan.
 
 == Description ==
 
-Tainacan AI extends the Tainacan plugin with powerful artificial intelligence capabilities for automated metadata extraction from images and documents. Perfect for museums, archives, libraries, and digital repositories looking to accelerate cataloging workflows.
+Tainacan AI extends the [Tainacan](https://wordpress.org/plugins/tainacan/) plugin with AI-assisted metadata extraction from images and documents. It is intended for museums, archives, libraries, and digital repositories that want to speed up cataloging while keeping control of prompts and field mapping.
+
+**AI access** is provided by **WordPress AI** through **Settings → Connectors** (WordPress 7.0+). This plugin does not store API keys for OpenAI, Gemini, or other vendors in its own settings screen; which model or service runs depends on your site’s connector configuration.
 
 = Key Features =
 
-* **Multiple AI Providers**: Choose from OpenAI (GPT-4o with Vision), Google Gemini, DeepSeek (cost-effective alternative), or Ollama (free local deployment)
-* **Image Analysis**: Extract detailed metadata from images including artistic techniques, materials, creation dates, and conservation status
-* **Document Analysis**: Extract bibliographic information, keywords, abstracts, and structured data from PDFs, TXT, and HTML files
-* **Custom Prompts per Collection**: Configure specialized prompts for different types of collections and metadata schemas
-* **Automatic Metadata Mapping**: Map AI-extracted fields to your Tainacan metadata automatically
-* **EXIF Data Extraction**: Automatic extraction of technical metadata from image files
-* **PDF Support**: Text extraction and visual analysis for scanned PDF documents
-* **Smart Caching**: Avoid repeated API calls with intelligent caching system
-* **Usage Tracking**: Monitor API usage, costs, and success rates
-* **REST API**: Integrate with external systems via REST endpoints
-* **WP Consent API**: GDPR-compliant data handling integration
+* **WordPress AI & Connectors**: Uses the site’s configured AI connectors
+* **Image analysis**: Extract structured metadata from images when your connector supports it
+* **Document analysis**: Extract bibliographic-style or custom JSON fields from PDFs, TXT, and HTML
+* **Custom prompts per collection**: Specialized prompts for different collections and schemas
+* **Metadata mapping**: Map AI output keys to Tainacan metadata for fill workflows
+* **EXIF data extraction**: Optional technical metadata from image files (when the server supports it)
+* **PDF support**: Text extraction via bundled parser; optional visual analysis depends on Imagick/Ghostscript and the connector
+* **Smart caching**: Reduce repeat analysis with caching and a manual clear action
+* **WP Consent API**: Optional consent gate for AI-powered actions (when enabled in settings)
 
 = Supported Formats =
 
 * **Images**: JPG, PNG, GIF, WebP
-* **Documents**: PDF (with text and visual analysis), TXT, HTML
+* **Documents**: PDF (text and optional visual analysis), TXT, HTML
 
 = How It Works =
 
-1. Upload an image or document to a Tainacan item
-2. Click "Analyze Document" in the item edit form
-3. AI extracts structured metadata based on your prompts
-4. Review and map extracted fields to Tainacan metadata
-5. Fill metadata fields automatically or manually
+1. Configure **AI connectors** under **Settings → Connectors** in WordPress
+2. Optionally set default prompts, features, and mapping under **Tainacan → Others → AI Tools**
+3. Upload an image or document to a Tainacan item
+4. Click **Analyze Document** in the item edit form
+5. Review extracted fields and map or fill Tainacan metadata
 
-= AI Providers =
+= AI configuration =
 
-* **OpenAI**: GPT-4o with Vision support for images and documents
-* **Google Gemini**: Gemini 1.5 Pro with Vision capabilities
-* **DeepSeek**: Cost-effective alternative (text-only documents)
-* **Ollama**: Free, local AI deployment with models like Llama, Mistral, and LLaVA
+Connectors and credentials are managed in **Settings → Connectors**. The plugin relies on WordPress to choose an appropriate connector/model for each request; you do not pick a legacy “provider card” inside Tainacan AI.
 
 = Customization =
 
-Configure custom prompts for each collection, enabling domain-specific metadata extraction tailored to your cataloging needs. Map AI output to your Tainacan metadata schema for seamless integration.
+Configure default and per-collection prompts, toggle features such as EXIF extraction, map AI field names to Tainacan metadata, and clear cache from **Tainacan → Others → AI Tools**.
 
 == Installation ==
 
@@ -59,77 +56,75 @@ Configure custom prompts for each collection, enabling domain-specific metadata 
 1. Go to **Plugins > Add New** in your WordPress admin
 2. Search for "Tainacan AI"
 3. Click **Install Now** and then **Activate**
-4. Navigate to **Tainacan > AI Tools** to configure your API key
+4. Set up **Settings → Connectors** for AI access, then open **Tainacan → Others → AI Tools** for plugin options
 
 = Manual Installation =
 
 1. Upload the `tainacan-ai` folder to `/wp-content/plugins/`
 2. Activate the plugin through the **Plugins** menu in WordPress
-3. Configure your AI provider API key in **Tainacan > AI Tools**
+3. Configure **Settings → Connectors**, then **Tainacan → Others → AI Tools** as needed
 
 = Requirements =
 
-* WordPress 6.5 or higher
+* WordPress 7.0 or higher (WordPress AI / Connectors)
 * PHP 8.0 or higher
 * Tainacan plugin (version 1.0 or higher)
-* An API key from one of the supported AI providers:
-  * OpenAI: Get your key at [platform.openai.com](https://platform.openai.com/api-keys)
-  * Google Gemini: Get your key at [Google AI Studio](https://aistudio.google.com/app/apikey)
-  * DeepSeek: Get your key at [platform.deepseek.com](https://platform.deepseek.com/api_keys)
-  * Ollama: Install locally from [ollama.com](https://ollama.com/download)
+* At least one AI connector configured in **Settings → Connectors** (exact providers depend on your site)
 
 = Optional Dependencies =
 
 * **EXIF Extension**: For automatic EXIF data extraction from images
 * **Imagick Extension**: For visual PDF analysis (converts PDF pages to images)
 * **Ghostscript**: Alternative method for PDF to image conversion
-* **PDF Parser Library**: Included with the plugin via Composer
+* **PDF Parser Library**: Install via Composer in the plugin directory for PDF text extraction
 
 == Frequently Asked Questions ==
 
-= Do I need a Tainacan plugin? =
+= Do I need the Tainacan plugin? =
 
-Yes, Tainacan AI requires the [Tainacan](https://wordpress.org/plugins/tainacan/) plugin to be installed and active.
+Yes. Tainacan AI requires the [Tainacan](https://wordpress.org/plugins/tainacan/) plugin to be installed and active.
 
-= Which AI provider should I use? =
+= Where do I configure API keys? =
 
-* **OpenAI GPT-4o**: Best overall quality, supports images and documents (paid)
-* **Google Gemini**: Excellent quality, good value, supports images and documents (paid)
-* **DeepSeek**: Most cost-effective, text-only documents (paid)
-* **Ollama**: Free but requires local setup, supports images with vision models (free, self-hosted)
+In **Settings → Connectors** (WordPress 7.0+). The Tainacan AI settings page is for prompts, features, cache, and mapping.
+
+= Which AI model or provider is used? =
+
+That depends on your **Connectors** configuration and WordPress AI. This plugin does not expose a separate vendor picker; routing is handled by WordPress.
 
 = How much does it cost? =
 
-* OpenAI and Google Gemini charge per API call based on tokens used
-* DeepSeek offers competitive pricing for text analysis
-* Ollama is completely free but requires local infrastructure
-* The plugin includes cost tracking to monitor your usage
+Any pricing depends on the services behind your connectors (hosted APIs, etc.).
 
 = Can I customize what metadata is extracted? =
 
-Yes! You can configure custom prompts for each collection, specifying exactly what fields and information you want extracted. The plugin also supports metadata mapping to automatically populate Tainacan fields.
+Yes. You can configure default and per-collection prompts and map AI field names to Tainacan metadata.
 
 = Does it work with scanned PDFs? =
 
-Yes, if you have Imagick or Ghostscript installed, the plugin can convert scanned PDF pages to images for visual analysis with vision-capable AI models.
+Often yes, when Imagick or Ghostscript is available and your connector supports the required modality—but results depend on environment and connector capabilities.
 
 = Is my data sent to external services? =
 
-When using OpenAI, Google Gemini, or DeepSeek, your files are sent to their respective APIs for analysis. When using Ollama (local), all processing happens on your server. The plugin integrates with WP Consent API for GDPR compliance.
+If your connector uses a remote API, document content may be sent according to that service’s terms. For fully local setups, that depends on your connector. The plugin can integrate with the **WP Consent API** when the consent option is enabled.
 
 = Can I use multiple AI providers? =
 
-Yes, you can switch between providers at any time in the plugin settings. Each provider can be configured independently.
+You can configure multiple connectors in WordPress; this plugin does not maintain its own separate list of provider API keys.
 
 == Screenshots ==
 
-1. AI Tools settings page with provider selection
+1. AI Tools settings page (prompts, features, cache)
 2. Custom prompt configuration for collections
 3. Metadata mapping interface
-4. Document analysis in item edit form
-5. Usage statistics dashboard
+4. Document analysis in the item edit form
 
 == Changelog ==
+
+= 0.1.0 =
+* Migrates to using Core's AI client and Connectors APIs
+* Removes logging functionality in favor of incoming WP 7.0+ logging system
+* Cleans up the UI to match Tainacan Admin Style
 
 = 0.0.3 =
 * Improved document detection in item edit form (less DOM mutations using Tainacan hooks)
@@ -142,17 +137,19 @@ Yes, you can switch between providers at any time in the plugin settings. Each p
 
 = 0.0.1 =
 * Initial release
-* Support for OpenAI, Google Gemini, DeepSeek, and Ollama
+* Support for OpenAI, Google Gemini, DeepSeek, and Ollama (legacy in-plugin provider configuration)
 * Image and document analysis
 * Custom prompts per collection
 * Metadata mapping
 * EXIF extraction
 * PDF support (text and visual)
-* Usage tracking and cost estimation
 * REST API endpoints
 * WP Consent API integration
 
 == Upgrade Notice ==
+
+= 0.1.0 =
+* Migrates to using Core's AI client and Connectors APIs (only works with WordPress 7.0+)
 
 = 0.0.3 =
 * Improved document detection in item edit form.
