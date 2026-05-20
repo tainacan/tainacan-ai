@@ -379,10 +379,12 @@ class ItemFormHook {
                 wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
             }
 
-            $item_id = absint($_POST['item_id'] ?? 0);
-            $attachment_id = absint($_POST['attachment_id'] ?? 0);
-            $collection_id = absint($_POST['collection_id'] ?? 0);
-            $force_refresh = filter_var($_POST['force_refresh'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $item_id = absint(wp_unslash($_POST['item_id'] ?? 0));
+            $attachment_id = absint(wp_unslash($_POST['attachment_id'] ?? 0));
+            $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
+            $force_refresh = isset($_POST['force_refresh'])
+                ? filter_var(wp_unslash($_POST['force_refresh']), FILTER_VALIDATE_BOOLEAN)
+                : false;
 
             if (empty($item_id) && empty($attachment_id)) {
                 wp_send_json_error(__('Item or attachment ID not provided.', 'tainacan-ai'));
@@ -459,7 +461,7 @@ class ItemFormHook {
     public function ajax_get_item_document(): void {
         check_ajax_referer('tainacan_ai_nonce', 'nonce');
 
-        $item_id = absint($_POST['item_id'] ?? 0);
+        $item_id = absint(wp_unslash($_POST['item_id'] ?? 0));
 
         if (empty($item_id)) {
             wp_send_json_error(__('Item ID not provided.', 'tainacan-ai'));
@@ -480,7 +482,7 @@ class ItemFormHook {
     public function ajax_clear_item_cache(): void {
         check_ajax_referer('tainacan_ai_nonce', 'nonce');
 
-        $attachment_id = absint($_POST['attachment_id'] ?? 0);
+        $attachment_id = absint(wp_unslash($_POST['attachment_id'] ?? 0));
 
         if (empty($attachment_id)) {
             wp_send_json_error(__('Attachment ID not provided.', 'tainacan-ai'));
@@ -501,9 +503,9 @@ class ItemFormHook {
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $item_id = absint($_POST['item_id'] ?? 0);
-        $metadata_id = absint($_POST['metadata_id'] ?? 0);
-        $value = sanitize_text_field($_POST['value'] ?? '');
+        $item_id = absint(wp_unslash($_POST['item_id'] ?? 0));
+        $metadata_id = absint(wp_unslash($_POST['metadata_id'] ?? 0));
+        $value = sanitize_text_field(wp_unslash($_POST['value'] ?? ''));
 
         if (empty($item_id) || empty($metadata_id)) {
             wp_send_json_error(__('Insufficient data.', 'tainacan-ai'));
@@ -656,7 +658,7 @@ class ItemFormHook {
     public function ajax_get_mapping(): void {
         check_ajax_referer('tainacan_ai_nonce', 'nonce');
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
 
         if (empty($collection_id)) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
