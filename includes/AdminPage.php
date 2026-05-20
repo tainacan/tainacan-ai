@@ -249,7 +249,7 @@ class AdminPage extends \Tainacan\Pages {
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
 
         if (empty($collection_id)) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
@@ -289,8 +289,8 @@ class AdminPage extends \Tainacan\Pages {
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
-        $mapping = isset($_POST['mapping']) ? json_decode(stripslashes($_POST['mapping']), true) : [];
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
+        $mapping = RequestInput::json_post_array('mapping');
 
         if (empty($collection_id)) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
@@ -313,7 +313,7 @@ class AdminPage extends \Tainacan\Pages {
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
 
         if (empty($collection_id)) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
@@ -335,7 +335,7 @@ class AdminPage extends \Tainacan\Pages {
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
 
         if (empty($collection_id)) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));

@@ -249,8 +249,8 @@ $json_example . "\n\n" .
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
-        $type = sanitize_text_field($_POST['type'] ?? 'image');
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
+        $type = sanitize_text_field(wp_unslash($_POST['type'] ?? 'image'));
 
         if (!$collection_id) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
@@ -276,10 +276,10 @@ $json_example . "\n\n" .
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
-        $type = sanitize_text_field($_POST['type'] ?? 'image');
-        $prompt_text = wp_kses_post($_POST['prompt_text'] ?? '');
-        $metadata_mapping = json_decode(stripslashes($_POST['metadata_mapping'] ?? '[]'), true);
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
+        $type = sanitize_text_field(wp_unslash($_POST['type'] ?? 'image'));
+        $prompt_text = wp_kses_post(wp_unslash($_POST['prompt_text'] ?? ''));
+        $metadata_mapping = RequestInput::json_post_array('metadata_mapping');
 
         if (!$collection_id) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
@@ -349,8 +349,8 @@ $json_example . "\n\n" .
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
-        $type = sanitize_text_field($_POST['type'] ?? 'image');
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
+        $type = sanitize_text_field(wp_unslash($_POST['type'] ?? 'image'));
 
         if ($this->delete_prompt($collection_id, $type)) {
             wp_send_json_success(__('Prompt removed successfully.', 'tainacan-ai'));
@@ -369,7 +369,7 @@ $json_example . "\n\n" .
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
 
         if (!$collection_id) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
@@ -390,8 +390,8 @@ $json_example . "\n\n" .
             wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
         }
 
-        $collection_id = absint($_POST['collection_id'] ?? 0);
-        $type = sanitize_text_field($_POST['type'] ?? 'image');
+        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
+        $type = sanitize_text_field(wp_unslash($_POST['type'] ?? 'image'));
 
         if (!$collection_id) {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));

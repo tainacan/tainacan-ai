@@ -21,14 +21,10 @@ if (!class_exists('\Imagick')) {
 $tainacan_ai_is_configured = \Tainacan\AI\CoreAI::is_supported_text_generation();
 $tainacan_ai_has_image_support = \Tainacan\AI\CoreAI::is_supported_image_analysis();
 
-// Check visual PDF analysis capabilities
-$tainacan_ai_has_image_support = $tainacan_ai_has_image_support ?? \Tainacan\AI\CoreAI::is_supported_image_analysis();
-
 // Check dependencies
 $tainacan_ai_has_exif = function_exists('exif_read_data');
-$tainacan_ai_has_pdfparser = class_exists('\Smalot\PdfParser\Parser') || file_exists(TAINACAN_AI_PLUGIN_DIR . 'vendor/autoload.php');
 
-// Check visual PDF analysis capabilities
+// Local PDF-to-image backends (scanned PDF visual analysis)
 $tainacan_ai_has_imagick = extension_loaded('imagick');
 $tainacan_ai_has_imagick_pdf = false;
 if ($tainacan_ai_has_imagick) {
@@ -41,29 +37,21 @@ if ($tainacan_ai_has_imagick) {
     }
 }
 
-// Check Ghostscript
+// Ghostscript (PDF to image)
 $tainacan_ai_has_ghostscript = false;
-$tainacan_ai_gs_path = null;
 if (function_exists('shell_exec')) {
     if (PHP_OS_FAMILY === 'Windows') {
         $tainacan_ai_output = @shell_exec('where gswin64c 2>nul');
         if (empty($tainacan_ai_output)) {
             $tainacan_ai_output = @shell_exec('where gswin32c 2>nul');
         }
-        if (!empty($tainacan_ai_output)) {
-            $tainacan_ai_has_ghostscript = true;
-            $tainacan_ai_gs_path = trim($tainacan_ai_output);
-        }
+        $tainacan_ai_has_ghostscript = !empty($tainacan_ai_output);
     } else {
         $tainacan_ai_output = @shell_exec('which gs 2>/dev/null');
-        if (!empty($tainacan_ai_output)) {
-            $tainacan_ai_has_ghostscript = true;
-            $tainacan_ai_gs_path = trim($tainacan_ai_output);
-        }
+        $tainacan_ai_has_ghostscript = !empty($tainacan_ai_output);
     }
 }
 
-$tainacan_ai_has_builtin_parser = true;
 $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghostscript;
 ?>
 
@@ -404,7 +392,7 @@ $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghost
                 <div class="tainacan-ai-info-box">
                     <h3>
                         <span class="dashicons dashicons-cloud"></span>
-                        <?php esc_html_e('AI Providers', 'tainacan-ai'); ?>
+                        <?php esc_html_e('AI Connectors', 'tainacan-ai'); ?>
                     </h3>
                     <?php if ($tainacan_ai_is_configured): ?>
                         <span class="tainacan-ai-badge success"><?php esc_html_e('Configured', 'tainacan-ai'); ?></span>
