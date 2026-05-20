@@ -123,7 +123,8 @@ You can configure multiple connectors in WordPress; this plugin does not maintai
 
 = 0.1.0 =
 * Migrates to using Core's AI client and Connectors APIs
-* Removes logging functionality in favor of incoming WP 7.0+ logging system
+* Removes legacy in-plugin providers (OpenAI, Gemini, DeepSeek, Ollama); AI access is via Settings → Connectors only
+* Removes custom usage logging in favor of WordPress AI Request Logs (when enabled)
 * Cleans up the UI to match Tainacan Admin Style
 
 = 0.0.3 =

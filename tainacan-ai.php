@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Tainacan AI
  * Plugin URI: https://github.com/tainacan/tainacan-ai
- * Description: Automated metadata extraction in Tainacan using AI (OpenAI, Gemini, DeepSeek). Supports image analysis, PDF documents, EXIF extraction and custom prompts per collection.
+ * Description: Automated metadata extraction in Tainacan using WordPress AI and Connectors. Supports image analysis, PDF documents, EXIF extraction and custom prompts per collection.
  * Version: 0.1.0
  * Author: Sigismundo
  * Author URI: https://seu-site.com
@@ -116,6 +116,7 @@ final class Tainacan_AI {
 
         $this->create_tables();
         $this->set_default_options();
+        $this->prune_legacy_option_keys();
 
         // Flush rewrite rules
         flush_rewrite_rules();
@@ -169,19 +170,6 @@ final class Tainacan_AI {
      */
     private function set_default_options(): void {
         $default_options = [
-            // OpenAI
-            'api_key' => '',
-
-            // Google Gemini
-            'gemini_api_key' => '',
-
-            // DeepSeek
-            'deepseek_api_key' => '',
-
-            // Ollama (Local)
-            'ollama_url' => 'http://localhost:11434',
-
-            // General settings
             'default_image_prompt' => $this->get_default_image_prompt(),
             'default_document_prompt' => $this->get_default_document_prompt(),
             'max_tokens' => 2000,
@@ -195,6 +183,38 @@ final class Tainacan_AI {
 
         $existing = get_option('tainacan_ai_options', []);
         update_option('tainacan_ai_options', wp_parse_args($existing, $default_options));
+    }
+
+    /**
+     * Remove legacy in-plugin provider option keys (pre–WordPress Connectors).
+     */
+    private function prune_legacy_option_keys(): void {
+        $legacy_keys = [
+            'api_key',
+            'gemini_api_key',
+            'deepseek_api_key',
+            'ollama_url',
+            'default_provider',
+            'provider',
+            'model',
+        ];
+
+        $options = get_option('tainacan_ai_options', []);
+        if (!is_array($options)) {
+            return;
+        }
+
+        $changed = false;
+        foreach ($legacy_keys as $key) {
+            if (array_key_exists($key, $options)) {
+                unset($options[$key]);
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            update_option('tainacan_ai_options', $options);
+        }
     }
 
     /**
@@ -371,6 +391,8 @@ final class Tainacan_AI {
      * Initialize plugin components
      */
     public function init(): void {
+        $this->prune_legacy_option_keys();
+
         // Check if Tainacan is active
         if (!class_exists('\Tainacan\Repositories\Items')) {
             add_action('admin_notices', function() {
