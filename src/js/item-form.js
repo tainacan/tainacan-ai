@@ -65,6 +65,15 @@ import { addAction } from '@wordpress/hooks';
 		},
 
 		/**
+		 * Ensure widget DOM refs exist (widget is injected when the item form mounts).
+		 */
+		ensureElementsCached() {
+			if ( ! this.elements.analyzeBtn?.length ) {
+				this.cacheElements();
+			}
+		},
+
+		/**
 		 * Create the sidebar panel
 		 */
 		createSidebarPanel() {
@@ -308,7 +317,10 @@ import { addAction } from '@wordpress/hooks';
 				'tainacan_navigation_path_updated',
 				'tainacan_ai_item_form',
 				( payload ) => {
-					const path = payload?.childEntity?.defaultLink || payload?.currentRoute?.path || '';
+					const path =
+						payload?.childEntity?.defaultLink ||
+						payload?.currentRoute?.path ||
+						'';
 					const editMatch = path.match( /collections\/(\d+)\/items\/(\d+)\/edit/ );
 					const isItemEdit = Boolean( editMatch );
 
@@ -533,6 +545,8 @@ import { addAction } from '@wordpress/hooks';
 		 */
 		async analyze( forceRefresh = false ) {
 			if ( this.state.isAnalyzing ) return;
+
+			this.ensureElementsCached();
 
 			// Check if we have item or attachment
 			if ( ! this.state.itemId && ! this.state.attachmentId ) {
@@ -906,6 +920,7 @@ import { addAction } from '@wordpress/hooks';
 		 * Show loading state
 		 */
 		showLoading() {
+			this.ensureElementsCached();
 			this.elements.analyzeBtn.prop( 'disabled', true );
 			this.elements.refreshBtn.prop( 'disabled', true );
 			this.elements.status.show();
@@ -916,6 +931,7 @@ import { addAction } from '@wordpress/hooks';
 		 * Hide loading
 		 */
 		hideLoading() {
+			this.ensureElementsCached();
 			this.elements.analyzeBtn.prop( 'disabled', false );
 			this.elements.refreshBtn.prop( 'disabled', false );
 			this.elements.status.hide();
@@ -925,6 +941,7 @@ import { addAction } from '@wordpress/hooks';
 		 * Show error
 		 */
 		showError( message ) {
+			this.ensureElementsCached();
 			this.elements.analyzeBtn.prop( 'disabled', false );
 			this.elements.refreshBtn.prop( 'disabled', false );
 
