@@ -1,6 +1,6 @@
 {
 	"name": "tainacan/tainacan-ai",
-	"description": "Automated metadata extraction in Tainacan using AI APIs (OpenAI, Gemini, DeepSeek, Ollama)",
+	"description": "Automated metadata extraction in Tainacan using WordPress AI and Connectors",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {

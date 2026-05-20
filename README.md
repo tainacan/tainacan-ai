@@ -140,8 +140,8 @@ tainacan-ai/
 │   ├── API.php             # REST API endpoints
 │   ├── CollectionPrompts.php
 │   ├── ExifExtractor.php
-│   ├── CoreAI.php          # WordPress AI client integration
-│   ├── AI/                 # Legacy provider implementations (internal / fallback paths)
+│   ├── CoreAI.php              # WordPress AI client integration
+│   ├── CoreAIRequestLogging.php
 │   └── admin/
 │       └── admin-page.php  # Settings page template
 ├── lib/                    # Embedded third-party libraries

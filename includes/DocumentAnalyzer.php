@@ -14,7 +14,7 @@ use Tainacan\AI\PdfParser\PdfToImage;
  * Analyzes images and documents extracting metadata via AI.
  * Uses `wp_ai_client_prompt()` through `CoreAI`.
  *
- * @since 1.0.0 - Support for multiple AI providers
+ * @since 1.0.0 - WordPress AI client via Connectors
  */
 class DocumentAnalyzer {
 
@@ -308,7 +308,7 @@ class DocumentAnalyzer {
             ];
         }
 
-        // Method 2: Convert to image and visual analysis (if provider supports)
+        // Method 2: Convert to image and visual analysis (if the connector supports vision)
         if ($core_supports_image) {
             $visual_result = $this->analyze_pdf_visually($file_path);
 
@@ -378,7 +378,7 @@ class DocumentAnalyzer {
                 $pageCount
             );
 
-            // Prepare images for provider
+            // Prepare images for the AI client
             $image_data = [];
             foreach ($images as $image) {
                 $image_data[] = [
