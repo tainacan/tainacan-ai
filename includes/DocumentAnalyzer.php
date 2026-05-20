@@ -349,6 +349,8 @@ class DocumentAnalyzer {
      * Analyze PDF visually (for scanned PDFs)
      */
     private function analyze_pdf_visually(string $file_path): array|\WP_Error {
+        $images = [];
+
         try {
             $converter = new PdfToImage();
             $converter->setDpi(150)
@@ -387,7 +389,7 @@ class DocumentAnalyzer {
                 ];
             }
 
-            $result = CoreAI::generate_json_from_text_and_files(
+            return CoreAI::generate_json_from_text_and_files(
                 $promptWithContext,
                 $image_data,
                 $this->generation_options([
@@ -395,19 +397,15 @@ class DocumentAnalyzer {
                     'extraction_method' => 'visual_analysis',
                 ])
             );
-
-            // Clean temporary files
-            foreach ($images as $image) {
-                if (isset($image['path']) && file_exists($image['path'])) {
-                    @unlink($image['path']);
-                }
-            }
-
-            return $result;
-
         } catch (\Throwable $e) {
             $this->debug_log('PDF visual analysis error: ' . $e->getMessage());
             return new \WP_Error('visual_analysis_error', $e->getMessage());
+        } finally {
+            foreach ($images as $image) {
+                if (!empty($image['path']) && file_exists($image['path'])) {
+                    wp_delete_file($image['path']);
+                }
+            }
         }
     }
 
