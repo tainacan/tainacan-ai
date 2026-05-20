@@ -188,8 +188,8 @@ class ItemFormHook {
 
         $options = \Tainacan_AI::get_options();
 
-        // Get metadata mapping for current collection
-        $metadata_mapping = $this->get_metadata_mapping();
+        // Mapping is loaded per collection via AJAX once the SPA route is known (see item-form.js).
+        $metadata_mapping = $this->get_default_mapping();
 
         wp_localize_script('tainacan-ai-item', 'TainacanAI', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
@@ -244,93 +244,6 @@ class ItemFormHook {
     }
 
     /**
-     * Get metadata mapping for automatic filling
-     * Maps AI JSON fields to Tainacan fields
-     */
-    private function get_metadata_mapping(): array {
-        // Try to get collection_id from URL or context
-        $collection_id = $this->get_current_collection_id();
-
-        if (!$collection_id || !class_exists('\Tainacan\Repositories\Metadata')) {
-            return $this->get_default_mapping();
-        }
-
-        try {
-            $metadata_repo = \Tainacan\Repositories\Metadata::get_instance();
-            $collection_metadata = $metadata_repo->fetch_by_collection(
-                new \Tainacan\Entities\Collection($collection_id),
-                [],
-                'OBJECT'
-            );
-
-            if (empty($collection_metadata)) {
-                return $this->get_default_mapping();
-            }
-
-            $mapping = [];
-
-            // Mapeamento automático baseado no slug/nome do metadado
-            $ai_fields = [
-                'titulo' => ['titulo', 'title', 'nome', 'name'],
-                'autor' => ['autor', 'author', 'criador', 'creator', 'artista', 'artist', 'dccreator'],
-                'data_criacao' => ['data', 'date', 'data_criacao', 'creation_date', 'ano', 'year', 'dcdate'],
-                'tecnica' => ['tecnica', 'technique', 'technica'],
-                'materiais' => ['materiais', 'materials', 'material'],
-                'dimensoes_estimadas' => ['dimensoes', 'dimensions', 'tamanho', 'size'],
-                'estado_conservacao' => ['conservacao', 'conservation', 'estado', 'condition'],
-                'descricao' => ['descricao', 'description', 'desc'],
-                'estilo_artistico' => ['estilo', 'style', 'movimento', 'movement'],
-                'palavras_chave' => ['palavras_chave', 'keywords', 'tags', 'palavras-chave', 'assunto', 'dcsubject'],
-                'observacoes' => ['observacoes', 'observations', 'notas', 'notes'],
-                'tipo_documento' => ['tipo', 'type', 'tipo_documento', 'dctype'],
-                'formato' => ['formato', 'format', 'dcformat'],
-                'ano_publicacao' => ['ano_publicacao', 'publication_year', 'ano'],
-                'instituicao' => ['instituicao', 'institution', 'organizacao', 'editor', 'editora', 'dcpublisher'],
-                'resumo' => ['resumo', 'abstract', 'summary'],
-                'area_conhecimento' => ['area', 'area_conhecimento', 'field', 'subject', 'abrangencia', 'dccoverage'],
-                'idioma' => ['idioma', 'language', 'lingua', 'dclanguage'],
-                'referencias_principais' => ['referencias', 'references', 'relacao', 'dcrelation'],
-                'metodologia' => ['metodologia', 'methodology', 'metodo'],
-                'identificador' => ['identificador', 'identifier', 'dcidentifier', 'id', 'codigo'],
-                'direitos' => ['direitos', 'rights', 'dcrights', 'licenca', 'license', 'copyright'],
-                'fonte' => ['fonte', 'source', 'dcsource', 'origem'],
-                'contribuidor' => ['contribuidor', 'contributor', 'dccontributor', 'colaborador'],
-            ];
-
-            foreach ($collection_metadata as $metadata) {
-                $slug = $metadata->get_slug();
-                $name = strtolower($metadata->get_name());
-                $id = $metadata->get_id();
-                $type = $metadata->get_metadata_type();
-
-                // Procura correspondência nos campos da IA
-                foreach ($ai_fields as $ai_key => $possible_matches) {
-                    foreach ($possible_matches as $match) {
-                        if ($slug === $match || strpos($slug, $match) !== false ||
-                            strpos($name, $match) !== false) {
-                            $mapping[$ai_key] = [
-                                'id' => $id,
-                                'slug' => $slug,
-                                'name' => $metadata->get_name(),
-                                'type' => $type,
-                            ];
-                            break 2;
-                        }
-                    }
-                }
-            }
-
-            return !empty($mapping) ? $mapping : $this->get_default_mapping();
-
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[TainacanAI] Error getting metadata mapping: ' . $e->getMessage());
-            }
-            return $this->get_default_mapping();
-        }
-    }
-
-    /**
      * Default mapping when there's no specific collection
      */
     private function get_default_mapping(): array {
@@ -338,34 +251,6 @@ class ItemFormHook {
             'titulo' => ['id' => 'title', 'slug' => 'title', 'name' => 'Title', 'type' => 'text'],
             'descricao' => ['id' => 'description', 'slug' => 'description', 'name' => 'Description', 'type' => 'textarea'],
         ];
-    }
-
-    /**
-     * Get current collection ID from context
-     */
-    private function get_current_collection_id(): ?int {
-        // Via query string
-        if (!empty($_GET['collection_id'])) {
-            return absint($_GET['collection_id']);
-        }
-
-        // Via referrer (URL hash)
-        $referer = wp_get_referer();
-        if ($referer && preg_match('/collections\/(\d+)/', $referer, $matches)) {
-            return (int) $matches[1];
-        }
-
-        // Via post being edited
-        global $post;
-        if ($post && class_exists('\Tainacan\Repositories\Items')) {
-            $items_repo = \Tainacan\Repositories\Items::get_instance();
-            $item = $items_repo->fetch($post->ID);
-            if ($item && method_exists($item, 'get_collection_id')) {
-                return $item->get_collection_id();
-            }
-        }
-
-        return null;
     }
 
     /**
