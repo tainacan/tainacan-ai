@@ -212,8 +212,22 @@ class CoreAI {
             return new \WP_Error('no_core_ai_client', __('WordPress Core AI Client is not available.', 'tainacan-ai'));
         }
 
+        $log_context = null;
+        if (
+            isset($options[CoreAIRequestLogging::OPTIONS_CONTEXT_KEY])
+            && is_array($options[CoreAIRequestLogging::OPTIONS_CONTEXT_KEY])
+        ) {
+            $log_context = $options[CoreAIRequestLogging::OPTIONS_CONTEXT_KEY];
+        }
+        unset($options[CoreAIRequestLogging::OPTIONS_CONTEXT_KEY]);
+
         $temperature = isset($options['temperature']) ? (float) $options['temperature'] : null;
         $max_tokens = isset($options['max_tokens']) ? (int) $options['max_tokens'] : null;
+
+        $log_scope = null;
+        if ($log_context !== null && CoreAIRequestLogging::is_active()) {
+            $log_scope = CoreAIRequestLogging::begin($log_context);
+        }
 
         try {
             $builder = wp_ai_client_prompt($prompt_text);
@@ -273,6 +287,10 @@ class CoreAI {
             ];
         } catch (\Throwable $e) {
             return new \WP_Error('ai_generation_error', $e->getMessage());
+        } finally {
+            if ($log_scope !== null) {
+                $log_scope->release();
+            }
         }
     }
 

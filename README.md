@@ -15,6 +15,12 @@ AI routing and credentials are managed by WordPress; this plugin focuses on prom
 - **EXIF extraction**: Optional EXIF extraction from images (when enabled and supported by the server)
 - **PDF support**: Text extraction and optional visual analysis for PDFs (depends on server extensions and the configured connector)
 
+### Observability
+
+When the WordPress **AI** plugin (1.0.0+) is active and the **AI Request Logging** feature is enabled (under **Settings → AI**, with **AI features** turned on globally), Tainacan AI adds a `tainacan_ai` block to each log entry under **Tools → AI Request Logs** (attachment, item, collection, document type, extraction method). Core also records request **source** (plugin slug/file) with improved attribution that typically includes `tainacan-ai` rather than only the connector provider. Logs are retained indefinitely unless the site filters `wpai_request_log_retention_days`. This plugin does not ship a separate usage dashboard or API keys.
+
+With `WP_DEBUG` enabled, non-HTTP failures (PDF extraction, conversion, etc.) and one-line analysis summaries are also written to the PHP error log (alongside Core request logs when that feature is on).
+
 ## Installation
 
 1. Upload the `tainacan-ai` folder to `/wp-content/plugins/`

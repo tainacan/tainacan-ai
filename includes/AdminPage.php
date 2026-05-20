@@ -145,18 +145,11 @@ class AdminPage extends \Tainacan\Pages {
      */
     private function get_collections_list(): array {
         if (!class_exists('\Tainacan\Repositories\Collections')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[TainacanAI] Collections class not found');
-            }
             return [];
         }
 
         $collections_repo = \Tainacan\Repositories\Collections::get_instance();
         $collections = $collections_repo->fetch([], 'OBJECT');
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[TainacanAI] Fetched collections count: ' . (is_array($collections) ? count($collections) : 'not array'));
-        }
 
         $list = [];
 
@@ -169,10 +162,6 @@ class AdminPage extends \Tainacan\Pages {
                 'id' => $collection->get_id(),
                 'name' => $collection->get_name(),
             ];
-        }
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[TainacanAI] Collections list: ' . print_r($list, true));
         }
 
         return $list;

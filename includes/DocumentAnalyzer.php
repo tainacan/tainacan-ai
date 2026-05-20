@@ -21,6 +21,7 @@ class DocumentAnalyzer {
     private array $options;
     private ?int $collection_id = null;
     private ?int $item_id = null;
+    private ?int $current_attachment_id = null;
     private ExifExtractor $exif_extractor;
     private CollectionPrompts $collection_prompts;
 
@@ -103,6 +104,24 @@ class DocumentAnalyzer {
             $this->collection_id = $this->get_item_collection($this->item_id);
         }
 
+        $this->current_attachment_id = $attachment_id;
+
+        try {
+            return $this->run_analysis($attachment_id, $include_exif, $file_path, $mime_type);
+        } finally {
+            $this->current_attachment_id = null;
+        }
+    }
+
+    /**
+     * @return array|\WP_Error
+     */
+    private function run_analysis(
+        int $attachment_id,
+        bool $include_exif,
+        string $file_path,
+        string $mime_type
+    ): array|\WP_Error {
         $result = [];
         $document_type = 'unknown';
         $extraction_method = null;
@@ -132,7 +151,13 @@ class DocumentAnalyzer {
 
         } elseif (in_array($mime_type, ['text/plain', 'text/html'])) {
             $document_type = 'text';
-            $ai_result = $this->analyze_text(file_get_contents($file_path));
+            $ai_result = $this->analyze_text(
+                file_get_contents($file_path),
+                [
+                    'document_type' => 'text',
+                    'extraction_method' => 'text',
+                ]
+            );
             $extraction_method = 'text';
 
         } else {
@@ -145,8 +170,7 @@ class DocumentAnalyzer {
 
         // Check for error in AI analysis
         if (is_wp_error($ai_result)) {
-            $this->debug_log_request_summary(
-                $attachment_id,
+            $this->debug_log_analysis_outcome(
                 $document_type,
                 'error',
                 0,
@@ -164,13 +188,12 @@ class DocumentAnalyzer {
         $result['tokens_used'] = $ai_result['usage']['total_tokens'] ?? 0;
         $result['analyzed_at'] = current_time('mysql');
 
-        $this->debug_log_request_summary(
-            $attachment_id,
+        $this->debug_log_analysis_outcome(
             $document_type,
             'success',
             (int) $result['tokens_used'],
-            (string) ($ai_result['model'] ?? ''),
             (string) ($ai_result['provider'] ?? ''),
+            (string) ($ai_result['model'] ?? ''),
             null
         );
 
@@ -178,15 +201,25 @@ class DocumentAnalyzer {
     }
 
     /**
-     * One-line server log when WP_DEBUG is on (no prompt or response body).
+     * WP_DEBUG-only server log (no prompt or response body).
      */
-    private function debug_log_request_summary(
-        int $attachment_id,
+    private function debug_log(string $message): void {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+
+        error_log('[TainacanAI] ' . preg_replace('/\s+/', ' ', $message));
+    }
+
+    /**
+     * One-line analysis outcome for WP_DEBUG (complements Core AI Request Logs).
+     */
+    private function debug_log_analysis_outcome(
         string $document_type,
         string $status,
         int $tokens_used,
-        string $model,
         string $provider,
+        string $model,
         ?string $error_message
     ): void {
         if (!defined('WP_DEBUG') || !WP_DEBUG) {
@@ -194,15 +227,15 @@ class DocumentAnalyzer {
         }
 
         $parts = [
-            '[TainacanAI]',
             'analysis',
-            'attachment_id=' . $attachment_id,
+            'attachment_id=' . ($this->current_attachment_id ?? '0'),
             'item_id=' . ($this->item_id ?? '0'),
             'collection_id=' . ($this->collection_id ?? '0'),
             'document_type=' . $document_type,
             'status=' . $status,
             'tokens=' . $tokens_used,
         ];
+
         if ($provider !== '') {
             $parts[] = 'provider=' . $provider;
         }
@@ -213,7 +246,46 @@ class DocumentAnalyzer {
             $parts[] = 'error=' . preg_replace('/\s+/', ' ', $error_message);
         }
 
-        error_log(implode(' ', $parts));
+        error_log('[TainacanAI] ' . implode(' ', $parts));
+    }
+
+    /**
+     * @param array<string, mixed> $log_extra
+     * @return array<string, mixed>
+     */
+    private function generation_options(array $log_extra = []): array {
+        $options = [
+            'temperature' => (float) ($this->options['temperature'] ?? 0.1),
+            'max_tokens' => (int) ($this->options['max_tokens'] ?? 2000),
+        ];
+
+        return CoreAIRequestLogging::options_with_context(
+            $this->base_log_context($log_extra),
+            $options
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     * @return array<string, mixed>
+     */
+    private function base_log_context(array $extra = []): array {
+        $context = [
+            'plugin' => 'tainacan-ai',
+            'feature' => 'document_analysis',
+        ];
+
+        if ($this->current_attachment_id) {
+            $context['attachment_id'] = $this->current_attachment_id;
+        }
+        if ($this->item_id) {
+            $context['item_id'] = $this->item_id;
+        }
+        if ($this->collection_id) {
+            $context['collection_id'] = $this->collection_id;
+        }
+
+        return array_merge($context, $extra);
     }
 
     /**
@@ -226,7 +298,10 @@ class DocumentAnalyzer {
         $text = $this->extract_pdf_text($file_path);
 
         if (!is_wp_error($text) && !empty(trim($text)) && strlen(trim($text)) > 100) {
-            $result = $this->analyze_text($text);
+            $result = $this->analyze_text($text, [
+                'document_type' => 'pdf',
+                'extraction_method' => 'text_extraction',
+            ]);
             return [
                 'result' => $result,
                 'method' => 'text_extraction',
@@ -243,6 +318,8 @@ class DocumentAnalyzer {
                     'method' => 'visual_analysis',
                 ];
             }
+
+            $this->debug_log('PDF visual analysis failed: ' . $visual_result->get_error_message());
         }
 
         // If both failed, return more informative error
@@ -259,6 +336,8 @@ class DocumentAnalyzer {
                 __('Core AI does not support image analysis on this site. ', 'tainacan-ai')
             );
         }
+
+        $this->debug_log('PDF analysis failed (all methods): ' . trim($error_msg));
 
         return [
             'result' => new \WP_Error('pdf_analysis_failed', trim($error_msg)),
@@ -308,15 +387,13 @@ class DocumentAnalyzer {
                 ];
             }
 
-            $generation_options = [
-                'temperature' => (float) ($this->options['temperature'] ?? 0.1),
-                'max_tokens' => (int) ($this->options['max_tokens'] ?? 2000),
-            ];
-
             $result = CoreAI::generate_json_from_text_and_files(
                 $promptWithContext,
                 $image_data,
-                $generation_options
+                $this->generation_options([
+                    'document_type' => 'pdf',
+                    'extraction_method' => 'visual_analysis',
+                ])
             );
 
             // Clean temporary files
@@ -329,9 +406,7 @@ class DocumentAnalyzer {
             return $result;
 
         } catch (\Throwable $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[TainacanAI] Visual analysis error: ' . $e->getMessage());
-            }
+            $this->debug_log('PDF visual analysis error: ' . $e->getMessage());
             return new \WP_Error('visual_analysis_error', $e->getMessage());
         }
     }
@@ -375,13 +450,6 @@ class DocumentAnalyzer {
             }
 
             $image_data = "data:{$mime_type};base64,{$base64}";
-
-            // Debug: Base64 size
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                $base64_size = strlen($base64);
-                $mb_size = round($base64_size / 1024 / 1024, 2);
-                error_log("[TainacanAI] Base64 size: {$base64_size} bytes ({$mb_size} MB)");
-            }
         }
 
         // Get prompt
@@ -391,11 +459,6 @@ class DocumentAnalyzer {
             return new \WP_Error('no_prompt', __('No prompt configured for image analysis.', 'tainacan-ai'));
         }
 
-        $generation_options = [
-            'temperature' => (float) ($this->options['temperature'] ?? 0.1),
-            'max_tokens' => (int) ($this->options['max_tokens'] ?? 2000),
-        ];
-
         return CoreAI::generate_json_from_text_and_files(
             $prompt,
             [
@@ -404,14 +467,19 @@ class DocumentAnalyzer {
                     'mime' => $mime_type,
                 ],
             ],
-            $generation_options
+            $this->generation_options([
+                'document_type' => 'image',
+                'extraction_method' => 'vision',
+            ])
         );
     }
 
     /**
      * Analyze text
+     *
+     * @param array<string, mixed> $log_extra
      */
-    private function analyze_text(string $text): array|\WP_Error {
+    private function analyze_text(string $text, array $log_extra = []): array|\WP_Error {
         // Sanitize text to valid UTF-8
         $text = $this->sanitize_utf8_string($text);
 
@@ -431,12 +499,7 @@ class DocumentAnalyzer {
 
         $full_prompt = $prompt . "\n\n---\n\n**Documento:**\n\n" . $text;
 
-        $generation_options = [
-            'temperature' => (float) ($this->options['temperature'] ?? 0.1),
-            'max_tokens' => (int) ($this->options['max_tokens'] ?? 2000),
-        ];
-
-        return CoreAI::generate_json_from_text($full_prompt, $generation_options);
+        return CoreAI::generate_json_from_text($full_prompt, $this->generation_options($log_extra));
     }
 
     /**
@@ -451,17 +514,9 @@ class DocumentAnalyzer {
         if ($this->collection_id) {
             $custom_mapping = get_option('tainacan_ai_mapping_' . $this->collection_id, []);
 
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[TainacanAI] get_prompt: collection_id={$this->collection_id}, type={$type}");
-                error_log("[TainacanAI] Custom mapping found: " . (empty($custom_mapping) ? 'NO' : 'YES - ' . count($custom_mapping) . ' fields'));
-            }
-
             if (!empty($custom_mapping)) {
                 $prompt = $this->generate_prompt_from_mapping($custom_mapping, $type);
                 if (!empty($prompt)) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log("[TainacanAI] Using dynamic prompt from mapping. Length: " . strlen($prompt));
-                    }
                     return $prompt;
                 }
             }
@@ -551,9 +606,7 @@ $json_text . "\n\n" .
                 return $text;
             }
         } catch (\Throwable $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[TainacanAI] PdfParser error: ' . $e->getMessage());
-            }
+            $this->debug_log('PdfParser error: ' . $e->getMessage());
         }
 
         // Method 2: smalot/pdfparser (if installed via Composer)
@@ -567,9 +620,7 @@ $json_text . "\n\n" .
                     return $text;
                 }
             } catch (\Throwable $e) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[TainacanAI] Smalot PdfParser error: ' . $e->getMessage());
-                }
+                $this->debug_log('Smalot PdfParser error: ' . $e->getMessage());
             }
         }
 
@@ -606,10 +657,10 @@ $json_text . "\n\n" .
             return $text;
         }
 
-        return new \WP_Error(
-            'pdf_extract_failed',
-            __('Could not extract text from PDF. The document may be a scanned image.', 'tainacan-ai')
-        );
+        $message = __('Could not extract text from PDF. The document may be a scanned image.', 'tainacan-ai');
+        $this->debug_log('PDF text extraction failed: ' . $message);
+
+        return new \WP_Error('pdf_extract_failed', $message);
     }
 
     /**
@@ -765,9 +816,6 @@ $json_text . "\n\n" .
         $fixed_path = preg_replace('/([\/\\\\])_x_(\d+)([\/\\\\])/', '$1$2$3', $file_path);
 
         if ($fixed_path !== $file_path && file_exists($fixed_path)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[TainacanAI] Fixed file path from: {$file_path} to: {$fixed_path}");
-            }
             return $fixed_path;
         }
 
@@ -807,9 +855,6 @@ $json_text . "\n\n" .
                            $collection_id . DIRECTORY_SEPARATOR . $item_id . DIRECTORY_SEPARATOR . $file_name;
 
             if (file_exists($correct_path)) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("[TainacanAI] Found file at corrected path: {$correct_path}");
-                }
                 return $correct_path;
             }
         }

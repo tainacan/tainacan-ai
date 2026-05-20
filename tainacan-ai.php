@@ -392,6 +392,8 @@ final class Tainacan_AI {
 
         // Initialize collection prompts manager
         new \Tainacan\AI\CollectionPrompts();
+
+        add_action('wpai_features_initialized', [\Tainacan\AI\CoreAIRequestLogging::class, 'register_integration']);
     }
 
     /**
