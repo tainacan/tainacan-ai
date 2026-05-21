@@ -368,10 +368,10 @@ class DocumentAnalyzer {
             }
 
             // Get prompt
-            $prompt = $this->get_prompt('document');
+            $prompt = $this->get_prompt();
 
             if (empty($prompt)) {
-                return new \WP_Error('no_prompt', __('No prompt configured for document analysis.', 'tainacan-ai'));
+                return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
             }
 
             $pageCount = count($images);
@@ -450,10 +450,10 @@ class DocumentAnalyzer {
         }
 
         // Get prompt
-        $prompt = $this->get_prompt('image');
+        $prompt = $this->get_prompt();
 
         if (empty($prompt)) {
-            return new \WP_Error('no_prompt', __('No prompt configured for image analysis.', 'tainacan-ai'));
+            return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
         }
 
         return CoreAI::generate_json_from_text_and_files(
@@ -488,10 +488,10 @@ class DocumentAnalyzer {
         }
 
         // Get prompt
-        $prompt = $this->get_prompt('document');
+        $prompt = $this->get_prompt();
 
         if (empty($prompt)) {
-            return new \WP_Error('no_prompt', __('No prompt configured for document analysis.', 'tainacan-ai'));
+            return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
         }
 
         $full_prompt = $prompt . "\n\n---\n\n**Documento:**\n\n" . $text;
@@ -506,27 +506,26 @@ class DocumentAnalyzer {
      * and generates a dynamic prompt based on those fields so AI
      * returns exactly the mapped fields.
      */
-    private function get_prompt(string $type): string {
+    private function get_prompt(): string {
         // First, check if there's custom mapping saved in admin
         if ($this->collection_id) {
             $custom_mapping = get_option('tainacan_ai_mapping_' . $this->collection_id, []);
 
             if (!empty($custom_mapping)) {
-                $prompt = $this->generate_prompt_from_mapping($custom_mapping, $type);
+                $prompt = $this->generate_prompt_from_mapping($custom_mapping);
                 if (!empty($prompt)) {
                     return $prompt;
                 }
             }
 
             // If no custom mapping, try collection prompt
-            $prompt = $this->collection_prompts->get_effective_prompt($this->collection_id, $type);
+            $prompt = $this->collection_prompts->get_effective_prompt($this->collection_id);
             if (!empty($prompt)) {
                 return $prompt;
             }
         }
 
-        $key = $type === 'image' ? 'default_image_prompt' : 'default_document_prompt';
-        return $this->options[$key] ?? '';
+        return (string) ($this->options['default_prompt'] ?? '');
     }
 
     /**
@@ -535,7 +534,7 @@ class DocumentAnalyzer {
      * Creates a prompt that instructs AI to return JSON with exactly
      * the fields defined in the mapping, using the correct keys.
      */
-    private function generate_prompt_from_mapping(array $mapping, string $type): string {
+    private function generate_prompt_from_mapping(array $mapping): string {
         if (empty($mapping)) {
             return '';
         }
@@ -559,35 +558,19 @@ class DocumentAnalyzer {
         $fields_text = implode("\n", $fields_list);
         $json_text = json_encode($json_example, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-        if ($type === 'image') {
-            return 'Você é um especialista em análise e catalogação de imagens de acervos culturais. Analise esta imagem cuidadosamente e extraia informações para os campos especificados abaixo.' . "\n\n" .
+        return 'Você é um especialista em catalogação de acervos. Analise o conteúdo fornecido e extraia informações para os campos especificados abaixo.' . "\n\n" .
 '## Campos para Extrair:' . "\n" .
 $fields_text . "\n\n" .
 '## Instruções:' . "\n" .
-'1. Analise a imagem detalhadamente' . "\n" .
+'1. Analise o conteúdo com atenção' . "\n" .
 '2. Extraia informações relevantes para CADA campo listado' . "\n" .
-'3. Se não conseguir identificar um campo, use null' . "\n" .
+'3. Se não encontrar informação para um campo, use null' . "\n" .
 '4. Para campos com múltiplos valores, use array' . "\n" .
 '5. Seja preciso e objetivo' . "\n\n" .
 '## Formato de Resposta:' . "\n" .
 'Retorne APENAS um JSON válido com esta estrutura (use EXATAMENTE estas chaves):' . "\n" .
 $json_text . "\n\n" .
 'IMPORTANTE: Use EXATAMENTE as chaves mostradas acima (como "titulo", "autor", etc.). Responda SOMENTE com o JSON, sem texto adicional.';
-        } else {
-            return 'Você é um especialista em análise documental e catalogação. Analise este documento e extraia informações para os campos especificados abaixo.' . "\n\n" .
-'## Campos para Extrair:' . "\n" .
-$fields_text . "\n\n" .
-'## Instruções:' . "\n" .
-'1. Leia o documento completamente' . "\n" .
-'2. Extraia informações para CADA campo listado' . "\n" .
-'3. Se não encontrar informação para um campo, use null' . "\n" .
-'4. Para campos com múltiplos valores, use array' . "\n" .
-'5. Seja preciso nas citações' . "\n\n" .
-'## Formato de Resposta:' . "\n" .
-'Retorne APENAS um JSON válido com esta estrutura (use EXATAMENTE estas chaves):' . "\n" .
-$json_text . "\n\n" .
-'IMPORTANTE: Use EXATAMENTE as chaves mostradas acima (como "titulo", "autor", etc.). Responda SOMENTE com o JSON, sem texto adicional.';
-        }
     }
 
     /**

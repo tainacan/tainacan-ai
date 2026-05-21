@@ -10,7 +10,8 @@ AI routing and credentials are managed by WordPress; this plugin focuses on prom
 - **WordPress AI & Connectors**: Uses the site’s configured AI connectors
 - **Compatible with Tainacan 1.0+**: Uses the Pages and Admin Form Hooks APIs
 - **Smart cache**: Caching with manual clear from settings
-- **Custom prompts**: Default prompts and per-collection overrides
+- **Custom prompts**: One default analysis prompt plus per-collection overrides
+- **Prompt templates**: Suggested prompt templates in AI Tools that can be copied into the default prompt
 - **Metadata mapping**: Map AI-extracted fields to Tainacan metadata (supports “Fill fields” workflows)
 - **EXIF extraction**: Optional EXIF extraction from images (when enabled and supported by the server)
 - **PDF support**: Text extraction and optional visual analysis for PDFs (depends on server extensions and the configured connector)
@@ -108,7 +109,7 @@ When preparing a release for WordPress.org:
 ## Usage
 
 1. Ensure AI connectors are set up in **Settings → Connectors**
-2. Optionally adjust default prompts under **Tainacan → AI Tools** and per-collection prompts on each collection's edition form
+2. Optionally adjust the default prompt (and templates) under **Tainacan → AI Tools** and per-collection prompts on each collection's edition form
 3. Edit a Tainacan item with an attached document
 4. In the **AI Metadata Extractor** section, click **Analyze Document**
 5. Review results and fill metadata (manually or using the provided actions)
@@ -148,6 +149,7 @@ tainacan-ai/
 │   ├── API.php             # REST API endpoints
 │   ├── CollectionPrompts.php   # Post meta + metadata for mapping UI
 │   ├── CollectionFormHook.php  # Per-collection prompts on edition form
+│   ├── PromptTemplates.php     # Suggested prompt templates for admin UI
 │   ├── ExifExtractor.php
 │   ├── CoreAI.php              # WordPress AI client integration
 │   ├── CoreAIRequestLogging.php

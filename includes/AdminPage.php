@@ -92,6 +92,7 @@ class AdminPage extends \Tainacan\Pages {
         wp_localize_script('tainacan-ai-admin', 'TainacanAIAdmin', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('tainacan_ai_admin_nonce'),
+            'promptTemplates' => PromptTemplates::get_templates(),
             'texts' => [
                 'error' => __('Something went wrong. Please try again.', 'tainacan-ai'),
                 'clearing' => __('Clearing cache...', 'tainacan-ai'),
@@ -99,6 +100,7 @@ class AdminPage extends \Tainacan\Pages {
                 'saving' => __('Saving...', 'tainacan-ai'),
                 'saved' => __('Saved successfully!', 'tainacan-ai'),
                 'loading' => __('Loading...', 'tainacan-ai'),
+                'confirmReplacePromptTemplate' => __('Replace the current prompt with this template?', 'tainacan-ai'),
                 'confirmClearCache' => __('Are you sure you want to clear all cache?', 'tainacan-ai'),
                 'selectCollectionFirst' => __('Select a collection first.', 'tainacan-ai'),
                 'loadingMetadata' => __('Loading metadata...', 'tainacan-ai'),
@@ -145,7 +147,7 @@ class AdminPage extends \Tainacan\Pages {
         $options = get_option('tainacan_ai_options', []);
 
         // Long text fields (prompts)
-        $textarea_fields = ['default_image_prompt', 'default_document_prompt'];
+        $textarea_fields = ['default_prompt'];
         foreach ($textarea_fields as $field) {
             if (isset($input[$field])) {
                 $options[$field] = wp_kses_post($input[$field]);

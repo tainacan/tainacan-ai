@@ -498,6 +498,46 @@
 }
 
 /* ================================
+   Prompt templates
+   ================================ */
+.tainacan-ai-prompt-templates {
+    margin-top: 16px;
+    border: 1px solid var(--tainacan-ai-border);
+    border-radius: var(--tainacan-input-border-radius, 8px);
+    background: var(--tainacan-ai-white);
+    padding: 12px;
+}
+
+.tainacan-ai-prompt-templates > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--tainacan-ai-primary);
+}
+
+.tainacan-ai-prompt-template {
+    margin-top: 14px;
+    border-top: 1px solid var(--tainacan-ai-border);
+    padding-top: 14px;
+}
+
+.tainacan-ai-prompt-template-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.tainacan-ai-prompt-template-header h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.tainacan-ai-prompt-template textarea[readonly] {
+    background: var(--tainacan-ai-bg-light);
+}
+
+/* ================================
    Actions Bar
    ================================ */
 .tainacan-ai-actions-bar {
