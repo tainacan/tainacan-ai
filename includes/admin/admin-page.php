@@ -455,10 +455,13 @@ $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghost
                 </div>
 
                 <div class="tainacan-ai-info-box">
-                    <h3>
-                        <span class="dashicons dashicons-admin-tools"></span>
-                        <?php esc_html_e('System Capabilities', 'tainacan-ai'); ?>
-                    </h3>
+
+                    <div class="tainacan-ai-info-box-header">
+                        <h3>
+                            <span class="dashicons dashicons-admin-tools"></span>
+                            <?php esc_html_e('System Capabilities', 'tainacan-ai'); ?>
+                        </h3>
+                    </div>
                     <p><?php esc_html_e('Status of local modules and runtime support used during analysis.', 'tainacan-ai'); ?></p>
                     <ul class="tainacan-ai-capability-list">
                         <li>
