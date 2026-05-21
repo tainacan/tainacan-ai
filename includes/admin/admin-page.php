@@ -19,7 +19,24 @@ if (!class_exists('\Imagick')) {
 
 // WP 7.0+ path: rely on WordPress Connectors + Core AI support checks.
 $tainacan_ai_is_configured = \Tainacan\AI\CoreAI::is_supported_text_generation();
-$tainacan_ai_has_image_support = \Tainacan\AI\CoreAI::is_supported_image_analysis();
+$tainacan_ai_image_support = \Tainacan\AI\CoreAI::get_image_analysis_support_display();
+$tainacan_ai_image_support_status = \Tainacan\AI\CoreAI::get_image_analysis_support_status();
+$tainacan_ai_request_timeout_bounds = \Tainacan\AI\CoreAI::get_request_timeout_bounds();
+$tainacan_ai_request_timeout_value = max(
+    $tainacan_ai_request_timeout_bounds['min'],
+    min(
+        $tainacan_ai_request_timeout_bounds['max'],
+        (int) ($options['request_timeout'] ?? 120)
+    )
+);
+$tainacan_ai_temperature_bounds = \Tainacan\AI\CoreAI::get_temperature_bounds();
+$tainacan_ai_temperature_value = max(
+    $tainacan_ai_temperature_bounds['min'],
+    min(
+        $tainacan_ai_temperature_bounds['max'],
+        (float) ($options['temperature'] ?? 0.1)
+    )
+);
 
 // Check dependencies
 $tainacan_ai_has_exif = function_exists('exif_read_data');
@@ -349,24 +366,42 @@ $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghost
                                     type="number"
                                     id="temperature"
                                     name="tainacan_ai_options[temperature]"
-                                    value="<?php echo esc_attr($options['temperature'] ?? 0.1); ?>"
-                                    min="0"
-                                    max="2"
-                                    step="0.1"
+                                    value="<?php echo esc_attr($tainacan_ai_temperature_value); ?>"
+                                    min="<?php echo esc_attr($tainacan_ai_temperature_bounds['min']); ?>"
+                                    max="<?php echo esc_attr($tainacan_ai_temperature_bounds['max']); ?>"
+                                    step="<?php echo esc_attr($tainacan_ai_temperature_bounds['step']); ?>"
                                 />
-                                <p class="description"><?php esc_html_e('0 = deterministic, 2 = creative.', 'tainacan-ai'); ?></p>
+                                <p class="description">
+                                    <?php
+                                    printf(
+                                        /* translators: 1: minimum temperature, 2: maximum temperature */
+                                        esc_html__('Randomness for the connector API (%1$s–%2$s; lower is more deterministic).', 'tainacan-ai'),
+                                        esc_html((string) $tainacan_ai_temperature_bounds['min']),
+                                        esc_html((string) $tainacan_ai_temperature_bounds['max'])
+                                    );
+                                    ?>
+                                </p>
                             </div>
 
                             <div class="tainacan-ai-field">
-                                <label for="request_timeout"><?php esc_html_e('Timeout (seconds)', 'tainacan-ai'); ?></label>
+                                <label for="request_timeout"><?php esc_html_e('AI request timeout (seconds)', 'tainacan-ai'); ?></label>
                                 <input
                                     type="number"
                                     id="request_timeout"
                                     name="tainacan_ai_options[request_timeout]"
-                                    value="<?php echo esc_attr($options['request_timeout'] ?? 120); ?>"
-                                    min="10"
-                                    max="300"
+                                    value="<?php echo esc_attr($tainacan_ai_request_timeout_value); ?>"
+                                    min="<?php echo esc_attr($tainacan_ai_request_timeout_bounds['min']); ?>"
+                                    max="<?php echo esc_attr($tainacan_ai_request_timeout_bounds['max']); ?>"
                                 />
+                                <p class="description">
+                                    <?php
+                                    if ((int) ini_get('max_execution_time') > 0) {
+                                        esc_html_e('Max wait for the connector HTTP API call, capped by this site’s PHP max_execution_time.', 'tainacan-ai');
+                                    } else {
+                                        esc_html_e('Max wait for the connector HTTP API call. Does not extend browser limits for the full analyze action.', 'tainacan-ai');
+                                    }
+                                    ?>
+                                </p>
                             </div>
 
                             <div class="tainacan-ai-field">
@@ -390,15 +425,17 @@ $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghost
              <!-- Sidebar -->
             <div class="tainacan-ai-sidebar">
                 <div class="tainacan-ai-info-box">
-                    <h3>
-                        <span class="dashicons dashicons-cloud"></span>
-                        <?php esc_html_e('AI Connectors', 'tainacan-ai'); ?>
-                    </h3>
-                    <?php if ($tainacan_ai_is_configured): ?>
-                        <span class="tainacan-ai-badge success"><?php esc_html_e('Configured', 'tainacan-ai'); ?></span>
-                    <?php else: ?>
-                        <span class="tainacan-ai-badge warning"><?php esc_html_e('Not configured', 'tainacan-ai'); ?></span>
-                    <?php endif; ?>
+                    <div class="tainacan-ai-info-box-header">
+                        <h3>
+                            <span class="dashicons dashicons-cloud"></span>
+                            <?php esc_html_e('AI Connectors', 'tainacan-ai'); ?>
+                        </h3>
+                        <?php if ($tainacan_ai_is_configured): ?>
+                            <span class="tainacan-ai-badge success"><?php esc_html_e('Configured', 'tainacan-ai'); ?></span>
+                        <?php else: ?>
+                            <span class="tainacan-ai-badge warning"><?php esc_html_e('Not configured', 'tainacan-ai'); ?></span>
+                        <?php endif; ?>
+                    </div>
                     <p>
                         <?php
                         echo wp_kses_post(
@@ -410,8 +447,10 @@ $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghost
                         );
                         ?>
                     </p>
-                    <?php if (empty($tainacan_ai_has_image_support)): ?>
-                        <p><?php esc_html_e('Image/PDF visual analysis may be unavailable depending on the configured WordPress connector.', 'tainacan-ai'); ?></p>
+                    <?php if ($tainacan_ai_image_support_status !== \Tainacan\AI\CoreAI::IMAGE_SUPPORT_CATALOG): ?>
+                        <p><?php esc_html_e('Image analysis depends on a connector model that accepts image input. The status below is based on connector metadata only; run analysis on an item to confirm.', 'tainacan-ai'); ?></p>
+                    <?php else: ?>
+                        <p><?php esc_html_e('A vision-capable model appears in connector metadata. WordPress may still pick another model at runtime — confirm by analyzing an image on an item.', 'tainacan-ai'); ?></p>
                     <?php endif; ?>
                 </div>
 
@@ -439,9 +478,9 @@ $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghost
                             </strong>
                         </li>
                         <li>
-                            <span><?php esc_html_e('Image analysis via connector', 'tainacan-ai'); ?></span>
-                            <strong class="<?php echo $tainacan_ai_has_image_support ? 'status-ok' : 'status-warn'; ?>">
-                                <?php echo $tainacan_ai_has_image_support ? esc_html__('Available', 'tainacan-ai') : esc_html__('Unavailable', 'tainacan-ai'); ?>
+                            <span><?php esc_html_e('Image analysis', 'tainacan-ai'); ?></span>
+                            <strong class="<?php echo esc_attr($tainacan_ai_image_support['class']); ?>">
+                                <?php echo esc_html($tainacan_ai_image_support['label']); ?>
                             </strong>
                         </li>
                     </ul>
@@ -478,17 +517,6 @@ $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghost
                             ?>
                         </p>
                     <?php endif; ?>
-
-                    <div class="tainacan-ai-formats compact">
-                        <div class="tainacan-ai-format-group">
-                            <strong><?php esc_html_e('Images:', 'tainacan-ai'); ?></strong>
-                            <span>JPG, PNG, GIF, WebP</span>
-                        </div>
-                        <div class="tainacan-ai-format-group">
-                            <strong><?php esc_html_e('Documents:', 'tainacan-ai'); ?></strong>
-                            <span>PDF, TXT, HTML</span>
-                        </div>
-                    </div>
                 </div>
             </div>
 

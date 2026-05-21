@@ -228,6 +228,23 @@
     top: 48px;
 }
 
+.tainacan-ai-info-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+}
+
+.tainacan-ai-info-box-header h3 {
+    margin: 0;
+    font-size: 16px;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
 .tainacan-ai-info-box h3 {
     margin: 0 0 16px;
     font-size: 18px;
@@ -254,6 +271,9 @@
     font-size: 13px;
     color: var(--tainacan-ai-text-light);
     line-height: 1.6;
+}
+.tainacan-ai-info-box p:last-child {
+    margin-bottom: 0;
 }
 
 /* Spinner */
@@ -570,13 +590,23 @@
     top: 0;
 }
 
-.tainacan-ai-sidebar .tainacan-ai-info-box h3 {
+.tainacan-ai-sidebar .tainacan-ai-info-box h3,
+.tainacan-ai-sidebar .tainacan-ai-info-box-header h3 {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.tainacan-ai-sidebar .tainacan-ai-info-box h3 .dashicons {
+.tainacan-ai-sidebar .tainacan-ai-info-box-header {
+    flex-wrap: wrap;
+}
+
+.tainacan-ai-sidebar .tainacan-ai-info-box-header .tainacan-ai-badge {
+    flex-shrink: 0;
+}
+
+.tainacan-ai-sidebar .tainacan-ai-info-box h3 .dashicons,
+.tainacan-ai-sidebar .tainacan-ai-info-box-header h3 .dashicons {
     font-size: 18px;
     width: 18px;
     height: 18px;
@@ -591,32 +621,6 @@
 .tainacan-ai-sidebar .tainacan-ai-info-box ul li {
     margin-bottom: 6px;
     font-size: 13px;
-}
-
-/* ================================
-   Formats
-   ================================ */
-.tainacan-ai-formats {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.tainacan-ai-formats.compact {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--tainacan-ai-border);
-}
-
-.tainacan-ai-format-group strong {
-    font-size: 12px;
-    color: var(--tainacan-ai-primary);
-    text-transform: uppercase;
-}
-
-.tainacan-ai-format-group span {
-    font-size: 13px;
-    color: var(--tainacan-ai-text);
 }
 
 .tainacan-ai-capability-list {
@@ -640,7 +644,8 @@
 }
 
 .tainacan-ai-capability-list .status-ok,
-.tainacan-ai-capability-list .status-warn {
+.tainacan-ai-capability-list .status-warn,
+.tainacan-ai-capability-list .status-unknown {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -653,6 +658,10 @@
 
 .tainacan-ai-capability-list .status-warn {
     color: var(--tainacan-ai-warning);
+}
+
+.tainacan-ai-capability-list .status-unknown {
+    color: var(--tainacan-ai-gray-600, #646970);
 }
 
 /* ================================

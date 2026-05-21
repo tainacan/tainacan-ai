@@ -29,7 +29,56 @@ if (!function_exists('\wp_ai_client_prompt')) {
  * Note: We keep this intentionally small to avoid extra abstraction layers.
  */
 class CoreAI {
-    private const DUMMY_IMAGE_DATA_URI = 'data:image/jpeg;base64,AA==';
+    /** No vision-capable model in connector metadata (configured active connectors). */
+    public const IMAGE_SUPPORT_UNAVAILABLE = 'unavailable';
+
+    /**
+     * At least one configured connector declares a vision model in metadata.
+     * Runtime model selection is not guaranteed — confirm by testing on an item.
+     */
+    public const IMAGE_SUPPORT_CATALOG = 'catalog';
+
+    /** Cannot scan connectors or AI client metadata is unavailable. */
+    public const IMAGE_SUPPORT_UNKNOWN = 'unknown';
+
+    /** Upper cap for AI HTTP timeout when PHP max_execution_time is unlimited (0). */
+    private const REQUEST_TIMEOUT_CAP = 300;
+
+    /** Preferred minimum AI HTTP timeout (seconds). */
+    private const REQUEST_TIMEOUT_MIN = 10;
+
+    /**
+     * Allowed range for the AI HTTP request timeout setting.
+     *
+     * The maximum is limited by PHP max_execution_time when that ini value is set.
+     *
+     * @return array{min: int, max: int}
+     */
+    public static function get_request_timeout_bounds(): array {
+        $php_limit = (int) ini_get('max_execution_time');
+        $max = ($php_limit > 0)
+            ? min(self::REQUEST_TIMEOUT_CAP, $php_limit)
+            : self::REQUEST_TIMEOUT_CAP;
+        $min = min(self::REQUEST_TIMEOUT_MIN, $max);
+
+        return [
+            'min' => $min,
+            'max' => $max,
+        ];
+    }
+
+    /**
+     * Allowed range for temperature (WordPress AI client ModelConfig schema).
+     *
+     * @return array{min: float, max: float, step: float}
+     */
+    public static function get_temperature_bounds(): array {
+        return [
+            'min' => 0.0,
+            'max' => 2.0,
+            'step' => 0.1,
+        ];
+    }
 
     /**
      * Best-effort: detect if at least one Core connector has an API key.
@@ -123,55 +172,174 @@ class CoreAI {
     }
 
     /**
-     * Check if models that support image inputs are available.
+     * Vision support from connector model metadata (WP AI capability "vision" rules).
      *
-     * We build a prompt that includes a tiny dummy image file and check support.
+     * @return self::IMAGE_SUPPORT_* One of the IMAGE_SUPPORT_* constants.
+     */
+    public static function get_image_analysis_support_status(): string {
+        if (!class_exists(\WordPress\AiClient\AiClient::class)) {
+            return self::IMAGE_SUPPORT_UNKNOWN;
+        }
+
+        $requirements = self::build_vision_model_requirements();
+        if ($requirements === null) {
+            return self::IMAGE_SUPPORT_UNKNOWN;
+        }
+
+        $connector_ids = self::get_active_ai_connector_ids();
+        if ($connector_ids === []) {
+            return self::IMAGE_SUPPORT_UNKNOWN;
+        }
+
+        $registry = \WordPress\AiClient\AiClient::defaultRegistry();
+
+        foreach ($connector_ids as $connector_id) {
+            try {
+                $models = $registry->findProviderModelsMetadataForSupport($connector_id, $requirements);
+                if (!empty($models)) {
+                    return self::IMAGE_SUPPORT_CATALOG;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return self::IMAGE_SUPPORT_UNAVAILABLE;
+    }
+
+    /**
+     * Whether image analysis may be attempted (not known to be impossible from metadata).
      */
     public static function is_supported_image_analysis(): bool {
-        if (!function_exists('\wp_ai_client_prompt')) {
-            return false;
+        return self::get_image_analysis_support_status() !== self::IMAGE_SUPPORT_UNAVAILABLE;
+    }
+
+    /**
+     * Admin UI label and status class for image analysis via connector.
+     *
+     * @return array{class: string, label: string}
+     */
+    public static function get_image_analysis_support_display(): array {
+        switch (self::get_image_analysis_support_status()) {
+            case self::IMAGE_SUPPORT_CATALOG:
+                return [
+                    'class' => 'status-unknown',
+                    'label' => __('Requires testing', 'tainacan-ai'),
+                ];
+            case self::IMAGE_SUPPORT_UNAVAILABLE:
+                return [
+                    'class' => 'status-warn',
+                    'label' => __('Unavailable', 'tainacan-ai'),
+                ];
+            default:
+                return [
+                    'class' => 'status-unknown',
+                    'label' => __('Requires testing', 'tainacan-ai'),
+                ];
+        }
+    }
+
+    /**
+     * Vision requirements: text generation + input modalities text and image.
+     *
+     * @return \WordPress\AiClient\Providers\Models\DTO\ModelRequirements|null
+     */
+    private static function build_vision_model_requirements(): ?object {
+        if (
+            !class_exists(\WordPress\AiClient\Providers\Models\DTO\ModelRequirements::class)
+            || !class_exists(\WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::class)
+            || !class_exists(\WordPress\AiClient\Providers\Models\Enums\OptionEnum::class)
+            || !class_exists(\WordPress\AiClient\Providers\Models\DTO\RequiredOption::class)
+            || !class_exists(\WordPress\AiClient\Messages\Enums\ModalityEnum::class)
+        ) {
+            return null;
         }
 
-        $connectors_configured = self::has_connectors_api_key();
+        return new \WordPress\AiClient\Providers\Models\DTO\ModelRequirements(
+            [
+                \WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::textGeneration(),
+            ],
+            [
+                new \WordPress\AiClient\Providers\Models\DTO\RequiredOption(
+                    \WordPress\AiClient\Providers\Models\Enums\OptionEnum::inputModalities(),
+                    [
+                        \WordPress\AiClient\Messages\Enums\ModalityEnum::text(),
+                        \WordPress\AiClient\Messages\Enums\ModalityEnum::image(),
+                    ]
+                ),
+            ]
+        );
+    }
 
-        try {
-            $builder = wp_ai_client_prompt('test');
-            self::add_file_to_builder($builder, self::DUMMY_IMAGE_DATA_URI, 'image/jpeg');
+    /**
+     * Active AI provider connector IDs (wp_get_connectors; no WordPress AI plugin required).
+     *
+     * @return list<string>
+     */
+    private static function get_active_ai_connector_ids(): array {
+        if (!function_exists('wp_get_connectors')) {
+            return [];
+        }
 
-            $image_support_methods = [
-                // Snake_case variants
-                'is_supported_for_image_analysis',
-                'is_supported_for_image_generation',
-                'is_supported_for_vision',
-                'is_supported_for_images',
-                // CamelCase variants
-                'isSupportedForImageAnalysis',
-                'isSupportedForImageGeneration',
-                'isSupportedForVision',
-                'isSupportedForImages',
-            ];
-
-            $hasMagicCall = method_exists($builder, '__call');
-
-            foreach ($image_support_methods as $method) {
-                if (!self::builderHas($builder, $method) && !$hasMagicCall) {
-                    continue;
-                }
-
-                try {
-                    $supported = (bool) $builder->$method();
-                    return $supported || $connectors_configured;
-                } catch (\Throwable $e) {
-                    continue;
-                }
+        $connector_ids = [];
+        foreach ((array) wp_get_connectors() as $connector_id => $data) {
+            if (!is_string($connector_id) || !is_array($data)) {
+                continue;
             }
-        } catch (\Throwable $e) {
-            // Don't block image attempts if connectors are configured.
-            return self::is_supported_text_generation();
+            if (($data['type'] ?? '') !== 'ai_provider') {
+                continue;
+            }
+            if (
+                function_exists('\WordPress\AI\is_connector_plugin_active')
+                && !\WordPress\AI\is_connector_plugin_active($data)
+            ) {
+                continue;
+            }
+            $connector_ids[] = $connector_id;
         }
 
-        // If we can't detect image support method names, don't block.
-        return self::is_supported_text_generation() || $connectors_configured;
+        return $connector_ids;
+    }
+
+    /**
+     * Prefer vision-capable models when the WordPress AI plugin exposes preferences.
+     *
+     * @param object $builder Prompt builder from wp_ai_client_prompt().
+     */
+    private static function apply_vision_model_preferences(object $builder): void {
+        $preferences = self::get_vision_model_preferences();
+        if ($preferences === []) {
+            return;
+        }
+
+        $methods = ['using_model_preference', 'usingModelPreference'];
+        $has_magic_call = method_exists($builder, '__call');
+
+        foreach ($methods as $method) {
+            if (!self::builderHas($builder, $method) && !$has_magic_call) {
+                continue;
+            }
+
+            try {
+                $builder->$method(...$preferences);
+                return;
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+    }
+
+    /**
+     * @return list<array{0: string, 1: string}>
+     */
+    private static function get_vision_model_preferences(): array {
+        if (!function_exists('\WordPress\AI\get_preferred_vision_models')) {
+            return [];
+        }
+
+        $preferences = \WordPress\AI\get_preferred_vision_models();
+
+        return is_array($preferences) ? $preferences : [];
     }
 
     /**
@@ -223,6 +391,7 @@ class CoreAI {
 
         $temperature = isset($options['temperature']) ? (float) $options['temperature'] : null;
         $max_tokens = isset($options['max_tokens']) ? (int) $options['max_tokens'] : null;
+        $request_timeout = isset($options['request_timeout']) ? (int) $options['request_timeout'] : null;
 
         $log_scope = null;
         if ($log_context !== null && CoreAIRequestLogging::is_active()) {
@@ -238,12 +407,23 @@ class CoreAI {
             if ($max_tokens !== null) {
                 self::builderUsingMaxTokens($builder, $max_tokens);
             }
+            if ($request_timeout !== null && $request_timeout > 0) {
+                self::builderUsingRequestTimeout($builder, (float) $request_timeout);
+            }
 
+            $has_image_input = false;
             foreach ($files as $file) {
                 if (empty($file['data']) || empty($file['mime'])) {
                     continue;
                 }
                 self::add_file_to_builder($builder, $file['data'], $file['mime']);
+                if (str_starts_with((string) $file['mime'], 'image/')) {
+                    $has_image_input = true;
+                }
+            }
+
+            if ($has_image_input) {
+                self::apply_vision_model_preferences($builder);
             }
 
             // Use result object (we need usage + metadata).
@@ -317,6 +497,39 @@ class CoreAI {
         if (self::builderHas($builder, 'usingMaxTokens')) {
             $builder->usingMaxTokens($max_tokens);
             return;
+        }
+    }
+
+    /**
+     * HTTP timeout for the connector API request (overrides Core default, usually 30s).
+     */
+    private static function builderUsingRequestTimeout(object $builder, float $timeout_seconds): void {
+        if (!class_exists(\WordPress\AiClient\Providers\Http\DTO\RequestOptions::class)) {
+            return;
+        }
+
+        try {
+            $request_options = \WordPress\AiClient\Providers\Http\DTO\RequestOptions::fromArray([
+                \WordPress\AiClient\Providers\Http\DTO\RequestOptions::KEY_TIMEOUT => $timeout_seconds,
+            ]);
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        $methods = ['using_request_options', 'usingRequestOptions'];
+        $has_magic_call = method_exists($builder, '__call');
+
+        foreach ($methods as $method) {
+            if (!self::builderHas($builder, $method) && !$has_magic_call) {
+                continue;
+            }
+
+            try {
+                $builder->$method($request_options);
+                return;
+            } catch (\Throwable $e) {
+                continue;
+            }
         }
     }
 

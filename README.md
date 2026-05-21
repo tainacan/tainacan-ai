@@ -113,12 +113,20 @@ When preparing a release for WordPress.org:
 4. In the **AI Metadata Extractor** section, click **Analyze Document**
 5. Review results and fill metadata (manually or using the provided actions)
 
-## Supported Formats
+## File types
 
-**Images**: JPG, PNG, GIF, WebP  
-**Documents**: PDF, TXT, HTML  
+Tainacan AI only starts analysis for recognized MIME types: JPEG, PNG, GIF, WebP, PDF, plain text, HTML, and Word (`.doc` / `.docx`). Anything else is rejected before an AI request is sent.
 
-(Actual capabilities also depend on PHP extensions, Imagick/Ghostscript for some PDF workflows, and the configured connector.)
+Listing a format here does not guarantee a successful result:
+
+| Kind | What must work |
+|------|----------------|
+| Images | Connector model with image input (see **Image analysis** on **Tainacan → AI Tools**) |
+| PDF (text) | Bundled PDF text parser |
+| PDF (scanned / visual) | Imagick or Ghostscript **and** a vision-capable connector |
+| EXIF (optional) | PHP `exif` extension |
+
+Use **Analyze Document** on a real item to confirm your connector and server configuration.
 
 ## REST API
 

@@ -189,16 +189,27 @@ class AdminPage extends \Tainacan\Pages {
         }
 
         // Numeric fields
-        $numeric_fields = ['max_tokens', 'request_timeout', 'cache_duration'];
+        $numeric_fields = ['max_tokens', 'cache_duration'];
         foreach ($numeric_fields as $field) {
             if (isset($input[$field])) {
                 $options[$field] = absint($input[$field]);
             }
         }
 
-        // Temperature (float)
+        if (isset($input['request_timeout'])) {
+            $timeout_bounds = CoreAI::get_request_timeout_bounds();
+            $options['request_timeout'] = max(
+                $timeout_bounds['min'],
+                min($timeout_bounds['max'], absint($input['request_timeout']))
+            );
+        }
+
         if (isset($input['temperature'])) {
-            $options['temperature'] = max(0, min(2, floatval($input['temperature'])));
+            $temperature_bounds = CoreAI::get_temperature_bounds();
+            $options['temperature'] = max(
+                $temperature_bounds['min'],
+                min($temperature_bounds['max'], (float) $input['temperature'])
+            );
         }
 
         // Checkboxes

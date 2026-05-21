@@ -257,6 +257,7 @@ class DocumentAnalyzer {
         $options = [
             'temperature' => (float) ($this->options['temperature'] ?? 0.1),
             'max_tokens' => (int) ($this->options['max_tokens'] ?? 2000),
+            'request_timeout' => (int) ($this->options['request_timeout'] ?? 120),
         ];
 
         return CoreAIRequestLogging::options_with_context(
@@ -413,12 +414,10 @@ class DocumentAnalyzer {
      * Analyze image
      */
     private function analyze_image(int $attachment_id, string $file_path, string $mime_type): array|\WP_Error {
-        if (!CoreAI::is_supported_image_analysis()) {
+        if (CoreAI::get_image_analysis_support_status() === CoreAI::IMAGE_SUPPORT_UNAVAILABLE) {
             return new \WP_Error(
                 'vision_not_supported',
-                sprintf(
-                    __('Core AI does not support image analysis. Use text extraction or another setup.', 'tainacan-ai')
-                )
+                __('No configured connector exposes a model that accepts image input in its metadata. Use text extraction or configure a vision-capable model.', 'tainacan-ai')
             );
         }
 

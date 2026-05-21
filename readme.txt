@@ -28,10 +28,15 @@ Tainacan AI extends the [Tainacan](https://wordpress.org/plugins/tainacan/) plug
 * **Smart caching**: Reduce repeat analysis with caching and a manual clear action
 * **WP Consent API**: Optional consent gate for AI-powered actions (when enabled in settings)
 
-= Supported Formats =
+= File types =
 
-* **Images**: JPG, PNG, GIF, WebP
-* **Documents**: PDF (text and optional visual analysis), TXT, HTML
+The plugin will attempt analysis only for attachments whose MIME type it recognizes (JPEG, PNG, GIF, WebP, PDF, plain text, HTML, and Word documents). Other types are rejected before any AI request runs.
+
+Whether a supported file is fully processed depends on your setup—not on this list alone:
+
+* **Images** need a connector model that accepts image input (check status under **Tainacan → AI Tools**).
+* **PDFs** use text extraction when possible; visual analysis of scanned PDFs additionally requires Imagick or Ghostscript and a vision-capable connector.
+* **EXIF** metadata is optional and requires the PHP EXIF extension.
 
 = How It Works =
 
