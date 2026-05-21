@@ -8,14 +8,21 @@ if (!defined('ABSPATH')) {
 class PromptTemplates {
 
     public static function get_default_prompt(): string {
-        return self::get_image_template();
+        $default_prompt = self::get_image_template();
+
+        /**
+         * Filters the default analysis prompt used by Tainacan AI.
+         *
+         * @param string $default_prompt The default prompt text.
+         */
+        return (string) apply_filters('tainacan_ai_default_prompt', $default_prompt);
     }
 
     /**
      * @return array<string, array<string, string>>
      */
     public static function get_templates(): array {
-        return [
+        $templates = [
             'image' => [
                 'label' => __('Image analysis', 'tainacan-ai'),
                 'description' => __('Default template for visual and museological analysis of image files.', 'tainacan-ai'),
@@ -27,6 +34,36 @@ class PromptTemplates {
                 'content' => self::get_document_template(),
             ],
         ];
+
+        /**
+         * Filters prompt template suggestions shown in the admin.
+         *
+         * @param array<string, array<string, string>> $templates Template map keyed by template slug.
+         */
+        $templates = apply_filters('tainacan_ai_prompt_templates', $templates);
+        if (!is_array($templates)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($templates as $key => $template) {
+            if (!is_string($key) || !is_array($template)) {
+                continue;
+            }
+
+            $content = isset($template['content']) ? (string) $template['content'] : '';
+            if ($content === '') {
+                continue;
+            }
+
+            $normalized[$key] = [
+                'label' => isset($template['label']) ? (string) $template['label'] : $key,
+                'description' => isset($template['description']) ? (string) $template['description'] : '',
+                'content' => $content,
+            ];
+        }
+
+        return $normalized;
     }
 
     private static function get_image_template(): string {
