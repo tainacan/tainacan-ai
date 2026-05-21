@@ -21,7 +21,7 @@ Tainacan AI extends the [Tainacan](https://wordpress.org/plugins/tainacan/) plug
 * **WordPress AI & Connectors**: Uses the site’s configured AI connectors
 * **Image analysis**: Extract structured metadata from images when your connector supports it
 * **Document analysis**: Extract bibliographic-style or custom JSON fields from PDFs, TXT, and HTML
-* **Custom prompts per collection**: Specialized prompts for different collections and schemas
+* **Custom prompts per collection**: A single prompt per collection to guide extraction for any supported file type
 * **Metadata mapping**: Map AI output keys to Tainacan metadata for fill workflows
 * **EXIF data extraction**: Optional technical metadata from image files (when the server supports it)
 * **PDF support**: Text extraction via bundled parser; optional visual analysis depends on Imagick/Ghostscript and the connector
@@ -52,7 +52,7 @@ Connectors and credentials are managed in **Settings → Connectors**. The plugi
 
 = Customization =
 
-Configure default prompts, per-collection overrides on the collection edition form, field mapping, features such as EXIF extraction, and clear cache from **Tainacan → Others → AI Tools**.
+Configure a default analysis prompt, per-collection overrides on the collection edition form, suggested prompt templates, field mapping, features such as EXIF extraction, and clear cache from **Tainacan → Others → AI Tools**.
 
 == Installation ==
 
@@ -120,7 +120,7 @@ You can configure multiple connectors in WordPress; this plugin does not maintai
 == Screenshots ==
 
 1. AI Tools settings page (prompts, features, cache)
-2. Custom prompt configuration for collections
+2. Collection edit form with per-collection prompt override
 3. Metadata mapping interface
 4. Document analysis in the item edit form
 

@@ -23,6 +23,10 @@
 
 			// Toggle cards
 			$( '.tainacan-ai-toggle-card' ).on( 'click', this.toggleCard );
+			$( '.tainacan-ai-use-prompt-template' ).on(
+				'click',
+				this.applyPromptTemplate.bind( this )
+			);
 
 			// Field Mapping
 			$( '#mapping-collection-select' ).on(
@@ -113,6 +117,33 @@
 					.hasClass( 'collapsed' );
 				$card.toggleClass( 'is-collapsed', isCollapsed );
 			} );
+		},
+
+		applyPromptTemplate( e ) {
+			const templateKey = $( e.currentTarget ).data( 'template-key' );
+			const template =
+				TainacanAIAdmin.promptTemplates?.[ templateKey ] || null;
+			const $textarea = $( '#default_prompt' );
+
+			if ( ! template || ! template.content || ! $textarea.length ) {
+				Admin.showNotice( TainacanAIAdmin.texts.error, 'error' );
+				return;
+			}
+
+			const currentValue = ( $textarea.val() || '' ).toString().trim();
+			const nextValue = template.content.toString();
+			if (
+				currentValue &&
+				currentValue !== nextValue.trim() &&
+				! confirm(
+					TainacanAIAdmin.texts.confirmReplacePromptTemplate ||
+						'Replace the current prompt with this template?'
+				)
+			) {
+				return;
+			}
+
+			$textarea.val( nextValue ).trigger( 'change' ).focus();
 		},
 
 		populateMappingCollections() {
