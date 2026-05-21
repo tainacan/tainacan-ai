@@ -79,62 +79,6 @@ class API {
             'permission_callback' => [$this, 'check_permission'],
         ]);
 
-        // Prompts por coleção
-        register_rest_route($this->namespace, '/collections/(?P<id>\d+)/prompt', [
-            [
-                'methods' => 'GET',
-                'callback' => [$this, 'get_collection_prompt'],
-                'permission_callback' => [$this, 'check_permission'],
-                'args' => [
-                    'type' => [
-                        'required' => false,
-                        'type' => 'string',
-                        'default' => 'image',
-                    ],
-                ],
-            ],
-            [
-                'methods' => 'POST',
-                'callback' => [$this, 'save_collection_prompt'],
-                'permission_callback' => [$this, 'check_admin_permission'],
-                'args' => [
-                    'type' => [
-                        'required' => true,
-                        'type' => 'string',
-                    ],
-                    'prompt' => [
-                        'required' => true,
-                        'type' => 'string',
-                    ],
-                ],
-            ],
-            [
-                'methods' => 'DELETE',
-                'callback' => [$this, 'delete_collection_prompt'],
-                'permission_callback' => [$this, 'check_admin_permission'],
-                'args' => [
-                    'type' => [
-                        'required' => false,
-                        'type' => 'string',
-                        'default' => 'image',
-                    ],
-                ],
-            ],
-        ]);
-
-        // Sugestão de prompt
-        register_rest_route($this->namespace, '/collections/(?P<id>\d+)/prompt/suggestion', [
-            'methods' => 'GET',
-            'callback' => [$this, 'get_prompt_suggestion'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args' => [
-                'type' => [
-                    'required' => false,
-                    'type' => 'string',
-                    'default' => 'image',
-                ],
-            ],
-        ]);
     }
 
     /**
@@ -142,13 +86,6 @@ class API {
      */
     public function check_permission(): bool {
         return current_user_can('edit_posts');
-    }
-
-    /**
-     * Check admin permission
-     */
-    public function check_admin_permission(): bool {
-        return current_user_can('manage_options');
     }
 
     /**
@@ -240,84 +177,4 @@ class API {
         ], 200);
     }
 
-    /**
-     * Get collection prompt
-     */
-    public function get_collection_prompt(\WP_REST_Request $request): \WP_REST_Response {
-        $collection_id = (int) $request->get_param('id');
-        $type = $request->get_param('type');
-
-        $prompts = new CollectionPrompts();
-
-        return new \WP_REST_Response([
-            'success' => true,
-            'data' => [
-                'prompt' => $prompts->get_prompt($collection_id, $type),
-                'effective_prompt' => $prompts->get_effective_prompt($collection_id, $type),
-            ],
-        ], 200);
-    }
-
-    /**
-     * Save collection prompt
-     */
-    public function save_collection_prompt(\WP_REST_Request $request): \WP_REST_Response {
-        $collection_id = (int) $request->get_param('id');
-        $type = $request->get_param('type');
-        $prompt = $request->get_param('prompt');
-
-        $prompts = new CollectionPrompts();
-
-        if ($prompts->save_prompt($collection_id, $type, $prompt)) {
-            return new \WP_REST_Response([
-                'success' => true,
-                'message' => __('Prompt saved successfully!', 'tainacan-ai'),
-            ], 200);
-        }
-
-        return new \WP_REST_Response([
-            'success' => false,
-            'message' => __('Error saving prompt.', 'tainacan-ai'),
-        ], 500);
-    }
-
-    /**
-     * Remove collection prompt
-     */
-    public function delete_collection_prompt(\WP_REST_Request $request): \WP_REST_Response {
-        $collection_id = (int) $request->get_param('id');
-        $type = $request->get_param('type');
-
-        $prompts = new CollectionPrompts();
-
-        if ($prompts->delete_prompt($collection_id, $type)) {
-            return new \WP_REST_Response([
-                'success' => true,
-                'message' => __('Prompt removed. Default prompt will be used.', 'tainacan-ai'),
-            ], 200);
-        }
-
-        return new \WP_REST_Response([
-            'success' => false,
-            'message' => __('Error removing prompt.', 'tainacan-ai'),
-        ], 500);
-    }
-
-    /**
-     * Generate prompt suggestion
-     */
-    public function get_prompt_suggestion(\WP_REST_Request $request): \WP_REST_Response {
-        $collection_id = (int) $request->get_param('id');
-        $type = $request->get_param('type');
-
-        $prompts = new CollectionPrompts();
-
-        return new \WP_REST_Response([
-            'success' => true,
-            'data' => [
-                'suggestion' => $prompts->generate_prompt_suggestion($collection_id, $type),
-                'metadata' => $prompts->get_collection_metadata($collection_id),
-            ],
-        ], 200);
-    }
 }

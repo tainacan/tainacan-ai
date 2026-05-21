@@ -9,7 +9,6 @@
 		init() {
 			this.bindEvents();
 			this.syncCollapsedCardStates();
-			this.populateCollections();
 			this.populateMappingCollections();
 			this.collectionMetadata = [];
 			this.currentMapping = {};
@@ -24,28 +23,6 @@
 
 			// Toggle cards
 			$( '.tainacan-ai-toggle-card' ).on( 'click', this.toggleCard );
-
-			// Collection prompts
-			$( '#collection-select' ).on(
-				'change',
-				this.loadCollectionPrompt.bind( this )
-			);
-			$( 'input[name="collection_prompt_type"]' ).on(
-				'change',
-				this.loadCollectionPrompt.bind( this )
-			);
-			$( '#save-collection-prompt' ).on(
-				'click',
-				this.saveCollectionPrompt.bind( this )
-			);
-			$( '#reset-collection-prompt' ).on(
-				'click',
-				this.resetCollectionPrompt.bind( this )
-			);
-			$( '#generate-prompt-suggestion' ).on(
-				'click',
-				this.generatePromptSuggestion.bind( this )
-			);
 
 			// Field Mapping
 			$( '#mapping-collection-select' ).on(
@@ -135,17 +112,6 @@
 					.find( '.tainacan-ai-collapsible' )
 					.hasClass( 'collapsed' );
 				$card.toggleClass( 'is-collapsed', isCollapsed );
-			} );
-		},
-
-		populateCollections() {
-			const $select = $( '#collection-select' );
-			if ( ! $select.length || ! TainacanAIAdmin.collections ) return;
-
-			TainacanAIAdmin.collections.forEach( ( collection ) => {
-				$select.append(
-					`<option value="${ collection.id }">${ collection.name }</option>`
-				);
 			} );
 		},
 
@@ -502,169 +468,6 @@
 				TainacanAIAdmin.texts.mappingCleared || 'Mapping cleared. Click "Save" to confirm.',
 				'success'
 			);
-		},
-
-		loadCollectionPrompt() {
-			const collectionId = $( '#collection-select' ).val();
-			const type = $(
-				'input[name="collection_prompt_type"]:checked'
-			).val();
-
-			if ( ! collectionId ) {
-				$( '#collection-prompt-editor' ).hide();
-				return;
-			}
-
-			$( '#collection-prompt-editor' ).show();
-			$( '#collection-prompt-text' )
-				.val( '' )
-				.attr(
-					'placeholder',
-					TainacanAIAdmin.texts.loading || 'Loading...'
-				);
-
-			$.ajax( {
-				url: TainacanAIAdmin.ajaxUrl,
-				type: 'POST',
-				data: {
-					action: 'tainacan_ai_get_collection_prompt',
-					nonce: TainacanAIAdmin.nonce,
-					collection_id: collectionId,
-					type: type,
-				},
-				success( response ) {
-					if ( response.success ) {
-						const prompt =
-							response.data.custom_prompt?.prompt_text || '';
-						$( '#collection-prompt-text' )
-							.val( prompt )
-							.attr(
-								'placeholder',
-								TainacanAIAdmin.texts.useDefaultPrompt || 'Leave blank to use default prompt...'
-							);
-					}
-				},
-			} );
-		},
-
-		saveCollectionPrompt() {
-			const collectionId = $( '#collection-select' ).val();
-			const type = $(
-				'input[name="collection_prompt_type"]:checked'
-			).val();
-			const promptText = $( '#collection-prompt-text' ).val();
-			const $btn = $( '#save-collection-prompt' );
-			const originalHtml = $btn.html();
-
-			if ( ! collectionId ) {
-				Admin.showNotice( TainacanAIAdmin.texts.selectCollectionFirst || 'Select a collection first.', 'error' );
-				return;
-			}
-
-			$btn.prop( 'disabled', true ).html(
-				'<span class="dashicons dashicons-update spin"></span> ' +
-					TainacanAIAdmin.texts.saving
-			);
-
-			$.ajax( {
-				url: TainacanAIAdmin.ajaxUrl,
-				type: 'POST',
-				data: {
-					action: 'tainacan_ai_save_collection_prompt',
-					nonce: TainacanAIAdmin.nonce,
-					collection_id: collectionId,
-					type: type,
-					prompt_text: promptText,
-				},
-				success( response ) {
-					if ( response.success ) {
-						const message =
-							typeof response.data === 'string'
-								? response.data
-								: TainacanAIAdmin.texts.saved;
-						Admin.showNotice( message, 'success' );
-					} else {
-						const message =
-							typeof response.data === 'string'
-								? response.data
-								: TainacanAIAdmin.texts.error;
-						Admin.showNotice( message, 'error' );
-					}
-				},
-				error( xhr ) {
-					const message =
-						xhr.responseJSON?.data || TainacanAIAdmin.texts.error;
-					Admin.showNotice( message, 'error' );
-					console.error( '[TainacanAI] Save error:', xhr );
-				},
-				complete() {
-					$btn.prop( 'disabled', false ).html( originalHtml );
-				},
-			} );
-		},
-
-		resetCollectionPrompt() {
-			if ( ! confirm( TainacanAIAdmin.texts.confirmReset ) ) return;
-
-			$( '#collection-prompt-text' ).val( '' );
-			this.saveCollectionPrompt();
-		},
-
-		generatePromptSuggestion() {
-			const collectionId = $( '#collection-select' ).val();
-			const type = $(
-				'input[name="collection_prompt_type"]:checked'
-			).val();
-			const $btn = $( '#generate-prompt-suggestion' );
-			const originalHtml = $btn.html();
-
-			if ( ! collectionId ) {
-				Admin.showNotice( TainacanAIAdmin.texts.selectCollectionFirst || 'Select a collection first.', 'error' );
-				return;
-			}
-
-			$btn.prop( 'disabled', true ).html(
-				'<span class="dashicons dashicons-update spin"></span> ' +
-					TainacanAIAdmin.texts.generating
-			);
-
-			$.ajax( {
-				url: TainacanAIAdmin.ajaxUrl,
-				type: 'POST',
-				data: {
-					action: 'tainacan_ai_generate_prompt_suggestion',
-					nonce: TainacanAIAdmin.nonce,
-					collection_id: collectionId,
-					type: type,
-				},
-				success( response ) {
-					if ( response.success && response.data.suggestion ) {
-						$( '#collection-prompt-text' ).val(
-							response.data.suggestion
-						);
-						Admin.showNotice(
-							TainacanAIAdmin.texts.suggestionGenerated || 'Suggestion generated! Review, adjust and click "Save Prompt".',
-							'success'
-						);
-					} else {
-						const message =
-							response.data || ( TainacanAIAdmin.texts.errorGeneratingSuggestion || 'Error generating suggestion.' );
-						Admin.showNotice( message, 'error' );
-					}
-				},
-				error( xhr ) {
-					const message =
-						xhr.responseJSON?.data || TainacanAIAdmin.texts.error;
-					Admin.showNotice( message, 'error' );
-					console.error(
-						'[TainacanAI] Generate suggestion error:',
-						xhr
-					);
-				},
-				complete() {
-					$btn.prop( 'disabled', false ).html( originalHtml );
-				},
-			} );
 		},
 
 		showNotice( message, type = 'success' ) {
