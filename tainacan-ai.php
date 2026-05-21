@@ -26,8 +26,6 @@ define('TAINACAN_AI_VERSION', '0.1.0');
 define('TAINACAN_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('TAINACAN_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('TAINACAN_AI_DOMAIN', 'tainacan-ai');
-define('TAINACAN_AI_DB_VERSION', '0.1.0');
-
 /**
  * Plugin autoloader
  */
@@ -114,7 +112,6 @@ final class Tainacan_AI {
             );
         }
 
-        $this->create_tables();
         $this->set_default_options();
         $this->prune_legacy_option_keys();
 
@@ -133,36 +130,6 @@ final class Tainacan_AI {
         $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_tainacan_ai_%'");
 
         flush_rewrite_rules();
-    }
-
-    /**
-     * Create plugin tables
-     */
-    private function create_tables(): void {
-        global $wpdb;
-
-        $charset_collate = $wpdb->get_charset_collate();
-
-        // Collection prompts table
-        $table_prompts = $wpdb->prefix . 'tainacan_ai_collection_prompts';
-        $sql_prompts = "CREATE TABLE IF NOT EXISTS $table_prompts (
-            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            collection_id bigint(20) unsigned NOT NULL,
-            prompt_type varchar(20) NOT NULL DEFAULT 'image',
-            prompt_text text NOT NULL,
-            metadata_mapping text DEFAULT NULL,
-            is_active tinyint(1) NOT NULL DEFAULT 1,
-            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY collection_prompt (collection_id, prompt_type),
-            KEY is_active (is_active)
-        ) $charset_collate;";
-
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql_prompts);
-
-        update_option('tainacan_ai_db_version', TAINACAN_AI_DB_VERSION);
     }
 
     /**
@@ -411,8 +378,9 @@ final class Tainacan_AI {
         // Initialize components
         new \Tainacan\AI\API();
         new \Tainacan\AI\ItemFormHook();
+        new \Tainacan\AI\CollectionFormHook();
 
-        // Initialize collection prompts manager
+        // Post meta + metadata AJAX for collection prompts (form hook + field mapping UI)
         new \Tainacan\AI\CollectionPrompts();
 
         add_action('wpai_features_initialized', [\Tainacan\AI\CoreAIRequestLogging::class, 'register_integration']);

@@ -108,7 +108,7 @@ When preparing a release for WordPress.org:
 ## Usage
 
 1. Ensure AI connectors are set up in **Settings → Connectors**
-2. Optionally adjust defaults and per-collection prompts under **Tainacan → AI Tools**
+2. Optionally adjust default prompts under **Tainacan → AI Tools** and per-collection prompts on each collection's edition form
 3. Edit a Tainacan item with an attached document
 4. In the **AI Metadata Extractor** section, click **Analyze Document**
 5. Review results and fill metadata (manually or using the provided actions)
@@ -146,7 +146,8 @@ tainacan-ai/
 │   ├── ItemFormHook.php    # Form integration (Admin Form Hooks)
 │   ├── DocumentAnalyzer.php
 │   ├── API.php             # REST API endpoints
-│   ├── CollectionPrompts.php
+│   ├── CollectionPrompts.php   # Post meta + metadata for mapping UI
+│   ├── CollectionFormHook.php  # Per-collection prompts on edition form
 │   ├── ExifExtractor.php
 │   ├── CoreAI.php              # WordPress AI client integration
 │   ├── CoreAIRequestLogging.php

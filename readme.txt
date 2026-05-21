@@ -52,7 +52,7 @@ Connectors and credentials are managed in **Settings → Connectors**. The plugi
 
 = Customization =
 
-Configure default and per-collection prompts, toggle features such as EXIF extraction, map AI field names to Tainacan metadata, and clear cache from **Tainacan → Others → AI Tools**.
+Configure default prompts, per-collection overrides on the collection edition form, field mapping, features such as EXIF extraction, and clear cache from **Tainacan → Others → AI Tools**.
 
 == Installation ==
 
@@ -103,7 +103,7 @@ Any pricing depends on the services behind your connectors (hosted APIs, etc.).
 
 = Can I customize what metadata is extracted? =
 
-Yes. You can configure default and per-collection prompts and map AI field names to Tainacan metadata.
+Yes. You can configure default prompts, per-collection overrides on each collection's edition form, and map AI field names to Tainacan metadata from **AI Tools**.
 
 = Does it work with scanned PDFs? =
 

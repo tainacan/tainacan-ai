@@ -89,21 +89,15 @@ class AdminPage extends \Tainacan\Pages {
             true
         );
 
-        // Collections list for custom prompts
-        $collections = $this->get_collections_list();
-
         wp_localize_script('tainacan-ai-admin', 'TainacanAIAdmin', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('tainacan_ai_admin_nonce'),
-            'collections' => $collections,
             'texts' => [
                 'error' => __('Something went wrong. Please try again.', 'tainacan-ai'),
                 'clearing' => __('Clearing cache...', 'tainacan-ai'),
                 'cacheCleared' => __('Cache cleared successfully!', 'tainacan-ai'),
                 'saving' => __('Saving...', 'tainacan-ai'),
                 'saved' => __('Saved successfully!', 'tainacan-ai'),
-                'confirmReset' => __('Are you sure you want to reset to the default prompt?', 'tainacan-ai'),
-                'generating' => __('Generating suggestion...', 'tainacan-ai'),
                 'loading' => __('Loading...', 'tainacan-ai'),
                 'confirmClearCache' => __('Are you sure you want to clear all cache?', 'tainacan-ai'),
                 'selectCollectionFirst' => __('Select a collection first.', 'tainacan-ai'),
@@ -118,9 +112,6 @@ class AdminPage extends \Tainacan\Pages {
                 'errorDetectingMapping' => __('Error detecting mapping.', 'tainacan-ai'),
                 'confirmClearMapping' => __('Are you sure you want to clear all mapping?', 'tainacan-ai'),
                 'mappingCleared' => __('Mapping cleared. Click "Save" to confirm.', 'tainacan-ai'),
-                'useDefaultPrompt' => __('Leave blank to use default prompt...', 'tainacan-ai'),
-                'suggestionGenerated' => __('Suggestion generated! Review, adjust and click "Save Prompt".', 'tainacan-ai'),
-                'errorGeneratingSuggestion' => __('Error generating suggestion.', 'tainacan-ai'),
                 'title' => __('Title', 'tainacan-ai'),
                 'description' => __('Description', 'tainacan-ai'),
                 'author' => __('Author', 'tainacan-ai'),
@@ -138,33 +129,6 @@ class AdminPage extends \Tainacan\Pages {
                 'identifier' => __('Identifier', 'tainacan-ai'),
             ]
         ]);
-    }
-
-    /**
-     * Get collections list
-     */
-    private function get_collections_list(): array {
-        if (!class_exists('\Tainacan\Repositories\Collections')) {
-            return [];
-        }
-
-        $collections_repo = \Tainacan\Repositories\Collections::get_instance();
-        $collections = $collections_repo->fetch([], 'OBJECT');
-
-        $list = [];
-
-        if (!$collections || !is_array($collections)) {
-            return $list;
-        }
-
-        foreach ($collections as $collection) {
-            $list[] = [
-                'id' => $collection->get_id(),
-                'name' => $collection->get_name(),
-            ];
-        }
-
-        return $list;
     }
 
     /**
