@@ -13,6 +13,7 @@ AI routing and credentials are managed by WordPress; this plugin focuses on prom
 - **Custom prompts**: One default analysis prompt plus per-collection overrides
 - **Prompt templates**: Suggested prompt templates in AI Tools that can be copied into the default prompt
 - **Metadata mapping**: Map AI-extracted fields to Tainacan metadata (supports “Fill fields” workflows)
+- **Evidence per field**: Every analysis appends standardized instructions so each metadata key returns `{ "value", "evidence" }`
 - **EXIF extraction**: Optional EXIF extraction from images (when enabled and supported by the server)
 - **PDF support**: Text extraction and optional visual analysis for PDFs (depends on server extensions and the configured connector)
 
@@ -114,6 +115,27 @@ When preparing a release for WordPress.org:
 4. In the **AI Metadata Extractor** section, click **Analyze Document**
 5. Review results and fill metadata (manually or using the provided actions)
 
+### AI output shape
+
+Each extracted field should be returned as an object:
+
+```json
+{
+  "titulo": {
+    "value": "Example title",
+    "evidence": "Visible on the cover, top center"
+  }
+}
+```
+
+Evidence instructions are appended automatically at analysis time (image vs. text vs. scanned PDF). Prompt templates list example field keys only; they do not define per-field evidence text.
+
+Multivalued fields use **parallel arrays** inside one object (`value` and `evidence` with the same length), not an array of per-item `{ value, evidence }` objects.
+
+When **metadata mapping** is configured, the plugin **appends** a field list (and Tainacan metadata **descriptions** as extraction guidance) to your collection or default prompt—it does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)).
+
+Filter: `tainacan_ai_evidence_instructions` to customize the appended evidence block.
+
 ## File types
 
 Tainacan AI only starts analysis for recognized MIME types: JPEG, PNG, GIF, WebP, PDF, plain text, HTML, and Word (`.doc` / `.docx`). Anything else is rejected before an AI request is sent.
@@ -150,6 +172,7 @@ tainacan-ai/
 │   ├── CollectionPrompts.php   # Post meta + metadata for mapping UI
 │   ├── CollectionFormHook.php  # Per-collection prompts on edition form
 │   ├── PromptTemplates.php     # Suggested prompt templates for admin UI
+│   ├── EvidenceInstructions.php # Runtime { value, evidence } schema + file-type guidance
 │   ├── ExifExtractor.php
 │   ├── CoreAI.php              # WordPress AI client integration
 │   ├── CoreAIRequestLogging.php

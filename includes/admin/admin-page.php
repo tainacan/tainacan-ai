@@ -213,7 +213,7 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
                             <p class="tainacan-ai-card-description tainacan-ai-card-description-tip">
                                 <?php
                                 echo wp_kses(
-                                    __('<strong>Tip:</strong> AI fields are defined in your prompt. Configure the prompt to return the desired fields and map them here.', 'tainacan-ai'),
+                                    __('<strong>Tip:</strong> Mapping adds the field list and JSON keys to your collection or default prompt. Write the introduction and analysis goals in the prompt; the plugin handles output format and evidence.', 'tainacan-ai'),
                                     array( 'strong' => array() )
                                 );
                             ?>

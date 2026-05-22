@@ -809,6 +809,20 @@
     font-style: italic;
 }
 
+.tainacan-ai-evidence-item {
+    margin-top: 6px;
+}
+
+.tainacan-ai-evidence-item:first-child {
+    margin-top: 0;
+}
+
+.tainacan-ai-evidence-index {
+    font-style: normal;
+    font-weight: 600;
+    margin-right: 4px;
+}
+
 /* Mini Copy Button */
 .tainacan-ai-copy-mini {
     display: inline-flex !important;

@@ -634,6 +634,90 @@ import { addAction } from '@wordpress/hooks';
 		},
 
 		/**
+		 * Coerce AI field payload to { value, evidence } (parallel arrays when multivalued).
+		 */
+		parseFieldEntry( data ) {
+			if (
+				Array.isArray( data ) &&
+				data.length > 0 &&
+				data.every(
+					( item ) =>
+						item &&
+						typeof item === 'object' &&
+						! Array.isArray( item ) &&
+						'value' in item
+				)
+			) {
+				return this.coalesceValueEvidenceObjects( data );
+			}
+
+			if ( data && typeof data === 'object' && 'value' in data ) {
+				let value = data.value;
+				let evidence = data.evidence ?? null;
+
+				if (
+					Array.isArray( value ) &&
+					value.length > 0 &&
+					value.every(
+						( item ) =>
+							item &&
+							typeof item === 'object' &&
+							! Array.isArray( item ) &&
+							'value' in item
+					)
+				) {
+					const coalesced = this.coalesceValueEvidenceObjects( value );
+					const hasEvidence =
+						evidence !== null &&
+						evidence !== undefined &&
+						evidence !== '' &&
+						! ( Array.isArray( evidence ) && evidence.length === 0 );
+
+					value = coalesced.value;
+					if ( ! hasEvidence ) {
+						evidence = coalesced.evidence;
+					}
+				}
+
+				return { value, evidence };
+			}
+
+			return { value: data, evidence: null };
+		},
+
+		coalesceValueEvidenceObjects( items ) {
+			return {
+				value: items.map( ( item ) => item.value ),
+				evidence: items.map( ( item ) =>
+					item.evidence != null ? String( item.evidence ) : ''
+				),
+			};
+		},
+
+		formatEvidence( evidence ) {
+			if ( evidence === null || evidence === undefined || evidence === '' ) {
+				return '';
+			}
+
+			if ( Array.isArray( evidence ) ) {
+				if ( evidence.length === 0 ) {
+					return '';
+				}
+
+				return evidence
+					.map(
+						( entry, index ) =>
+							`<div class="tainacan-ai-evidence-item"><span class="tainacan-ai-evidence-index">${ index + 1 }.</span> ${ this.escapeHtml(
+								String( entry )
+							) }</div>`
+					)
+					.join( '' );
+			}
+
+			return this.escapeHtml( String( evidence ) );
+		},
+
+		/**
 		 * Render metadata in sidebar panel with evidence
 		 */
 		renderMetadataInPanel( metadata ) {
@@ -658,17 +742,9 @@ import { addAction } from '@wordpress/hooks';
 			Object.entries( metadata ).forEach( ( [ key, data ], index ) => {
 				const formattedLabel = this.formatLabel( key );
 
-				// Check if data has new format with evidence
-				let value, evidence;
-				if ( data && typeof data === 'object' && 'valor' in data ) {
-					value = data.valor;
-					evidence = data.evidencia;
-				} else {
-					value = data;
-					evidence = null;
-				}
-
+				const { value, evidence } = this.parseFieldEntry( data );
 				const formattedValue = this.formatValue( value );
+				const formattedEvidence = this.formatEvidence( evidence );
 				// Convert arrays to comma-separated string for field filling
 				let rawValue;
 				if ( Array.isArray( value ) ) {
@@ -749,16 +825,14 @@ import { addAction } from '@wordpress/hooks';
                             </div>
                         </div>
                         ${
-							evidence
+							formattedEvidence
 								? `
                         <div class="tainacan-ai-metadata-evidence">
                             <div class="tainacan-ai-evidence-label">
                                 <span class="dashicons dashicons-search"></span>
                                 ${ TainacanAI.texts?.evidence || 'Evidence' }
                             </div>
-                            <div class="tainacan-ai-evidence-text">${ this.escapeHtml(
-								evidence
-							) }</div>
+                            <div class="tainacan-ai-evidence-text">${ formattedEvidence }</div>
                         </div>
                         `
 								: ''
@@ -870,12 +944,7 @@ import { addAction } from '@wordpress/hooks';
 
 			const text = Object.entries( this.state.lastResult.ai_metadata )
 				.map( ( [ key, data ] ) => {
-					let value;
-					if ( data && typeof data === 'object' && 'valor' in data ) {
-						value = data.valor;
-					} else {
-						value = data;
-					}
+					const { value } = this.parseFieldEntry( data );
 					const formattedValue =
 						typeof value === 'string'
 							? value
@@ -1375,13 +1444,7 @@ import { addAction } from '@wordpress/hooks';
 
 					totalMapped++;
 
-					// Extract value (new or old format)
-					let value;
-					if ( data && typeof data === 'object' && 'valor' in data ) {
-						value = data.valor;
-					} else {
-						value = data;
-					}
+					const { value } = this.parseFieldEntry( data );
 
 					// Skip empty values
 					if (

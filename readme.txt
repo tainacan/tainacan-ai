@@ -23,6 +23,7 @@ Tainacan AI extends the [Tainacan](https://wordpress.org/plugins/tainacan/) plug
 * **Document analysis**: Extract bibliographic-style or custom JSON fields from PDFs, TXT, and HTML
 * **Custom prompts per collection**: A single prompt per collection to guide extraction for any supported file type
 * **Metadata mapping**: Map AI output keys to Tainacan metadata for fill workflows
+* **Evidence per field**: Analysis requests `{ "value", "evidence" }` for each key
 * **EXIF data extraction**: Optional technical metadata from image files (when the server supports it)
 * **PDF support**: Text extraction via bundled parser; optional visual analysis depends on Imagick/Ghostscript and the connector
 * **Smart caching**: Reduce repeat analysis with caching and a manual clear action
@@ -53,6 +54,8 @@ Connectors and credentials are managed in **Settings → Connectors**. The plugi
 = Customization =
 
 Configure a default analysis prompt, per-collection overrides on the collection edition form, suggested prompt templates, field mapping, features such as EXIF extraction, and clear cache from **Tainacan → Others → AI Tools**.
+
+Each AI field uses a standard JSON shape: `"field_key": { "value": "...", "evidence": "..." }`. Evidence wording is added automatically by file type (image, document text, or PDF pages). Mapped fields can use the Tainacan metadata description as extraction guidance.
 
 == Installation ==
 
