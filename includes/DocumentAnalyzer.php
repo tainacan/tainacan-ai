@@ -515,6 +515,151 @@ class DocumentAnalyzer {
     }
 
     /**
+     * Whether the resolved prompt may be included in AJAX/REST responses (never cached).
+     */
+    public static function should_include_prompt_in_response(): bool {
+        $include = defined('WP_DEBUG') && WP_DEBUG && current_user_can('edit_posts');
+
+        /**
+         * @param bool $include Default: WP_DEBUG and edit_posts capability.
+         */
+        return (bool) apply_filters('tainacan_ai_include_prompt_in_response', $include);
+    }
+
+    /**
+     * Debug payload for the composed analysis prompt (user + fields + evidence + attachment note).
+     *
+     * @return array{
+     *     prompt: string,
+     *     parts: array{user: string, fields: string, evidence: string},
+     *     evidence_strategy: string,
+     *     attachment_note: string
+     * }|\WP_Error|null Null when prompt debug is disabled.
+     */
+    public function build_prompt_debug_payload(int $attachment_id): array|\WP_Error|null {
+        if (!self::should_include_prompt_in_response()) {
+            return null;
+        }
+
+        $file_path = get_attached_file($attachment_id);
+        $mime_type = get_post_mime_type($attachment_id);
+
+        if (!$file_path) {
+            return new \WP_Error('file_not_found', __('File path not found.', 'tainacan-ai'));
+        }
+
+        $file_path = $this->normalize_file_path($file_path);
+
+        if (!$this->collection_id && $this->item_id) {
+            $this->collection_id = $this->get_item_collection($this->item_id);
+        }
+
+        $strategy = $this->guess_evidence_strategy($file_path, (string) $mime_type);
+        $user_section = trim($this->get_user_prompt());
+        $fields_section = $this->get_fields_section();
+        $base_prompt = $this->get_prompt();
+
+        if ($base_prompt === '') {
+            return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
+        }
+
+        $resolved = $this->resolve_analysis_prompt($strategy);
+
+        if (is_wp_error($resolved)) {
+            return $resolved;
+        }
+
+        $attachment_note = $this->get_prompt_attachment_note($file_path, (string) $mime_type, $strategy);
+        $prompt = $resolved;
+
+        if ($attachment_note !== '') {
+            $prompt .= "\n\n" . $attachment_note;
+        }
+
+        return [
+            'prompt' => $prompt,
+            'parts' => [
+                'user' => $user_section,
+                'fields' => $fields_section,
+                'evidence' => $this->get_evidence_instruction_block($strategy),
+            ],
+            'evidence_strategy' => $strategy,
+            'attachment_note' => $attachment_note,
+        ];
+    }
+
+    private function get_fields_section(): string {
+        if (!$this->collection_id) {
+            return '';
+        }
+
+        return ExtractionMetadata::get_instance()->build_instructions_section($this->collection_id);
+    }
+
+    private function get_evidence_instruction_block(string $strategy): string {
+        return trim(EvidenceInstructions::append_to_prompt('', $strategy));
+    }
+
+    private function guess_evidence_strategy(string $file_path, string $mime_type): string {
+        if (in_array($mime_type, $this->supported_image_types, true)) {
+            return EvidenceInstructions::STRATEGY_IMAGE;
+        }
+
+        if (in_array($mime_type, ['text/plain', 'text/html'], true)) {
+            return EvidenceInstructions::STRATEGY_DOCUMENT_TEXT;
+        }
+
+        if ($mime_type === 'application/pdf') {
+            $text = $this->extract_pdf_text($file_path);
+
+            if (!is_wp_error($text) && strlen(trim($text)) > 100) {
+                return EvidenceInstructions::STRATEGY_DOCUMENT_TEXT;
+            }
+
+            return EvidenceInstructions::STRATEGY_DOCUMENT_VISUAL;
+        }
+
+        return EvidenceInstructions::STRATEGY_DOCUMENT_TEXT;
+    }
+
+    private function get_prompt_attachment_note(string $file_path, string $mime_type, string $strategy): string {
+        if ($strategy === EvidenceInstructions::STRATEGY_IMAGE) {
+            return __('[Image file attached to the model request]', 'tainacan-ai');
+        }
+
+        if ($strategy === EvidenceInstructions::STRATEGY_DOCUMENT_VISUAL) {
+            return __('[PDF pages sent as images to the model]', 'tainacan-ai');
+        }
+
+        if (!is_readable($file_path)) {
+            return '';
+        }
+
+        $text = file_get_contents($file_path);
+
+        if ($text === false) {
+            return '';
+        }
+
+        if ($mime_type === 'application/pdf') {
+            $extracted = $this->extract_pdf_text($file_path);
+            $text = is_wp_error($extracted) ? '' : $extracted;
+        }
+
+        $text = $this->sanitize_utf8_string($text);
+        $length = mb_strlen($text, 'UTF-8');
+        $max_chars = 32000;
+        $truncated = $length > $max_chars;
+
+        return sprintf(
+            /* translators: 1: character count sent to the model, 2: truncated note */
+            __('--- Document body appended (%1$d characters%2$s) ---', 'tainacan-ai'),
+            min($length, $max_chars),
+            $truncated ? ', ' . __('truncated', 'tainacan-ai') : ''
+        );
+    }
+
+    /**
      * User-defined prompt: collection post meta, falling back to the site default option.
      */
     private function get_user_prompt(): string {
@@ -526,128 +671,23 @@ class DocumentAnalyzer {
     }
 
     /**
-     * Compose the analysis prompt: user intro + optional mapping field list.
+     * Compose the analysis prompt: user intro + extraction field list for the collection.
      *
      * Format and evidence rules are appended later in resolve_analysis_prompt().
      */
     private function get_prompt(): string {
         $prompt = trim($this->get_user_prompt());
+        $fields_section = $this->get_fields_section();
 
-        if (!$this->collection_id) {
-            return $prompt;
-        }
-
-        $custom_mapping = get_option('tainacan_ai_mapping_' . $this->collection_id, []);
-        if (empty($custom_mapping)) {
-            return $prompt;
-        }
-
-        $mapping_section = $this->build_mapping_instructions_section($custom_mapping);
-        if ($mapping_section === '') {
+        if ($fields_section === '') {
             return $prompt;
         }
 
         if ($prompt === '') {
-            return $mapping_section;
+            return $fields_section;
         }
 
-        return $prompt . "\n\n" . $mapping_section;
-    }
-
-    /**
-     * Plugin-provided field list and response keys from admin mapping (no role/intro text).
-     */
-    private function build_mapping_instructions_section(array $mapping): string {
-        if (empty($mapping)) {
-            return '';
-        }
-
-        // Build list of expected fields
-        $fields_list = [];
-        $json_example = [];
-
-        foreach ($mapping as $ai_field => $data) {
-            if (empty($data['metadata_id'])) {
-                continue;
-            }
-
-            $field_name = $data['metadata_name'] ?? $ai_field;
-            $metadata_id = (int) $data['metadata_id'];
-            $is_multiple = $this->get_metadata_allows_multiple($metadata_id);
-
-            $line = "- **{$ai_field}** ({$field_name})";
-            if ($is_multiple) {
-                $line .= ' — ' . __('multivalued: use parallel arrays in "value" and "evidence"', 'tainacan-ai');
-            }
-
-            $description = $this->get_metadata_description($metadata_id);
-            if ($description !== '') {
-                $line .= "\n  - " . __('Extraction guidance:', 'tainacan-ai') . ' ' . $description;
-            }
-
-            $fields_list[] = $line;
-            $json_example[$ai_field] = $is_multiple
-                ? [
-                    'value' => ['exemplo 1', 'exemplo 2'],
-                    'evidence' => ['fonte do exemplo 1', 'fonte do exemplo 2'],
-                ]
-                : [
-                    'value' => null,
-                    'evidence' => '',
-                ];
-        }
-
-        if (empty($fields_list)) {
-            return '';
-        }
-
-        $fields_text = implode("\n", $fields_list);
-        $json_text = json_encode($json_example, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-
-        return '## ' . __('Fields to extract', 'tainacan-ai') . "\n" .
-$fields_text . "\n\n" .
-'## ' . __('Extraction instructions', 'tainacan-ai') . "\n" .
-'- ' . __('Extract information for EACH field listed above.', 'tainacan-ai') . "\n" .
-'- ' . __('Follow per-field extraction guidance when provided.', 'tainacan-ai') . "\n" .
-'- ' . __('Return JSON using EXACTLY the response keys below.', 'tainacan-ai') . "\n\n" .
-'## ' . __('Response keys', 'tainacan-ai') . "\n" .
-$json_text;
-    }
-
-    private function get_metadata_entity(int $metadata_id): ?object {
-        if ($metadata_id <= 0 || !class_exists('\Tainacan\Repositories\Metadata')) {
-            return null;
-        }
-
-        try {
-            $metadata_repo = \Tainacan\Repositories\Metadata::get_instance();
-            $metadata = $metadata_repo->fetch($metadata_id);
-
-            return $metadata ?: null;
-        } catch (\Throwable $e) {
-            $this->debug_log('Metadata lookup failed: ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    private function get_metadata_description(int $metadata_id): string {
-        $metadata = $this->get_metadata_entity($metadata_id);
-
-        if (!$metadata || !method_exists($metadata, 'get_description')) {
-            return '';
-        }
-
-        return trim((string) $metadata->get_description());
-    }
-
-    private function get_metadata_allows_multiple(int $metadata_id): bool {
-        $metadata = $this->get_metadata_entity($metadata_id);
-
-        if (!$metadata || !method_exists($metadata, 'get_multiple')) {
-            return false;
-        }
-
-        return $metadata->get_multiple() === 'yes';
+        return $prompt . "\n\n" . $fields_section;
     }
 
     /**

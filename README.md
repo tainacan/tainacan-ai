@@ -3,7 +3,7 @@
 
 WordPress plugin that integrates [Tainacan](https://wordpress.org/plugins/tainacan/) with **WordPress AI** (via the **Connectors** screen) to extract metadata from item documents and images.
 
-AI routing and credentials are managed by WordPress; this plugin focuses on prompts, analysis, mapping, and Tainacan-specific UX.
+AI routing and credentials are managed by WordPress; this plugin focuses on prompts, per-metadata extraction, analysis, and Tainacan-specific UX.
 
 ## Features
 
@@ -12,7 +12,7 @@ AI routing and credentials are managed by WordPress; this plugin focuses on prom
 - **Smart cache**: Caching with manual clear from settings
 - **Custom prompts**: One default analysis prompt plus per-collection overrides
 - **Prompt templates**: Suggested prompt templates in AI Tools that can be copied into the default prompt
-- **Metadata mapping**: Map AI-extracted fields to Tainacan metadata (supports “Fill fields” workflows)
+- **Per-metadata extraction opt-out**: All collection metadata is included by default; check **Exclude from AI extraction** on the metadatum form to omit a field
 - **Evidence per field**: Every analysis appends standardized instructions so each metadata key returns `{ "value", "evidence" }`
 - **EXIF extraction**: Optional EXIF extraction from images (when enabled and supported by the server)
 - **PDF support**: Text extraction and optional visual analysis for PDFs (depends on server extensions and the configured connector)
@@ -29,7 +29,7 @@ With `WP_DEBUG` enabled, non-HTTP failures (PDF extraction, conversion, etc.) an
 2. Run `composer install` in the plugin folder (for PDF text extraction via the bundled parser)
 3. Activate the plugin in WordPress
 4. Configure AI **connectors** under **Settings → Connectors** (WordPress 7.0+)
-5. Open **Tainacan → AI Tools** for prompts, features, cache, and mapping (not for API keys)
+5. Open **Tainacan → AI Tools** for prompts, features, and cache (not for API keys)
 
 ## Development
 
@@ -132,7 +132,7 @@ Evidence instructions are appended automatically at analysis time (image vs. tex
 
 Multivalued fields use **parallel arrays** inside one object (`value` and `evidence` with the same length), not an array of per-item `{ value, evidence }` objects.
 
-When **metadata mapping** is configured, the plugin **appends** a field list (and Tainacan metadata **descriptions** as extraction guidance) to your collection or default prompt—it does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)).
+The plugin **appends** a field list for metadata marked for extraction (using slug as JSON keys, plus description and placeholder as guidance) to your collection or default prompt—it does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)). Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
 
 Filter: `tainacan_ai_evidence_instructions` to customize the appended evidence block.
 
@@ -169,10 +169,12 @@ tainacan-ai/
 │   ├── ItemFormHook.php    # Form integration (Admin Form Hooks)
 │   ├── DocumentAnalyzer.php
 │   ├── API.php             # REST API endpoints
-│   ├── CollectionPrompts.php   # Post meta + metadata for mapping UI
+│   ├── CollectionPrompts.php   # Per-collection prompt post meta
 │   ├── CollectionFormHook.php  # Per-collection prompts on edition form
 │   ├── PromptTemplates.php     # Suggested prompt templates for admin UI
 │   ├── EvidenceInstructions.php # Runtime { value, evidence } schema + file-type guidance
+│   ├── ExtractionMetadata.php   # Per-metadatum flag + dynamic field list for prompts/fill
+│   ├── MetadatumFormHook.php    # Toggle extraction on metadata edition form
 │   ├── ExifExtractor.php
 │   ├── CoreAI.php              # WordPress AI client integration
 │   ├── CoreAIRequestLogging.php

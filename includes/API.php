@@ -97,6 +97,9 @@ class API {
         $item_id = $request->get_param('item_id');
         $collection_id = $request->get_param('collection_id');
 
+        $analyzer = new DocumentAnalyzer();
+        $analyzer->set_context($collection_id, $item_id);
+
         // Check cache
         $cache_key = 'tainacan_ai_' . $attachment_id;
         if (!$force_refresh) {
@@ -104,16 +107,11 @@ class API {
             if ($cached !== false) {
                 return new \WP_REST_Response([
                     'success' => true,
-                    'data' => [
-                        'metadata' => $cached,
-                        'from_cache' => true,
-                    ],
+                    'data' => $this->build_analyze_api_data($analyzer, (int) $attachment_id, $cached, true),
                 ], 200);
             }
         }
 
-        $analyzer = new DocumentAnalyzer();
-        $analyzer->set_context($collection_id, $item_id);
         $result = $analyzer->analyze($attachment_id);
 
         if (is_wp_error($result)) {
@@ -132,11 +130,38 @@ class API {
 
         return new \WP_REST_Response([
             'success' => true,
-            'data' => [
-                'metadata' => $result,
-                'from_cache' => false,
-            ],
+            'data' => $this->build_analyze_api_data($analyzer, (int) $attachment_id, $result, false),
         ], 200);
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     * @return array<string, mixed>
+     */
+    private function build_analyze_api_data(
+        DocumentAnalyzer $analyzer,
+        int $attachment_id,
+        array $metadata,
+        bool $from_cache
+    ): array {
+        $data = [
+            'metadata' => $metadata,
+            'from_cache' => $from_cache,
+        ];
+
+        $prompt_debug = $analyzer->build_prompt_debug_payload($attachment_id);
+
+        if ($prompt_debug !== null) {
+            if (is_wp_error($prompt_debug)) {
+                $data['prompt_debug'] = [
+                    'error' => $prompt_debug->get_error_message(),
+                ];
+            } else {
+                $data['prompt_debug'] = $prompt_debug;
+            }
+        }
+
+        return $data;
     }
 
     /**

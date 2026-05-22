@@ -22,7 +22,7 @@ class ItemFormHook {
         add_action('wp_ajax_tainacan_ai_get_item_document', [$this, 'ajax_get_item_document']);
         add_action('wp_ajax_tainacan_ai_clear_item_cache', [$this, 'ajax_clear_item_cache']);
         add_action('wp_ajax_tainacan_ai_apply_metadata', [$this, 'ajax_apply_metadata']);
-        add_action('wp_ajax_tainacan_ai_get_item_mapping', [$this, 'ajax_get_mapping']);
+        add_action('wp_ajax_tainacan_ai_get_extraction_fields', [$this, 'ajax_get_extraction_fields']);
     }
 
     /**
@@ -188,17 +188,14 @@ class ItemFormHook {
 
         $options = \Tainacan_AI::get_options();
 
-        // Mapping is loaded per collection via AJAX once the SPA route is known (see item-form.js).
-        $metadata_mapping = $this->get_default_mapping();
-
+        // Extraction fields are loaded per collection via AJAX (see item-form.js).
         wp_localize_script('tainacan-ai-item', 'TainacanAI', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'restUrl' => rest_url('tainacan-ai/v1/'),
             'nonce' => wp_create_nonce('tainacan_ai_nonce'),
             'restNonce' => wp_create_nonce('wp_rest'),
             'debug' => defined('WP_DEBUG') && WP_DEBUG,
-            'autoMapMetadata' => !empty($options['auto_map_metadata']),
-            'metadataMapping' => $metadata_mapping,
+            'extractionFields' => [],
             'texts' => [
                 'analyzing' => __('Analyzing...', 'tainacan-ai'),
                 'analyzeBtn' => __('Analyze Document', 'tainacan-ai'),
@@ -225,15 +222,15 @@ class ItemFormHook {
                 'fillAllTooltip' => __('Automatically fills Tainacan fields with extracted values', 'tainacan-ai'),
                 'fillField' => __('Fill field', 'tainacan-ai'),
                 'fieldsFilled' => __('fields filled', 'tainacan-ai'),
-                'noMappedFields' => __('No mapped fields found', 'tainacan-ai'),
+                'noExtractionFields' => __('No extraction-enabled metadata found', 'tainacan-ai'),
                 'noFieldsToFill' => __('No fields to fill', 'tainacan-ai'),
                 'noResults' => __('No results available', 'tainacan-ai'),
-                'noMapping' => __('Field not mapped', 'tainacan-ai'),
                 'fieldNotFound' => __('Field not found on page', 'tainacan-ai'),
                 'openResults' => __('Open analysis results', 'tainacan-ai'),
                 'close' => __('Close', 'tainacan-ai'),
                 'clickToAnalyze' => __('Click "Analyze Document" to extract metadata', 'tainacan-ai'),
-                'mappedTo' => __('Mapped to:', 'tainacan-ai'),
+                'fieldLabel' => __('Tainacan field:', 'tainacan-ai'),
+                'valueNotFound' => __('Not found in document', 'tainacan-ai'),
                 'viewOnGoogleMaps' => __('View on Google Maps', 'tainacan-ai'),
                 'camera' => __('Camera', 'tainacan-ai'),
                 'capture' => __('Capture', 'tainacan-ai'),
@@ -244,13 +241,33 @@ class ItemFormHook {
     }
 
     /**
-     * Default mapping when there's no specific collection
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
      */
-    private function get_default_mapping(): array {
-        return [
-            'titulo' => ['id' => 'title', 'slug' => 'title', 'name' => 'Title', 'type' => 'text'],
-            'descricao' => ['id' => 'description', 'slug' => 'description', 'name' => 'Description', 'type' => 'textarea'],
+    private function build_analyze_ajax_response(
+        DocumentAnalyzer $analyzer,
+        int $attachment_id,
+        array $result,
+        bool $from_cache
+    ): array {
+        $response = [
+            'result' => $result,
+            'from_cache' => $from_cache,
         ];
+
+        $prompt_debug = $analyzer->build_prompt_debug_payload($attachment_id);
+
+        if ($prompt_debug !== null) {
+            if (is_wp_error($prompt_debug)) {
+                $response['prompt_debug'] = [
+                    'error' => $prompt_debug->get_error_message(),
+                ];
+            } else {
+                $response['prompt_debug'] = $prompt_debug;
+            }
+        }
+
+        return $response;
     }
 
     /**
@@ -289,21 +306,23 @@ class ItemFormHook {
                 $collection_id = $this->get_item_collection_id($item_id);
             }
 
+            $analyzer = new DocumentAnalyzer();
+            $analyzer->set_context($collection_id, $item_id);
+
             // Check cache
             $cache_key = 'tainacan_ai_' . $attachment_id;
             if (!$force_refresh) {
                 $cached = get_transient($cache_key);
                 if ($cached !== false) {
-                    wp_send_json_success([
-                        'result' => $cached,
-                        'from_cache' => true,
-                    ]);
+                    wp_send_json_success($this->build_analyze_ajax_response(
+                        $analyzer,
+                        $attachment_id,
+                        $cached,
+                        true
+                    ));
                 }
             }
 
-            // Analisa documento
-            $analyzer = new DocumentAnalyzer();
-            $analyzer->set_context($collection_id, $item_id);
             $result = $analyzer->analyze($attachment_id);
 
             if (is_wp_error($result)) {
@@ -317,10 +336,12 @@ class ItemFormHook {
                 set_transient($cache_key, $result, $cache_duration);
             }
 
-            wp_send_json_success([
-                'result' => $result,
-                'from_cache' => false,
-            ]);
+            wp_send_json_success($this->build_analyze_ajax_response(
+                $analyzer,
+                $attachment_id,
+                $result,
+                false
+            ));
         } catch (\Throwable $e) {
             // Catch any error/exception and return friendly message
             $error_message = $e->getMessage();
@@ -538,9 +559,9 @@ class ItemFormHook {
     }
 
     /**
-     * AJAX: Get metadata mapping for a collection
+     * AJAX: Get extraction-enabled metadata for a collection (keyed by slug).
      */
-    public function ajax_get_mapping(): void {
+    public function ajax_get_extraction_fields(): void {
         check_ajax_referer('tainacan_ai_nonce', 'nonce');
 
         $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
@@ -549,141 +570,7 @@ class ItemFormHook {
             wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
         }
 
-        $mapping = $this->get_metadata_mapping_for_collection($collection_id);
-        wp_send_json_success($mapping);
-    }
-
-    /**
-     * Get metadata mapping for a specific collection
-     * First checks if there's custom mapping saved in admin,
-     * then tries to detect automatically
-     */
-    public function get_metadata_mapping_for_collection(int $collection_id): array {
-        // First, check if there's custom mapping saved in admin
-        $custom_mapping = get_option('tainacan_ai_mapping_' . $collection_id, []);
-
-        if (!empty($custom_mapping)) {
-            // Convert custom mapping to format expected by JS
-            $mapping = [];
-            foreach ($custom_mapping as $ai_field => $data) {
-                if (!empty($data['metadata_id'])) {
-                    // Get additional metadata information
-                    $metadata_info = $this->get_metadata_info($data['metadata_id']);
-                    $mapping[$ai_field] = [
-                        'id' => $data['metadata_id'],
-                        'slug' => $metadata_info['slug'] ?? $ai_field,
-                        'name' => $data['metadata_name'] ?? $ai_field,
-                        'type' => $metadata_info['type'] ?? 'text',
-                    ];
-                }
-            }
-            if (!empty($mapping)) {
-                return $mapping;
-            }
-        }
-
-        // If no custom mapping, try to detect automatically
-        if (!class_exists('\Tainacan\Repositories\Metadata')) {
-            return $this->get_default_mapping();
-        }
-
-        try {
-            $metadata_repo = \Tainacan\Repositories\Metadata::get_instance();
-            $collection_metadata = $metadata_repo->fetch_by_collection(
-                new \Tainacan\Entities\Collection($collection_id),
-                [],
-                'OBJECT'
-            );
-
-            if (empty($collection_metadata)) {
-                return $this->get_default_mapping();
-            }
-
-            $mapping = [];
-
-            // Automatic mapping based on metadata slug/name
-            $ai_fields = [
-                'titulo' => ['titulo', 'title', 'nome', 'name'],
-                'autor' => ['autor', 'author', 'criador', 'creator', 'artista', 'artist', 'dccreator'],
-                'data_criacao' => ['data', 'date', 'data_criacao', 'creation_date', 'ano', 'year', 'dcdate'],
-                'tecnica' => ['tecnica', 'technique', 'technica'],
-                'materiais' => ['materiais', 'materials', 'material'],
-                'dimensoes_estimadas' => ['dimensoes', 'dimensions', 'tamanho', 'size'],
-                'estado_conservacao' => ['conservacao', 'conservation', 'estado', 'condition'],
-                'descricao' => ['descricao', 'description', 'desc'],
-                'estilo_artistico' => ['estilo', 'style', 'movimento', 'movement'],
-                'palavras_chave' => ['palavras_chave', 'keywords', 'tags', 'palavras-chave', 'assunto', 'dcsubject'],
-                'observacoes' => ['observacoes', 'observations', 'notas', 'notes'],
-                'tipo_documento' => ['tipo', 'type', 'tipo_documento', 'dctype'],
-                'formato' => ['formato', 'format', 'dcformat'],
-                'ano_publicacao' => ['ano_publicacao', 'publication_year', 'ano'],
-                'instituicao' => ['instituicao', 'institution', 'organizacao', 'editor', 'editora', 'dcpublisher'],
-                'resumo' => ['resumo', 'abstract', 'summary'],
-                'area_conhecimento' => ['area', 'area_conhecimento', 'field', 'subject', 'abrangencia', 'dccoverage'],
-                'idioma' => ['idioma', 'language', 'lingua', 'dclanguage'],
-                'referencias_principais' => ['referencias', 'references', 'relacao', 'dcrelation'],
-                'metodologia' => ['metodologia', 'methodology', 'metodo'],
-                'identificador' => ['identificador', 'identifier', 'dcidentifier', 'id', 'codigo'],
-                'direitos' => ['direitos', 'rights', 'dcrights', 'licenca', 'license', 'copyright'],
-                'fonte' => ['fonte', 'source', 'dcsource', 'origem'],
-                'contribuidor' => ['contribuidor', 'contributor', 'dccontributor', 'colaborador'],
-            ];
-
-            foreach ($collection_metadata as $metadata) {
-                $slug = $metadata->get_slug();
-                $name = strtolower($metadata->get_name());
-                $id = $metadata->get_id();
-                $type = $metadata->get_metadata_type();
-
-                // Search for match in AI fields
-                foreach ($ai_fields as $ai_key => $possible_matches) {
-                    foreach ($possible_matches as $match) {
-                        if ($slug === $match || strpos($slug, $match) !== false ||
-                            strpos($name, $match) !== false) {
-                            $mapping[$ai_key] = [
-                                'id' => $id,
-                                'slug' => $slug,
-                                'name' => $metadata->get_name(),
-                                'type' => $type,
-                            ];
-                            break 2;
-                        }
-                    }
-                }
-            }
-
-            return !empty($mapping) ? $mapping : $this->get_default_mapping();
-
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[TainacanAI] Error getting metadata mapping: ' . $e->getMessage());
-            }
-            return $this->get_default_mapping();
-        }
-    }
-
-    /**
-     * Get information about a specific metadata by ID
-     */
-    private function get_metadata_info(int $metadata_id): array {
-        if (!class_exists('\Tainacan\Repositories\Metadata')) {
-            return [];
-        }
-
-        try {
-            $metadata_repo = \Tainacan\Repositories\Metadata::get_instance();
-            $metadata = $metadata_repo->fetch($metadata_id);
-
-            if ($metadata) {
-                return [
-                    'slug' => $metadata->get_slug(),
-                    'type' => $metadata->get_metadata_type(),
-                ];
-            }
-        } catch (\Exception $e) {
-            // Ignore errors
-        }
-
-        return [];
+        $fields = ExtractionMetadata::get_instance()->get_fields_for_collection($collection_id);
+        wp_send_json_success($fields);
     }
 }

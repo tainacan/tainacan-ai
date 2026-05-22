@@ -199,9 +199,9 @@ import { addAction } from '@wordpress/hooks';
 				this.fillTainacanField( metadataKey, value, $btn );
 			} );
 
-			// Fill all mapped fields
+			// Fill all extraction-enabled fields
 			$( document ).on( 'click', '#tainacan-ai-fill-all', () => {
-				this.fillAllMappedFields();
+				this.fillAllExtractionFields();
 			} );
 
 			// Open panel via indicator
@@ -330,7 +330,7 @@ import { addAction } from '@wordpress/hooks';
 						this.state.collectionId = parseInt( editMatch[ 1 ], 10 );
 						this.state.itemId = parseInt( editMatch[ 2 ], 10 );
 						if ( this.state.collectionId && this.state.collectionId !== prevCollectionId ) {
-							this.fetchMetadataMapping();
+							this.fetchExtractionFields();
 						}
 					} else {
 						this.leaveItemEditContext();
@@ -356,7 +356,7 @@ import { addAction } from '@wordpress/hooks';
 					this.cacheElements();
 
 					if ( newCollectionId && newCollectionId !== prevCollectionId ) {
-						this.fetchMetadataMapping();
+						this.fetchExtractionFields();
 					}
 					this.detectDocument();
 					this.startDocumentFieldObserver();
@@ -424,9 +424,9 @@ import { addAction } from '@wordpress/hooks';
 		},
 
 		/**
-		 * Fetch metadata mapping via AJAX
+		 * Fetch extraction-enabled metadata for the collection (keyed by slug).
 		 */
-		async fetchMetadataMapping() {
+		async fetchExtractionFields() {
 			if ( ! this.state.collectionId ) return;
 
 			try {
@@ -434,24 +434,24 @@ import { addAction } from '@wordpress/hooks';
 					url: TainacanAI.ajaxUrl,
 					type: 'POST',
 					data: {
-						action: 'tainacan_ai_get_item_mapping',
+						action: 'tainacan_ai_get_extraction_fields',
 						nonce: TainacanAI.nonce,
 						collection_id: this.state.collectionId,
 					},
 				} );
 
 				if ( response.success && response.data ) {
-					TainacanAI.metadataMapping = response.data;
+					TainacanAI.extractionFields = response.data;
 					if ( TainacanAI.debug ) {
 						console.log(
-							'[TainacanAI] Mapping updated via AJAX:',
+							'[TainacanAI] Extraction fields updated via AJAX:',
 							response.data
 						);
 					}
 				}
 			} catch ( error ) {
 				console.error(
-					'[TainacanAI] Error fetching mapping:',
+					'[TainacanAI] Error fetching extraction fields:',
 					error
 				);
 			}
@@ -575,6 +575,28 @@ import { addAction } from '@wordpress/hooks';
 
 				if ( response.success ) {
 					this.state.lastResult = response.data.result;
+					if ( TainacanAI.debug && response.data.prompt_debug ) {
+						console.group( '[TainacanAI] Resolved analysis prompt' );
+						if ( response.data.prompt_debug.parts ) {
+							console.log( 'User intro:', response.data.prompt_debug.parts.user );
+							console.log( 'Fields section:', response.data.prompt_debug.parts.fields );
+							console.log( 'Evidence / format:', response.data.prompt_debug.parts.evidence );
+						}
+						if ( response.data.prompt_debug.evidence_strategy ) {
+							console.log(
+								'Evidence strategy:',
+								response.data.prompt_debug.evidence_strategy
+							);
+						}
+						if ( response.data.prompt_debug.attachment_note ) {
+							console.log(
+								'Attachment:',
+								response.data.prompt_debug.attachment_note
+							);
+						}
+						console.log( 'Full prompt:', response.data.prompt_debug.prompt );
+						console.groupEnd();
+					}
 					this.displayResults(
 						response.data.result,
 						response.data.from_cache
@@ -762,26 +784,44 @@ import { addAction } from '@wordpress/hooks';
 					( Array.isArray( value ) && value.length === 0 ) ||
 					value === '';
 
-				// Check if there's mapping for this field
-				const mapping = TainacanAI.metadataMapping || {};
-				const mappedField = mapping[ key ];
-				const hasMappedField = mappedField && ! isEmpty;
+				const extractionFields = TainacanAI.extractionFields || {};
+				const extractionField = extractionFields[ key ];
+				const displayLabel = extractionField?.name
+					? this.escapeHtml( extractionField.name )
+					: formattedLabel;
+				const canFill = extractionField && ! isEmpty;
+				const notFoundText =
+					TainacanAI.texts?.valueNotFound || 'Not found in document';
 
-				const $item = $( `
-                    <div class="tainacan-ai-metadata-item-with-evidence ${
-						isEmpty ? 'empty' : ''
-					}"
+				let $item;
+
+				if ( isEmpty ) {
+					$item = $( `
+                    <div class="tainacan-ai-metadata-item-with-evidence is-not-found"
+                         style="animation-delay: ${ index * 0.05 }s"
+                         data-metadata-key="${ this.escapeHtml( key ) }">
+                        <div class="tainacan-ai-metadata-main tainacan-ai-metadata-main--not-found">
+                            <span class="tainacan-ai-metadata-label">${ displayLabel }</span>
+                            <span class="tainacan-ai-metadata-not-found">${ this.escapeHtml(
+								notFoundText
+							) }</span>
+                        </div>
+                    </div>
+                ` );
+				} else {
+					$item = $( `
+                    <div class="tainacan-ai-metadata-item-with-evidence"
                          style="animation-delay: ${ index * 0.05 }s"
                          data-metadata-key="${ this.escapeHtml( key ) }">
                         <div class="tainacan-ai-metadata-main">
                             <div class="tainacan-ai-metadata-top">
                                 <div class="tainacan-ai-metadata-label-with-copy">
-                                    <span class="tainacan-ai-metadata-label">${ formattedLabel }</span>
+                                    <span class="tainacan-ai-metadata-label">${ displayLabel }</span>
                                     ${
-										hasMappedField
-											? `<span class="tainacan-ai-mapped-badge" title="${ TainacanAI.texts?.mappedTo || 'Mapped to: ' }${ this.escapeHtml(
-													mappedField.name ||
-														mappedField
+										canFill
+											? `<span class="tainacan-ai-extraction-field-badge" title="${ TainacanAI.texts?.fieldLabel || 'Tainacan field: ' }${ this.escapeHtml(
+													extractionField.name ||
+														extractionField
 											  ) }">
                                         <span class="dashicons dashicons-yes-alt"></span>
                                     </span>`
@@ -790,7 +830,7 @@ import { addAction } from '@wordpress/hooks';
                                 </div>
                                 <div class="tainacan-ai-metadata-actions-mini">
                                     ${
-										hasMappedField
+										canFill
 											? `
                                     <button type="button" class="tainacan-ai-fill-field"
                                             data-metadata-key="${ this.escapeHtml(
@@ -839,6 +879,7 @@ import { addAction } from '@wordpress/hooks';
 						}
                     </div>
                 ` );
+				}
 
 				$container.append( $item );
 			} );
@@ -1100,12 +1141,12 @@ import { addAction } from '@wordpress/hooks';
 		 * Fill a Tainacan field with extracted value
 		 */
 		fillTainacanField( metadataKey, value, $btn = null ) {
-			const mapping = TainacanAI.metadataMapping || {};
-			const fieldInfo = mapping[ metadataKey ];
+			const extractionFields = TainacanAI.extractionFields || {};
+			const fieldInfo = extractionFields[ metadataKey ];
 
 			if ( ! fieldInfo ) {
 				console.log(
-					`[TainacanAI] Field "${ metadataKey }" has no mapping`
+					`[TainacanAI] Field "${ metadataKey }" is not enabled for extraction`
 				);
 				return false;
 			}
@@ -1413,9 +1454,9 @@ import { addAction } from '@wordpress/hooks';
 		},
 
 		/**
-		 * Fill all mapped fields
+		 * Fill all extraction-enabled fields that have values in the AI result.
 		 */
-		fillAllMappedFields() {
+		fillAllExtractionFields() {
 			if ( ! this.state.lastResult?.ai_metadata ) {
 				this.showToast(
 					TainacanAI.texts?.noResults || 'No results available'
@@ -1423,26 +1464,32 @@ import { addAction } from '@wordpress/hooks';
 				return;
 			}
 
-			const mapping = TainacanAI.metadataMapping || {};
+			const extractionFields = TainacanAI.extractionFields || {};
 			let filledCount = 0;
-			let totalMapped = 0;
+			let totalFillable = 0;
 
-			// Debug: show mapping and AI result
-			console.log( '[TainacanAI] Available mapping:', mapping );
-			console.log(
-				'[TainacanAI] AI result:',
-				this.state.lastResult.ai_metadata
-			);
+			if ( TainacanAI.debug ) {
+				console.log(
+					'[TainacanAI] Extraction fields:',
+					extractionFields
+				);
+				console.log(
+					'[TainacanAI] AI result:',
+					this.state.lastResult.ai_metadata
+				);
+			}
 
 			Object.entries( this.state.lastResult.ai_metadata ).forEach(
 				( [ key, data ] ) => {
-					console.log(
-						`[TainacanAI] Checking key: "${ key }" -> exists in mapping:`,
-						!! mapping[ key ]
-					);
-					if ( ! mapping[ key ] ) return;
+					if ( TainacanAI.debug ) {
+						console.log(
+							`[TainacanAI] Checking key: "${ key }" -> extraction enabled:`,
+							!! extractionFields[ key ]
+						);
+					}
+					if ( ! extractionFields[ key ] ) return;
 
-					totalMapped++;
+					totalFillable++;
 
 					const { value } = this.parseFieldEntry( data );
 
@@ -1469,10 +1516,10 @@ import { addAction } from '@wordpress/hooks';
 						'{count} fields filled'
 					).replace( '{count}', filledCount )
 				);
-			} else if ( totalMapped === 0 ) {
+			} else if ( totalFillable === 0 ) {
 				this.showToast(
-					TainacanAI.texts?.noMappedFields ||
-						'No mapped fields found'
+					TainacanAI.texts?.noExtractionFields ||
+						'No extraction-enabled metadata found'
 				);
 			} else {
 				this.showToast(
