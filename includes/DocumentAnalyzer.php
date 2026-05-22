@@ -182,7 +182,10 @@ class DocumentAnalyzer {
         }
 
         // Combine results
-        $result['ai_metadata'] = $ai_result['metadata'] ?? $ai_result;
+        $raw_metadata = $ai_result['metadata'] ?? $ai_result;
+        $result['ai_metadata'] = is_array($raw_metadata)
+            ? EvidenceInstructions::normalize_metadata($raw_metadata)
+            : $raw_metadata;
         $result['document_type'] = $document_type;
         $result['extraction_method'] = $extraction_method;
         $result['tokens_used'] = $ai_result['usage']['total_tokens'] ?? 0;
@@ -367,11 +370,10 @@ class DocumentAnalyzer {
                 );
             }
 
-            // Get prompt
-            $prompt = $this->get_prompt();
+            $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::STRATEGY_DOCUMENT_VISUAL);
 
-            if (empty($prompt)) {
-                return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
+            if (is_wp_error($prompt)) {
+                return $prompt;
             }
 
             $pageCount = count($images);
@@ -449,11 +451,10 @@ class DocumentAnalyzer {
             $image_data = "data:{$mime_type};base64,{$base64}";
         }
 
-        // Get prompt
-        $prompt = $this->get_prompt();
+        $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::STRATEGY_IMAGE);
 
-        if (empty($prompt)) {
-            return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
+        if (is_wp_error($prompt)) {
+            return $prompt;
         }
 
         return CoreAI::generate_json_from_text_and_files(
@@ -487,11 +488,10 @@ class DocumentAnalyzer {
             $text .= "\n\n[Document truncated due to size]";
         }
 
-        // Get prompt
-        $prompt = $this->get_prompt();
+        $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::STRATEGY_DOCUMENT_TEXT);
 
-        if (empty($prompt)) {
-            return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
+        if (is_wp_error($prompt)) {
+            return $prompt;
         }
 
         $full_prompt = $prompt . "\n\n---\n\n**Documento:**\n\n" . $text;
@@ -500,41 +500,64 @@ class DocumentAnalyzer {
     }
 
     /**
-     * Get prompt (custom or default)
+     * Resolve base prompt and append standardized evidence instructions.
      *
-     * First checks if there's custom field mapping in admin,
-     * and generates a dynamic prompt based on those fields so AI
-     * returns exactly the mapped fields.
+     * @return string|\WP_Error
      */
-    private function get_prompt(): string {
-        // First, check if there's custom mapping saved in admin
+    private function resolve_analysis_prompt(string $evidence_strategy): string|\WP_Error {
+        $prompt = $this->get_prompt();
+
+        if ($prompt === '') {
+            return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
+        }
+
+        return EvidenceInstructions::append_to_prompt($prompt, $evidence_strategy);
+    }
+
+    /**
+     * User-defined prompt: collection post meta, falling back to the site default option.
+     */
+    private function get_user_prompt(): string {
         if ($this->collection_id) {
-            $custom_mapping = get_option('tainacan_ai_mapping_' . $this->collection_id, []);
-
-            if (!empty($custom_mapping)) {
-                $prompt = $this->generate_prompt_from_mapping($custom_mapping);
-                if (!empty($prompt)) {
-                    return $prompt;
-                }
-            }
-
-            // If no custom mapping, try collection prompt
-            $prompt = $this->collection_prompts->get_effective_prompt($this->collection_id);
-            if (!empty($prompt)) {
-                return $prompt;
-            }
+            return $this->collection_prompts->get_effective_prompt($this->collection_id);
         }
 
         return (string) ($this->options['default_prompt'] ?? '');
     }
 
     /**
-     * Generate dynamic prompt based on field mapping
+     * Compose the analysis prompt: user intro + optional mapping field list.
      *
-     * Creates a prompt that instructs AI to return JSON with exactly
-     * the fields defined in the mapping, using the correct keys.
+     * Format and evidence rules are appended later in resolve_analysis_prompt().
      */
-    private function generate_prompt_from_mapping(array $mapping): string {
+    private function get_prompt(): string {
+        $prompt = trim($this->get_user_prompt());
+
+        if (!$this->collection_id) {
+            return $prompt;
+        }
+
+        $custom_mapping = get_option('tainacan_ai_mapping_' . $this->collection_id, []);
+        if (empty($custom_mapping)) {
+            return $prompt;
+        }
+
+        $mapping_section = $this->build_mapping_instructions_section($custom_mapping);
+        if ($mapping_section === '') {
+            return $prompt;
+        }
+
+        if ($prompt === '') {
+            return $mapping_section;
+        }
+
+        return $prompt . "\n\n" . $mapping_section;
+    }
+
+    /**
+     * Plugin-provided field list and response keys from admin mapping (no role/intro text).
+     */
+    private function build_mapping_instructions_section(array $mapping): string {
         if (empty($mapping)) {
             return '';
         }
@@ -544,11 +567,34 @@ class DocumentAnalyzer {
         $json_example = [];
 
         foreach ($mapping as $ai_field => $data) {
-            if (!empty($data['metadata_id'])) {
-                $field_name = $data['metadata_name'] ?? $ai_field;
-                $fields_list[] = "- **{$ai_field}**: {$field_name}";
-                $json_example[$ai_field] = "value for {$field_name}";
+            if (empty($data['metadata_id'])) {
+                continue;
             }
+
+            $field_name = $data['metadata_name'] ?? $ai_field;
+            $metadata_id = (int) $data['metadata_id'];
+            $is_multiple = $this->get_metadata_allows_multiple($metadata_id);
+
+            $line = "- **{$ai_field}** ({$field_name})";
+            if ($is_multiple) {
+                $line .= ' — ' . __('multivalued: use parallel arrays in "value" and "evidence"', 'tainacan-ai');
+            }
+
+            $description = $this->get_metadata_description($metadata_id);
+            if ($description !== '') {
+                $line .= "\n  - " . __('Extraction guidance:', 'tainacan-ai') . ' ' . $description;
+            }
+
+            $fields_list[] = $line;
+            $json_example[$ai_field] = $is_multiple
+                ? [
+                    'value' => ['exemplo 1', 'exemplo 2'],
+                    'evidence' => ['fonte do exemplo 1', 'fonte do exemplo 2'],
+                ]
+                : [
+                    'value' => null,
+                    'evidence' => '',
+                ];
         }
 
         if (empty($fields_list)) {
@@ -558,19 +604,50 @@ class DocumentAnalyzer {
         $fields_text = implode("\n", $fields_list);
         $json_text = json_encode($json_example, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-        return 'Você é um especialista em catalogação de acervos. Analise o conteúdo fornecido e extraia informações para os campos especificados abaixo.' . "\n\n" .
-'## Campos para Extrair:' . "\n" .
+        return '## ' . __('Fields to extract', 'tainacan-ai') . "\n" .
 $fields_text . "\n\n" .
-'## Instruções:' . "\n" .
-'1. Analise o conteúdo com atenção' . "\n" .
-'2. Extraia informações relevantes para CADA campo listado' . "\n" .
-'3. Se não encontrar informação para um campo, use null' . "\n" .
-'4. Para campos com múltiplos valores, use array' . "\n" .
-'5. Seja preciso e objetivo' . "\n\n" .
-'## Formato de Resposta:' . "\n" .
-'Retorne APENAS um JSON válido com esta estrutura (use EXATAMENTE estas chaves):' . "\n" .
-$json_text . "\n\n" .
-'IMPORTANTE: Use EXATAMENTE as chaves mostradas acima (como "titulo", "autor", etc.). Responda SOMENTE com o JSON, sem texto adicional.';
+'## ' . __('Extraction instructions', 'tainacan-ai') . "\n" .
+'- ' . __('Extract information for EACH field listed above.', 'tainacan-ai') . "\n" .
+'- ' . __('Follow per-field extraction guidance when provided.', 'tainacan-ai') . "\n" .
+'- ' . __('Return JSON using EXACTLY the response keys below.', 'tainacan-ai') . "\n\n" .
+'## ' . __('Response keys', 'tainacan-ai') . "\n" .
+$json_text;
+    }
+
+    private function get_metadata_entity(int $metadata_id): ?object {
+        if ($metadata_id <= 0 || !class_exists('\Tainacan\Repositories\Metadata')) {
+            return null;
+        }
+
+        try {
+            $metadata_repo = \Tainacan\Repositories\Metadata::get_instance();
+            $metadata = $metadata_repo->fetch($metadata_id);
+
+            return $metadata ?: null;
+        } catch (\Throwable $e) {
+            $this->debug_log('Metadata lookup failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function get_metadata_description(int $metadata_id): string {
+        $metadata = $this->get_metadata_entity($metadata_id);
+
+        if (!$metadata || !method_exists($metadata, 'get_description')) {
+            return '';
+        }
+
+        return trim((string) $metadata->get_description());
+    }
+
+    private function get_metadata_allows_multiple(int $metadata_id): bool {
+        $metadata = $this->get_metadata_entity($metadata_id);
+
+        if (!$metadata || !method_exists($metadata, 'get_multiple')) {
+            return false;
+        }
+
+        return $metadata->get_multiple() === 'yes';
     }
 
     /**

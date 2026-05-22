@@ -98,6 +98,14 @@ class CollectionFormHook {
             );
             ?>
         </p>
+        <p class="help">
+            <?php
+            esc_html_e(
+                'Write the introduction and analysis goals here (role, domain, what to look for). When field mapping is configured in AI Tools, the plugin appends the mapped field list and response keys. Evidence and output format rules are added automatically at analysis time.',
+                'tainacan-ai'
+            );
+            ?>
+        </p>
         <div class="field">
             <label class="label" for="<?php echo esc_attr(CollectionPrompts::meta_key_text()); ?>">
                 <?php esc_html_e('Analysis prompt', 'tainacan-ai'); ?>
