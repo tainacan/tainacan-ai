@@ -8,21 +8,21 @@ Stable tag: 0.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automated metadata extraction in Tainacan using WordPress AI and Connectors. Prompts, mapping, and analysis are integrated into Tainacan.
+Automated metadata extraction in Tainacan using WordPress AI and Connectors. Prompts, per-metadata extraction, and analysis are integrated into Tainacan.
 
 == Description ==
 
-Tainacan AI extends the [Tainacan](https://wordpress.org/plugins/tainacan/) plugin with AI-assisted metadata extraction from images and documents. It is intended for museums, archives, libraries, and digital repositories that want to speed up cataloging while keeping control of prompts and field mapping.
+Tainacan AI extends the [Tainacan](https://wordpress.org/plugins/tainacan/) plugin with AI-assisted metadata extraction from images and documents. It is intended for museums, archives, libraries, and digital repositories that want to speed up cataloging while keeping control of prompts and which metadata fields are extracted.
 
-**AI access** is provided by **WordPress AI** through **Settings → Connectors** (WordPress 7.0+). This plugin does not store API keys for OpenAI, Gemini, or other vendors in its own settings screen; which model or service runs depends on your site’s connector configuration.
+**AI access** is provided by **WordPress AI** through **Settings → Connectors** (WordPress 7.0+). This plugin does not store API keys for OpenAI, Gemini, or other vendors in its own settings screen; which model or service runs depends on your site's connector configuration.
 
 = Key Features =
 
-* **WordPress AI & Connectors**: Uses the site’s configured AI connectors
+* **WordPress AI & Connectors**: Uses the site's configured AI connectors
 * **Image analysis**: Extract structured metadata from images when your connector supports it
-* **Document analysis**: Extract bibliographic-style or custom JSON fields from PDFs, TXT, and HTML
+* **Document analysis**: Extract metadata from PDFs, TXT, and HTML using collection field slugs
 * **Custom prompts per collection**: A single prompt per collection to guide extraction for any supported file type
-* **Metadata mapping**: Map AI output keys to Tainacan metadata for fill workflows
+* **Per-metadata extraction**: All metadata is included by default; opt out per field with **Exclude from AI extraction** on the metadatum form
 * **Evidence per field**: Analysis requests `{ "value", "evidence" }` for each key
 * **EXIF data extraction**: Optional technical metadata from image files (when the server supports it)
 * **PDF support**: Text extraction via bundled parser; optional visual analysis depends on Imagick/Ghostscript and the connector
@@ -42,20 +42,21 @@ Whether a supported file is fully processed depends on your setup—not on this 
 = How It Works =
 
 1. Configure **AI connectors** under **Settings → Connectors** in WordPress
-2. Optionally set default prompts, features, and mapping under **Tainacan → Others → AI Tools**
-3. Upload an image or document to a Tainacan item
-4. Click **Analyze Document** in the item edit form
-5. Review extracted fields and map or fill Tainacan metadata
+2. Optionally set default prompts and features under **Tainacan → Others → AI Tools**
+3. Enable or disable extraction per metadata on each metadatum edition form (all fields are on by default)
+4. Upload an image or document to a Tainacan item
+5. Click **Analyze Document** in the item edit form
+6. Review extracted fields and fill Tainacan metadata from the results panel
 
 = AI configuration =
 
-Connectors and credentials are managed in **Settings → Connectors**. The plugin relies on WordPress to choose an appropriate connector/model for each request; you do not pick a legacy “provider card” inside Tainacan AI.
+Connectors and credentials are managed in **Settings → Connectors**. The plugin relies on WordPress to choose an appropriate connector/model for each request.
 
 = Customization =
 
-Configure a default analysis prompt, per-collection overrides on the collection edition form, suggested prompt templates, field mapping, features such as EXIF extraction, and clear cache from **Tainacan → Others → AI Tools**.
+Configure a default analysis prompt, per-collection overrides on the collection edition form, suggested prompt templates, features such as EXIF extraction, and clear cache from **Tainacan → Others → AI Tools**.
 
-Each AI field uses a standard JSON shape: `"field_key": { "value": "...", "evidence": "..." }`. Evidence wording is added automatically by file type (image, document text, or PDF pages). Mapped fields can use the Tainacan metadata description as extraction guidance.
+Each field uses the metadata slug as JSON key with shape `{ "value": "...", "evidence": "..." }`. The plugin appends the field list, response format, and file-type evidence rules at analysis time. Extraction guidance comes from the metadata description and placeholder when set.
 
 == Installation ==
 
@@ -94,7 +95,7 @@ Yes. Tainacan AI requires the [Tainacan](https://wordpress.org/plugins/tainacan/
 
 = Where do I configure API keys? =
 
-In **Settings → Connectors** (WordPress 7.0+). The Tainacan AI settings page is for prompts, features, cache, and mapping.
+In **Settings → Connectors** (WordPress 7.0+). The Tainacan AI settings page is for prompts, features, and cache.
 
 = Which AI model or provider is used? =
 
@@ -106,7 +107,7 @@ Any pricing depends on the services behind your connectors (hosted APIs, etc.).
 
 = Can I customize what metadata is extracted? =
 
-Yes. You can configure default prompts, per-collection overrides on each collection's edition form, and map AI field names to Tainacan metadata from **AI Tools**.
+Yes. All collection metadata is included by default. Uncheck **Exclude from AI extraction** on a metadatum to omit it. You can also set default and per-collection prompts under **AI Tools** and on each collection edition form.
 
 = Does it work with scanned PDFs? =
 
@@ -114,7 +115,7 @@ Often yes, when Imagick or Ghostscript is available and your connector supports 
 
 = Is my data sent to external services? =
 
-If your connector uses a remote API, document content may be sent according to that service’s terms. For fully local setups, that depends on your connector. The plugin can integrate with the **WP Consent API** when the consent option is enabled.
+If your connector uses a remote API, document content may be sent according to that service's terms. For fully local setups, that depends on your connector. The plugin can integrate with the **WP Consent API** when the consent option is enabled.
 
 = Can I use multiple AI providers? =
 
@@ -124,50 +125,21 @@ You can configure multiple connectors in WordPress; this plugin does not maintai
 
 1. AI Tools settings page (prompts, features, cache)
 2. Collection edit form with per-collection prompt override
-3. Metadata mapping interface
+3. Metadatum form with extraction opt-out toggle
 4. Document analysis in the item edit form
 
 == Changelog ==
 
 = 0.1.0 =
-* Migrates to using Core's AI client and Connectors APIs
-* Removes legacy in-plugin providers (OpenAI, Gemini, DeepSeek, Ollama); AI access is via Settings → Connectors only
-* Removes custom usage logging in favor of WordPress AI Request Logs (when enabled)
-* Cleans up the UI to match Tainacan Admin Style
-
-= 0.0.3 =
-* Improved document detection in item edit form (less DOM mutations using Tainacan hooks)
-* Added no document found message to item edit form
-* Makes more strings translatable in the Javascript side
-
-= 0.0.2 =
-* UI improvements to match Tainacan Admin Style
-* Detects if document is of type attachment before showing the analyze button
-
-= 0.0.1 =
-* Initial release
-* Support for OpenAI, Google Gemini, DeepSeek, and Ollama (legacy in-plugin provider configuration)
-* Image and document analysis
-* Custom prompts per collection
-* Metadata mapping
-* EXIF extraction
-* PDF support (text and visual)
-* REST API endpoints
-* WP Consent API integration
+* WordPress AI client and Connectors integration
+* Per-metadatum extraction opt-out and dynamic prompt field lists
+* Evidence `{ value, evidence }` schema appended at analysis time
+* Item form fill actions keyed by metadata slug
 
 == Upgrade Notice ==
 
 = 0.1.0 =
-* Migrates to using Core's AI client and Connectors APIs (only works with WordPress 7.0+)
-
-= 0.0.3 =
-* Improved document detection in item edit form.
-
-= 0.0.2 =
-Better integration with Tainacan Admin Style.
-
-= 0.0.1 =
-Initial release. Requires WordPress 6.5+, PHP 8.0+, and Tainacan 1.0+.
+Initial public release. Requires WordPress 7.0+, PHP 8.0+, and Tainacan 1.0+.
 
 == Development ==
 

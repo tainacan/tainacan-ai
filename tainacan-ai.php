@@ -142,7 +142,6 @@ final class Tainacan_AI {
             'request_timeout' => 120,
             'cache_duration' => 3600,
             'extract_exif' => true,
-            'auto_map_metadata' => false,
             'consent_required' => true,
         ];
 
@@ -219,8 +218,9 @@ final class Tainacan_AI {
         new \Tainacan\AI\API();
         new \Tainacan\AI\ItemFormHook();
         new \Tainacan\AI\CollectionFormHook();
+        new \Tainacan\AI\MetadatumFormHook();
 
-        // Post meta + metadata AJAX for collection prompts (form hook + field mapping UI)
+        \Tainacan\AI\ExtractionMetadata::get_instance()->init_hooks();
         new \Tainacan\AI\CollectionPrompts();
 
         add_action('wpai_features_initialized', [\Tainacan\AI\CoreAIRequestLogging::class, 'register_integration']);

@@ -92,7 +92,7 @@ class CollectionFormHook {
             echo wp_kses_post(
                 sprintf(
                     /* translators: %s: link to Tainacan AI settings page */
-                    __('Override the site-wide prompt for this collection. Leave blank to use <a href="%s">Tainacan AI settings</a>. Field mapping is edited there.', 'tainacan-ai'),
+                    __('Override the site-wide prompt for this collection. Leave blank to use <a href="%s">Tainacan AI settings</a>. Enable extraction per metadata on each metadata edition form.', 'tainacan-ai'),
                     esc_url($ai_tools_url)
                 )
             );
@@ -101,7 +101,7 @@ class CollectionFormHook {
         <p class="help">
             <?php
             esc_html_e(
-                'Write the introduction and analysis goals here (role, domain, what to look for). When field mapping is configured in AI Tools, the plugin appends the mapped field list and response keys. Evidence and output format rules are added automatically at analysis time.',
+                'Write the introduction and analysis goals here (role, domain, what to look for). The plugin appends the list of metadata marked for extraction in this collection. Evidence and output format rules are added automatically at analysis time.',
                 'tainacan-ai'
             );
             ?>

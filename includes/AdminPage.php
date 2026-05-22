@@ -26,10 +26,6 @@ class AdminPage extends \Tainacan\Pages {
 
         add_action('admin_init', [$this, 'register_settings']);
         add_action('wp_ajax_tainacan_ai_clear_cache', [$this, 'ajax_clear_cache']);
-        add_action('wp_ajax_tainacan_ai_get_collection_metadata', [$this, 'ajax_get_collection_metadata']);
-        add_action('wp_ajax_tainacan_ai_save_mapping', [$this, 'ajax_save_mapping']);
-        add_action('wp_ajax_tainacan_ai_get_mapping', [$this, 'ajax_get_mapping']);
-        add_action('wp_ajax_tainacan_ai_auto_detect_mapping', [$this, 'ajax_auto_detect_mapping']);
     }
 
     /**
@@ -102,33 +98,6 @@ class AdminPage extends \Tainacan\Pages {
                 'loading' => __('Loading...', 'tainacan-ai'),
                 'confirmReplacePromptTemplate' => __('Replace the current prompt with this template?', 'tainacan-ai'),
                 'confirmClearCache' => __('Are you sure you want to clear all cache?', 'tainacan-ai'),
-                'selectCollectionFirst' => __('Select a collection first.', 'tainacan-ai'),
-                'loadingMetadata' => __('Loading metadata...', 'tainacan-ai'),
-                'errorLoadingMetadata' => __('Error loading metadata.', 'tainacan-ai'),
-                'doNotMap' => __('-- Do not map --', 'tainacan-ai'),
-                'remove' => __('Remove', 'tainacan-ai'),
-                'addCustomField' => __('Add custom field', 'tainacan-ai'),
-                'aiFieldName' => __('AI field name', 'tainacan-ai'),
-                'detecting' => __('Detecting...', 'tainacan-ai'),
-                'fieldsDetected' => __('field(s) detected automatically!', 'tainacan-ai'),
-                'errorDetectingMapping' => __('Error detecting mapping.', 'tainacan-ai'),
-                'confirmClearMapping' => __('Are you sure you want to clear all mapping?', 'tainacan-ai'),
-                'mappingCleared' => __('Mapping cleared. Click "Save" to confirm.', 'tainacan-ai'),
-                'title' => __('Title', 'tainacan-ai'),
-                'description' => __('Description', 'tainacan-ai'),
-                'author' => __('Author', 'tainacan-ai'),
-                'date' => __('Date', 'tainacan-ai'),
-                'subject' => __('Subject', 'tainacan-ai'),
-                'type' => __('Type', 'tainacan-ai'),
-                'format' => __('Format', 'tainacan-ai'),
-                'language' => __('Language', 'tainacan-ai'),
-                'source' => __('Source', 'tainacan-ai'),
-                'rights' => __('Rights', 'tainacan-ai'),
-                'coverage' => __('Coverage', 'tainacan-ai'),
-                'publisher' => __('Publisher', 'tainacan-ai'),
-                'contributor' => __('Contributor', 'tainacan-ai'),
-                'relation' => __('Relation', 'tainacan-ai'),
-                'identifier' => __('Identifier', 'tainacan-ai'),
             ]
         ]);
     }
@@ -179,7 +148,7 @@ class AdminPage extends \Tainacan\Pages {
         }
 
         // Checkboxes
-        $checkbox_fields = ['extract_exif', 'auto_map_metadata', 'consent_required'];
+        $checkbox_fields = ['extract_exif', 'consent_required'];
         foreach ($checkbox_fields as $field) {
             $options[$field] = !empty($input[$field]);
         }
@@ -214,167 +183,5 @@ class AdminPage extends \Tainacan\Pages {
             /* translators: %d: number of cache entries removed */
             sprintf(__('Cache cleared! %d entries removed.', 'tainacan-ai'), $deleted)
         );
-    }
-
-    /**
-     * Get collection metadata
-     */
-    public function ajax_get_collection_metadata() {
-        check_ajax_referer('tainacan_ai_admin_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
-
-        if (empty($collection_id)) {
-            wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
-        }
-
-        if (!class_exists('\Tainacan\Repositories\Metadata')) {
-            wp_send_json_error(__('Tainacan is not active.', 'tainacan-ai'));
-        }
-
-        $metadata_repo = \Tainacan\Repositories\Metadata::get_instance();
-        $metadata = $metadata_repo->fetch_by_collection(
-            new \Tainacan\Entities\Collection($collection_id),
-            [],
-            'OBJECT'
-        );
-
-        $list = [];
-        foreach ($metadata as $meta) {
-            $list[] = [
-                'id' => $meta->get_id(),
-                'name' => $meta->get_name(),
-                'slug' => $meta->get_slug(),
-                'type' => $meta->get_metadata_type(),
-            ];
-        }
-
-        wp_send_json_success($list);
-    }
-
-    /**
-     * Save field mapping for a collection
-     */
-    public function ajax_save_mapping() {
-        check_ajax_referer('tainacan_ai_admin_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
-        $mapping = RequestInput::json_post_array('mapping');
-
-        if (empty($collection_id)) {
-            wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
-        }
-
-        // Save mapping as option
-        $option_key = 'tainacan_ai_mapping_' . $collection_id;
-        update_option($option_key, $mapping);
-
-        wp_send_json_success(__('Mapping saved successfully!', 'tainacan-ai'));
-    }
-
-    /**
-     * Get field mapping for a collection
-     */
-    public function ajax_get_mapping() {
-        check_ajax_referer('tainacan_ai_admin_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
-
-        if (empty($collection_id)) {
-            wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
-        }
-
-        $option_key = 'tainacan_ai_mapping_' . $collection_id;
-        $mapping = get_option($option_key, []);
-
-        wp_send_json_success($mapping);
-    }
-
-    /**
-     * Auto-detect mapping based on collection metadata
-     */
-    public function ajax_auto_detect_mapping() {
-        check_ajax_referer('tainacan_ai_admin_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        $collection_id = absint(wp_unslash($_POST['collection_id'] ?? 0));
-
-        if (empty($collection_id)) {
-            wp_send_json_error(__('Collection ID not provided.', 'tainacan-ai'));
-        }
-
-        if (!class_exists('\Tainacan\Repositories\Metadata')) {
-            wp_send_json_error(__('Tainacan is not active.', 'tainacan-ai'));
-        }
-
-        $metadata_repo = \Tainacan\Repositories\Metadata::get_instance();
-        $metadata = $metadata_repo->fetch_by_collection(
-            new \Tainacan\Entities\Collection($collection_id),
-            [],
-            'OBJECT'
-        );
-
-        // Common AI field mappings to Tainacan metadata
-        $ai_field_mappings = [
-            'titulo' => ['titulo', 'title', 'nome', 'name'],
-            'descricao' => ['descricao', 'description', 'desc', 'resumo', 'abstract'],
-            'autor' => ['autor', 'author', 'autores', 'authors', 'criador', 'creator', 'dccreator'],
-            'data' => ['data', 'date', 'data_criacao', 'created_date', 'dcdate', 'ano', 'year'],
-            'assunto' => ['assunto', 'subject', 'tema', 'topic', 'palavras-chave', 'keywords', 'dcsubject'],
-            'tipo' => ['tipo', 'type', 'categoria', 'category', 'dctype'],
-            'formato' => ['formato', 'format', 'dcformat'],
-            'idioma' => ['idioma', 'language', 'lingua', 'dclanguage'],
-            'fonte' => ['fonte', 'source', 'origem', 'dcsource'],
-            'direitos' => ['direitos', 'rights', 'licenca', 'license', 'dcrights'],
-            'cobertura' => ['cobertura', 'coverage', 'local', 'location', 'dccoverage'],
-            'editor' => ['editor', 'publisher', 'editora', 'dcpublisher'],
-            'contribuidor' => ['contribuidor', 'contributor', 'colaborador', 'dccontributor'],
-            'relacao' => ['relacao', 'relation', 'relacionado', 'dcrelation'],
-            'identificador' => ['identificador', 'identifier', 'id', 'dcidentifier'],
-        ];
-
-        $auto_mapping = [];
-
-        foreach ($metadata as $meta) {
-            $meta_name = strtolower($meta->get_name());
-            $meta_slug = strtolower($meta->get_slug());
-            $meta_id = $meta->get_id();
-
-            // Try to find match
-            foreach ($ai_field_mappings as $ai_field => $variations) {
-                foreach ($variations as $variation) {
-                    // Check in metadata name or slug
-                    if (
-                        strpos($meta_name, $variation) !== false ||
-                        strpos($meta_slug, $variation) !== false ||
-                        $meta_name === $variation ||
-                        $meta_slug === $variation
-                    ) {
-                        $auto_mapping[$ai_field] = [
-                            'metadata_id' => $meta_id,
-                            'metadata_name' => $meta->get_name(),
-                        ];
-                        break 2; // Exit both loops
-                    }
-                }
-            }
-        }
-
-        wp_send_json_success($auto_mapping);
     }
 }

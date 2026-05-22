@@ -106,7 +106,12 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
                     </div>
                     <div class="tainacan-ai-card-body tainacan-ai-collapsible">
                         <p class="tainacan-ai-card-description">
-                            <?php esc_html_e('This prompt is used as the default for every file type. Use collection-level overrides when needed.', 'tainacan-ai'); ?>
+                            <?php
+                            esc_html_e(
+                                'Write the introduction and analysis goals (role, domain, what to look for). This prompt is the default for every file type; use collection-level overrides when needed. The plugin appends the metadata field list per collection and the JSON response format automatically.',
+                                'tainacan-ai'
+                            );
+                            ?>
                         </p>
 
                         <div class="tainacan-ai-field">
@@ -142,83 +147,6 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
                                 </article>
                             <?php endforeach; ?>
                         </details>
-                    </div>
-                </div>
-
-                <!-- Seção: Mapeamento de Campos -->
-                <div class="tainacan-ai-card">
-                    <div class="tainacan-ai-card-header">
-                        <div class="tainacan-ai-card-title">
-                            <span class="dashicons dashicons-networking"></span>
-                            <h2><?php esc_html_e('Field Mapping', 'tainacan-ai'); ?></h2>
-                        </div>
-                        <button type="button" class="tainacan-ai-toggle-card">
-                            <span class="dashicons dashicons-arrow-down-alt2"></span>
-                        </button>
-                    </div>
-                    <div class="tainacan-ai-card-body tainacan-ai-collapsible">
-                        <p class="tainacan-ai-card-description">
-                            <?php esc_html_e('Configure the mapping between AI-extracted fields and your collection metadata. This allows the "Fill Fields" button to work correctly.', 'tainacan-ai'); ?>
-                        </p>
-
-                        <div class="tainacan-ai-field">
-                            <label for="mapping-collection-select"><?php esc_html_e('Select a Collection', 'tainacan-ai'); ?></label>
-                            <select id="mapping-collection-select" class="regular-text">
-                                <option value=""><?php esc_html_e('-- Selecione --', 'tainacan-ai'); ?></option>
-                                <?php
-                                // Popula coleções diretamente no PHP
-                                if (class_exists('\Tainacan\Repositories\Collections')) {
-                                    $tainacan_ai_collections_repo = \Tainacan\Repositories\Collections::get_instance();
-                                    $tainacan_ai_collections = $tainacan_ai_collections_repo->fetch([], 'OBJECT');
-                                    if (is_array($tainacan_ai_collections)) {
-                                        foreach ($tainacan_ai_collections as $tainacan_ai_collection) {
-                                            printf(
-                                                '<option value="%d">%s</option>',
-                                                esc_attr($tainacan_ai_collection->get_id()),
-                                                esc_html($tainacan_ai_collection->get_name())
-                                            );
-                                        }
-                                    }
-                                }
-                                ?>
-                            </select>
-                        </div>
-
-                        <div id="metadata-mapping-editor" style="display: none;">
-                            <div class="tainacan-ai-mapping-header">
-                                <div class="tainacan-ai-mapping-col"><?php esc_html_e('AI Field', 'tainacan-ai'); ?></div>
-                                <div class="tainacan-ai-mapping-col tainacan-ai-mapping-col--spacer" aria-hidden="true"></div>
-                                <div class="tainacan-ai-mapping-col"><?php esc_html_e('Tainacan Metadata', 'tainacan-ai'); ?></div>
-                                <div class="tainacan-ai-mapping-col tainacan-ai-mapping-col--spacer" aria-hidden="true"></div>
-                            </div>
-                            <div id="metadata-mapping-list" class="tainacan-ai-mapping-list">
-                                <!-- Preenchido via JavaScript -->
-                            </div>
-
-                            <div class="tainacan-ai-mapping-actions">
-                                <button type="button" class="button button-primary" id="save-metadata-mapping">
-                                    <span class="dashicons dashicons-saved"></span>
-                                    <?php esc_html_e('Save Mapping', 'tainacan-ai'); ?>
-                                </button>
-                                <button type="button" class="button" id="auto-detect-mapping">
-                                    <span class="dashicons dashicons-admin-generic"></span>
-                                    <?php esc_html_e('Auto-detect', 'tainacan-ai'); ?>
-                                </button>
-                                <button type="button" class="button" id="clear-mapping">
-                                    <span class="dashicons dashicons-trash"></span>
-                                    <?php esc_html_e('Clear Mapping', 'tainacan-ai'); ?>
-                                </button>
-                            </div>
-
-                            <p class="tainacan-ai-card-description tainacan-ai-card-description-tip">
-                                <?php
-                                echo wp_kses(
-                                    __('<strong>Tip:</strong> Mapping adds the field list and JSON keys to your collection or default prompt. Write the introduction and analysis goals in the prompt; the plugin handles output format and evidence.', 'tainacan-ai'),
-                                    array( 'strong' => array() )
-                                );
-                            ?>
-                            </p>
-                        </div>
                     </div>
                 </div>
 
