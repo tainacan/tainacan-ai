@@ -521,12 +521,14 @@ import { addAction } from '@wordpress/hooks';
 				image: TainacanAI.texts.image,
 				pdf: TainacanAI.texts.pdf,
 				text: TainacanAI.texts.text,
+				url: TainacanAI.texts.url || 'URL',
 			};
 
 			const typeIcons = {
 				image: 'dashicons-format-image',
 				pdf: 'dashicons-pdf',
 				text: 'dashicons-media-text',
+				url: 'dashicons-admin-links',
 			};
 
 			this.elements.docType.html(

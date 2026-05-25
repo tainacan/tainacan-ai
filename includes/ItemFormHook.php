@@ -214,6 +214,7 @@ class ItemFormHook {
                 'image' => __('Image', 'tainacan-ai'),
                 'pdf' => __('PDF', 'tainacan-ai'),
                 'text' => __('Text', 'tainacan-ai'),
+                'url' => __('URL', 'tainacan-ai'),
                 'detecting' => __('Detecting document...', 'tainacan-ai'),
                 'analysisResults' => __('Analysis Results', 'tainacan-ai'),
                 'newAnalysis' => __('New Analysis', 'tainacan-ai'),
@@ -246,7 +247,7 @@ class ItemFormHook {
      */
     private function build_analyze_ajax_response(
         DocumentAnalyzer $analyzer,
-        int $attachment_id,
+        ?int $attachment_id,
         array $result,
         bool $from_cache
     ): array {
@@ -255,15 +256,17 @@ class ItemFormHook {
             'from_cache' => $from_cache,
         ];
 
-        $prompt_debug = $analyzer->build_prompt_debug_payload($attachment_id);
+        if ($attachment_id && $attachment_id > 0) {
+            $prompt_debug = $analyzer->build_prompt_debug_payload($attachment_id);
 
-        if ($prompt_debug !== null) {
-            if (is_wp_error($prompt_debug)) {
-                $response['prompt_debug'] = [
-                    'error' => $prompt_debug->get_error_message(),
-                ];
-            } else {
-                $response['prompt_debug'] = $prompt_debug;
+            if ($prompt_debug !== null) {
+                if (is_wp_error($prompt_debug)) {
+                    $response['prompt_debug'] = [
+                        'error' => $prompt_debug->get_error_message(),
+                    ];
+                } else {
+                    $response['prompt_debug'] = $prompt_debug;
+                }
             }
         }
 
@@ -292,13 +295,17 @@ class ItemFormHook {
                 wp_send_json_error(__('Item or attachment ID not provided.', 'tainacan-ai'));
             }
 
+            $document_data = null;
+
             // Get document from item if no attachment_id
             if (empty($attachment_id) && !empty($item_id)) {
                 $document_data = $this->get_item_document($item_id);
                 if (!$document_data) {
                     wp_send_json_error(__('No document found in this item.', 'tainacan-ai'));
                 }
-                $attachment_id = $document_data['id'];
+                if (!empty($document_data['id'])) {
+                    $attachment_id = (int) $document_data['id'];
+                }
             }
 
             // Get collection_id from item if not provided
@@ -309,21 +316,34 @@ class ItemFormHook {
             $analyzer = new DocumentAnalyzer();
             $analyzer->set_context($collection_id, $item_id);
 
+            $is_remote_url_document = (
+                is_array($document_data)
+                && ($document_data['source'] ?? '') === 'url'
+                && !empty($document_data['document_url'])
+            );
+            $document_url = $is_remote_url_document ? (string) $document_data['document_url'] : '';
+
             // Check cache
-            $cache_key = 'tainacan_ai_' . $attachment_id;
+            $cache_key = $is_remote_url_document
+                ? 'tainacan_ai_url_' . md5($document_url)
+                : 'tainacan_ai_' . $attachment_id;
             if (!$force_refresh) {
                 $cached = get_transient($cache_key);
                 if ($cached !== false) {
                     wp_send_json_success($this->build_analyze_ajax_response(
                         $analyzer,
-                        $attachment_id,
+                        $is_remote_url_document ? null : $attachment_id,
                         $cached,
                         true
                     ));
                 }
             }
 
-            $result = $analyzer->analyze($attachment_id);
+            if ($is_remote_url_document) {
+                $result = $analyzer->analyze_document_url($document_url);
+            } else {
+                $result = $analyzer->analyze($attachment_id);
+            }
 
             if (is_wp_error($result)) {
                 wp_send_json_error($result->get_error_message());
@@ -338,7 +358,7 @@ class ItemFormHook {
 
             wp_send_json_success($this->build_analyze_ajax_response(
                 $analyzer,
-                $attachment_id,
+                $is_remote_url_document ? null : $attachment_id,
                 $result,
                 false
             ));
@@ -472,6 +492,8 @@ class ItemFormHook {
                     if ($attachment_id) {
                         return $this->get_attachment_info($attachment_id);
                     }
+
+                    return $this->get_remote_url_document_info((string) $document);
                 }
             }
         }
@@ -537,6 +559,34 @@ class ItemFormHook {
             'mime_type' => $mime_type,
             'type' => $type,
             'thumbnail' => $thumbnail,
+            'source' => 'attachment',
+        ];
+    }
+
+    private function get_remote_url_document_info(string $document_url): array {
+        $title = wp_parse_url($document_url, PHP_URL_PATH);
+        $title = is_string($title) && $title !== '' ? basename($title) : $document_url;
+        $extension = strtolower((string) pathinfo($title, PATHINFO_EXTENSION));
+        $mime_type = 'application/octet-stream';
+        $type = 'url';
+
+        if ($extension === 'pdf') {
+            $mime_type = 'application/pdf';
+        } elseif (in_array($extension, ['txt', 'text'], true)) {
+            $mime_type = 'text/plain';
+        } elseif (in_array($extension, ['htm', 'html'], true)) {
+            $mime_type = 'text/html';
+        }
+
+        return [
+            'id' => 0,
+            'title' => $title,
+            'url' => $document_url,
+            'mime_type' => $mime_type,
+            'type' => $type,
+            'thumbnail' => null,
+            'source' => 'url',
+            'document_url' => $document_url,
         ];
     }
 

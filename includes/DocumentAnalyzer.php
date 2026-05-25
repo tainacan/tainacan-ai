@@ -42,6 +42,12 @@ class DocumentAnalyzer {
         'text/html',
     ];
 
+    private array $supported_remote_document_types = [
+        'application/pdf',
+        'text/plain',
+        'text/html',
+    ];
+
     public function __construct() {
         $this->options = \Tainacan_AI::get_options();
         $this->exif_extractor = new ExifExtractor();
@@ -108,6 +114,48 @@ class DocumentAnalyzer {
             return $this->run_analysis($attachment_id, $include_exif, $file_path, $mime_type);
         } finally {
             $this->current_attachment_id = null;
+        }
+    }
+
+    /**
+     * Analyze a remote document URL (https only).
+     */
+    public function analyze_document_url(string $document_url): array|\WP_Error {
+        if (!CoreAI::is_supported_text_generation()) {
+            return new \WP_Error(
+                'no_core_ai',
+                __('WordPress Core AI Client is not available or not configured.', 'tainacan-ai')
+            );
+        }
+
+        if (!\Tainacan_AI::has_consent()) {
+            return new \WP_Error('no_consent', __('Consent required to use AI features.', 'tainacan-ai'));
+        }
+
+        if (!$this->collection_id && $this->item_id) {
+            $this->collection_id = $this->get_item_collection($this->item_id);
+        }
+
+        $downloaded = $this->download_remote_document($document_url);
+
+        if (is_wp_error($downloaded)) {
+            return $downloaded;
+        }
+
+        $this->current_attachment_id = null;
+
+        try {
+            return $this->run_analysis(
+                0,
+                false,
+                $downloaded['file_path'],
+                $downloaded['mime_type']
+            );
+        } finally {
+            $this->current_attachment_id = null;
+            if (file_exists($downloaded['file_path'])) {
+                wp_delete_file($downloaded['file_path']);
+            }
         }
     }
 
@@ -208,6 +256,189 @@ class DocumentAnalyzer {
         );
 
         return $result;
+    }
+
+    /**
+     * @return array{file_path: string, mime_type: string}|\WP_Error
+     */
+    private function download_remote_document(string $document_url): array|\WP_Error {
+        $document_url = trim($document_url);
+
+        if ($document_url === '') {
+            return new \WP_Error('empty_url', __('Document URL is empty.', 'tainacan-ai'));
+        }
+
+        if (!wp_http_validate_url($document_url)) {
+            return new \WP_Error('invalid_url', __('Invalid document URL.', 'tainacan-ai'));
+        }
+
+        $parts = wp_parse_url($document_url);
+        $scheme = isset($parts['scheme']) ? strtolower((string) $parts['scheme']) : '';
+        if ($scheme !== 'https') {
+            return new \WP_Error('unsupported_url_scheme', __('Only HTTPS document URLs are supported.', 'tainacan-ai'));
+        }
+
+        $host = isset($parts['host']) ? strtolower((string) $parts['host']) : '';
+        if ($host === '' || !$this->is_public_host($host)) {
+            return new \WP_Error('private_url_blocked', __('Private or local document URLs are not allowed.', 'tainacan-ai'));
+        }
+
+        $tmp_file = wp_tempnam('tainacan-ai-remote');
+        if (!$tmp_file) {
+            return new \WP_Error('tmp_file_error', __('Could not create temporary file for remote document.', 'tainacan-ai'));
+        }
+
+        $response = wp_safe_remote_get(
+            $document_url,
+            [
+                'timeout' => (int) ($this->options['request_timeout'] ?? 120),
+                'redirection' => 3,
+                'stream' => true,
+                'filename' => $tmp_file,
+                'limit_response_size' => 20 * 1024 * 1024,
+            ]
+        );
+
+        if (is_wp_error($response)) {
+            wp_delete_file($tmp_file);
+            return new \WP_Error(
+                'remote_download_failed',
+                sprintf(
+                    /* translators: %s: low-level remote error */
+                    __('Could not download document URL: %s', 'tainacan-ai'),
+                    $response->get_error_message()
+                )
+            );
+        }
+
+        $status_code = (int) wp_remote_retrieve_response_code($response);
+        if ($status_code < 200 || $status_code >= 300) {
+            wp_delete_file($tmp_file);
+            return new \WP_Error(
+                'remote_http_error',
+                sprintf(
+                    /* translators: %d: HTTP status code */
+                    __('Document URL returned HTTP status %d.', 'tainacan-ai'),
+                    $status_code
+                )
+            );
+        }
+
+        $content_type = (string) wp_remote_retrieve_header($response, 'content-type');
+        $header_mime_type = strtolower(trim((string) preg_replace('/;.*/', '', $content_type)));
+        $url_mime_type = (string) wp_check_filetype($document_url)['type'];
+        $file_mime_type = $this->detect_local_file_mime_type($tmp_file);
+        $mime_type = $this->resolve_remote_mime_type(
+            $tmp_file,
+            $file_mime_type,
+            $header_mime_type,
+            $url_mime_type
+        );
+
+        if (!in_array($mime_type, $this->supported_remote_document_types, true)) {
+            wp_delete_file($tmp_file);
+            return new \WP_Error(
+                'unsupported_remote_type',
+                sprintf(
+                    /* translators: %s: MIME type */
+                    __('Unsupported remote document type: %s', 'tainacan-ai'),
+                    $mime_type !== '' ? $mime_type : __('unknown', 'tainacan-ai')
+                )
+            );
+        }
+
+        return [
+            'file_path' => $tmp_file,
+            'mime_type' => $mime_type,
+        ];
+    }
+
+    private function detect_local_file_mime_type(string $file_path): string {
+        if (!is_readable($file_path)) {
+            return '';
+        }
+
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo) {
+                $mime = finfo_file($finfo, $file_path);
+                finfo_close($finfo);
+                if (is_string($mime) && $mime !== '') {
+                    return strtolower($mime);
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function resolve_remote_mime_type(
+        string $file_path,
+        string $file_mime_type,
+        string $header_mime_type,
+        string $url_mime_type
+    ): string {
+        $candidates = [
+            strtolower(trim($file_mime_type)),
+            strtolower(trim($header_mime_type)),
+            strtolower(trim($url_mime_type)),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $this->supported_remote_document_types, true)) {
+                return $candidate;
+            }
+        }
+
+        if ($this->file_looks_like_pdf($file_path)) {
+            return 'application/pdf';
+        }
+
+        if ($this->file_looks_like_html($file_path)) {
+            return 'text/html';
+        }
+
+        return $candidates[0] ?? '';
+    }
+
+    private function file_looks_like_pdf(string $file_path): bool {
+        if (!is_readable($file_path)) {
+            return false;
+        }
+
+        $handle = fopen($file_path, 'rb');
+        if (!$handle) {
+            return false;
+        }
+
+        $header = fread($handle, 5);
+        fclose($handle);
+
+        return $header === '%PDF-';
+    }
+
+    private function file_looks_like_html(string $file_path): bool {
+        if (!is_readable($file_path)) {
+            return false;
+        }
+
+        $handle = fopen($file_path, 'rb');
+        if (!$handle) {
+            return false;
+        }
+
+        $sample = fread($handle, 4096);
+        fclose($handle);
+
+        if (!is_string($sample) || $sample === '') {
+            return false;
+        }
+
+        $normalized = strtolower(ltrim($sample));
+        return strpos($normalized, '<!doctype html') === 0
+            || strpos($normalized, '<html') === 0
+            || strpos($normalized, '<head') === 0
+            || strpos($normalized, '<body') === 0;
     }
 
     /**
@@ -826,6 +1057,40 @@ class DocumentAnalyzer {
         }
 
         // Check common local domains
+        $local_domains = ['.local', '.localhost', '.test', '.example', '.invalid', '.lan'];
+        foreach ($local_domains as $domain) {
+            if (str_ends_with($host, $domain)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function is_public_host(string $host): bool {
+        $local_hosts = [
+            'localhost',
+            '127.0.0.1',
+            '::1',
+            '0.0.0.0',
+        ];
+
+        if (in_array($host, $local_hosts, true)) {
+            return false;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            if (preg_match('/^10\./', $host)) {
+                return false;
+            }
+            if (preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $host)) {
+                return false;
+            }
+            if (preg_match('/^192\.168\./', $host)) {
+                return false;
+            }
+        }
+
         $local_domains = ['.local', '.localhost', '.test', '.example', '.invalid', '.lan'];
         foreach ($local_domains as $domain) {
             if (str_ends_with($host, $domain)) {

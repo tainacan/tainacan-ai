@@ -33,6 +33,8 @@ Tainacan AI extends the [Tainacan](https://wordpress.org/plugins/tainacan/) plug
 
 The plugin will attempt analysis only for attachments whose MIME type it recognizes (JPEG, PNG, GIF, WebP, PDF, plain text, and HTML). Other types are rejected before any AI request runs.
 
+For item documents configured as URL in Tainacan, analysis currently supports HTTPS links that resolve to PDF, plain text, or HTML.
+
 Whether a supported file is fully processed depends on your setup—not on this list alone:
 
 * **Images** need a connector model that accepts image input (check status under **Tainacan → AI Tools**).
