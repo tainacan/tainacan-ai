@@ -168,6 +168,8 @@ Filter: `tainacan_ai_evidence_instructions` to customize the appended evidence b
 
 Tainacan AI only starts analysis for recognized MIME types: JPEG, PNG, GIF, WebP, PDF, plain text, and HTML. Anything else is rejected before an AI request is sent.
 
+For item documents configured as **URL** in Tainacan, analysis currently supports **HTTPS** links that resolve to PDF, plain text, or HTML content.
+
 Listing a format here does not guarantee a successful result:
 
 | Kind | What must work |
