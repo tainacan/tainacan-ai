@@ -115,7 +115,35 @@ When preparing a release for WordPress.org:
 4. In the **AI Metadata Extractor** section, click **Analyze Document**
 5. Review results and fill metadata (manually or using the provided actions)
 
-### AI output shape
+### How the final prompt is built
+
+At analysis time, the plugin composes the final prompt in a fixed order (single request, no multi-step orchestration):
+
+1. **User preamble**  
+   From collection prompt (`tainacan_ai_prompt_text`) or the site default prompt.
+2. **Task**  
+   A short instruction with **analysis mode** (`image`, `text`, `pdf_text`, `pdf_visual`).
+3. **Global rules**  
+   Non-fabrication boundaries and JSON-only output requirement.
+4. **Field blocks**  
+   Built from extraction-enabled metadata in the collection, using metadata **slug** as JSON key and including type, label, mode (`strict`/`exploratory`), and optional field hints.
+5. **Field format contract**  
+   Compact `{ "value", "evidence" }` format rules, including multivalue parallel arrays.
+6. **Evidence rules module**  
+   Injected using the same **analysis mode** (`image`, `text`, `pdf_text`, `pdf_visual`) based on file type/content.
+7. **Output keys closure**  
+   Explicit list of expected slugs.
+
+Implementation reference:
+- `AnalysisPromptComposer::get_sections()` and `AnalysisPromptComposer::compose()`
+- `DocumentAnalyzer::resolve_analysis_prompt()`
+
+Available prompt customization filters:
+- `tainacan_ai_analysis_prompt_sections` (section array before join)
+- `tainacan_ai_analysis_prompt` (final composed prompt)
+- `tainacan_ai_evidence_instructions` (evidence rules block)
+
+### AI response shape
 
 Each extracted field should be returned as an object:
 
@@ -132,13 +160,13 @@ Evidence instructions are appended automatically at analysis time (image vs. tex
 
 Multivalued fields use **parallel arrays** inside one object (`value` and `evidence` with the same length), not an array of per-item `{ value, evidence }` objects.
 
-The plugin **appends** a field list for metadata marked for extraction (using slug as JSON keys, plus description and placeholder as guidance) to your collection or default prompt—it does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)). Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
+The plugin appends field blocks for metadata marked for extraction (slug as JSON key, plus optional field hints from description/placeholder) to your collection or default prompt. It does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)). Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
 
 Filter: `tainacan_ai_evidence_instructions` to customize the appended evidence block.
 
 ## File types
 
-Tainacan AI only starts analysis for recognized MIME types: JPEG, PNG, GIF, WebP, PDF, plain text, HTML, and Word (`.doc` / `.docx`). Anything else is rejected before an AI request is sent.
+Tainacan AI only starts analysis for recognized MIME types: JPEG, PNG, GIF, WebP, PDF, plain text, and HTML. Anything else is rejected before an AI request is sent.
 
 Listing a format here does not guarantee a successful result:
 
@@ -172,7 +200,7 @@ tainacan-ai/
 │   ├── CollectionPrompts.php   # Per-collection prompt post meta
 │   ├── CollectionFormHook.php  # Per-collection prompts on edition form
 │   ├── PromptTemplates.php     # Suggested prompt templates for admin UI
-│   ├── EvidenceInstructions.php # Runtime { value, evidence } schema + file-type guidance
+│   ├── EvidenceInstructions.php # Runtime file-type evidence guidance (by analysis mode)
 │   ├── ExtractionMetadata.php   # Per-metadatum flag + dynamic field list for prompts/fill
 │   ├── MetadatumFormHook.php    # Toggle extraction on metadata edition form
 │   ├── ExifExtractor.php

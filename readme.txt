@@ -8,7 +8,7 @@ Stable tag: 0.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automated metadata extraction in Tainacan using WordPress AI and Connectors. Prompts, per-metadata extraction, and analysis are integrated into Tainacan.
+Automated metadata extraction for Tainacan using WordPress AI and Connectors. Images, PDFs, and custom prompts.
 
 == Description ==
 
@@ -31,7 +31,7 @@ Tainacan AI extends the [Tainacan](https://wordpress.org/plugins/tainacan/) plug
 
 = File types =
 
-The plugin will attempt analysis only for attachments whose MIME type it recognizes (JPEG, PNG, GIF, WebP, PDF, plain text, HTML, and Word documents). Other types are rejected before any AI request runs.
+The plugin will attempt analysis only for attachments whose MIME type it recognizes (JPEG, PNG, GIF, WebP, PDF, plain text, and HTML). Other types are rejected before any AI request runs.
 
 Whether a supported file is fully processed depends on your setup—not on this list alone:
 

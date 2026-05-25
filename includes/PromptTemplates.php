@@ -8,8 +8,9 @@ if (!defined('ABSPATH')) {
 /**
  * Suggested prompt intros for the admin UI and default site option.
  *
- * Templates describe role and analysis goals only. Per-collection field lists,
- * response keys, and JSON/evidence format are appended at runtime by the plugin.
+ * Template labels and descriptions use gettext (English defaults). Template body
+ * text is English-only and not translated: it is sent to the model as-is. Per-collection
+ * field blocks, response keys, and evidence rules are appended at runtime by the plugin.
  */
 class PromptTemplates {
 
@@ -31,12 +32,12 @@ class PromptTemplates {
         $templates = [
             'image' => [
                 'label' => __('Image analysis', 'tainacan-ai'),
-                'description' => __('Intro for visual and museological analysis. Fields and response format are appended by the plugin per collection.', 'tainacan-ai'),
+                'description' => __('Extraction-focused intro for image metadata. Keep it about priorities and domain context, not output formatting.', 'tainacan-ai'),
                 'content' => self::get_image_template(),
             ],
             'document' => [
                 'label' => __('Document analysis', 'tainacan-ai'),
-                'description' => __('Intro for bibliographic and textual documents. Fields and response format are appended by the plugin per collection.', 'tainacan-ai'),
+                'description' => __('Extraction-focused intro for textual documents. Keep it about priorities and domain context, not output formatting.', 'tainacan-ai'),
                 'content' => self::get_document_template(),
             ],
         ];
@@ -73,20 +74,18 @@ class PromptTemplates {
     }
 
     private static function get_image_template(): string {
-        return 'Você é um especialista em catalogação museológica e arquivística. Analise esta imagem e descreva o que for relevante para descrição e preservação do acervo.' . "\n\n" .
-            '## Objetivos da análise' . "\n" .
-            '1. Analise cuidadosamente todos os elementos visuais' . "\n" .
-            '2. Identifique técnicas artísticas, materiais e estilos' . "\n" .
-            '3. Estime períodos históricos quando possível' . "\n" .
-            '4. Descreva o estado de conservação visível';
+        return 'You are a precise metadata extraction assistant for museum and archival collections. Extract only the requested fields and avoid broad descriptions outside field needs.' . "\n\n" .
+            '## Analysis goals' . "\n" .
+            '1. Prioritize explicit visual evidence for each field' . "\n" .
+            '2. Surface plausible vocabulary suggestions when support is weak but useful' . "\n" .
+            '3. Preserve uncertain leads using concise evidence markers';
     }
 
     private static function get_document_template(): string {
-        return 'Você é um especialista em análise documental e bibliográfica. Analise este documento e identifique informações relevantes para catalogação e indexação.' . "\n\n" .
-            '## Objetivos da análise' . "\n" .
-            '1. Identifique o tipo de documento (artigo, relatório, tese, etc.)' . "\n" .
-            '2. Extraia informações bibliográficas completas quando presentes' . "\n" .
-            '3. Identifique temas e áreas de conhecimento' . "\n" .
-            '4. Resuma o conteúdo principal';
+        return 'You are a precise metadata extraction assistant for documentary and bibliographic collections. Extract only the requested fields and avoid summaries beyond field needs.' . "\n\n" .
+            '## Analysis goals' . "\n" .
+            '1. Prioritize explicit textual evidence for each field' . "\n" .
+            '2. Surface plausible taxonomy or relationship suggestions when grounded in the document' . "\n" .
+            '3. Preserve uncertain leads using concise evidence markers';
     }
 }

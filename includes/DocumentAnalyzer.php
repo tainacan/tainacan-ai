@@ -40,8 +40,6 @@ class DocumentAnalyzer {
         'application/pdf',
         'text/plain',
         'text/html',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
 
     public function __construct() {
@@ -156,7 +154,8 @@ class DocumentAnalyzer {
                 [
                     'document_type' => 'text',
                     'extraction_method' => 'text',
-                ]
+                ],
+                EvidenceInstructions::MODE_TEXT
             );
             $extraction_method = 'text';
 
@@ -183,9 +182,17 @@ class DocumentAnalyzer {
 
         // Combine results
         $raw_metadata = $ai_result['metadata'] ?? $ai_result;
-        $result['ai_metadata'] = is_array($raw_metadata)
-            ? EvidenceInstructions::normalize_metadata($raw_metadata)
-            : $raw_metadata;
+        if (is_array($raw_metadata)) {
+            $normalized = EvidenceInstructions::normalize_metadata($raw_metadata);
+
+            if ($this->collection_id) {
+                $normalized = ExtractionMetadata::get_instance()->complete_expected_fields($normalized, $this->collection_id);
+            }
+
+            $result['ai_metadata'] = $normalized;
+        } else {
+            $result['ai_metadata'] = $raw_metadata;
+        }
         $result['document_type'] = $document_type;
         $result['extraction_method'] = $extraction_method;
         $result['tokens_used'] = $ai_result['usage']['total_tokens'] ?? 0;
@@ -305,7 +312,7 @@ class DocumentAnalyzer {
             $result = $this->analyze_text($text, [
                 'document_type' => 'pdf',
                 'extraction_method' => 'text_extraction',
-            ]);
+            ], EvidenceInstructions::MODE_PDF_TEXT);
             return [
                 'result' => $result,
                 'method' => 'text_extraction',
@@ -370,7 +377,7 @@ class DocumentAnalyzer {
                 );
             }
 
-            $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::STRATEGY_DOCUMENT_VISUAL);
+            $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::MODE_PDF_VISUAL);
 
             if (is_wp_error($prompt)) {
                 return $prompt;
@@ -378,8 +385,7 @@ class DocumentAnalyzer {
 
             $pageCount = count($images);
             $promptWithContext = $prompt . "\n\n" . sprintf(
-                /* translators: %d: number of pages */
-                __('The document has %d page(s). Analyze the visual content of all provided pages.', 'tainacan-ai'),
+                'The document has %d page(s). Analyze the visual content of all provided pages.',
                 $pageCount
             );
 
@@ -451,7 +457,7 @@ class DocumentAnalyzer {
             $image_data = "data:{$mime_type};base64,{$base64}";
         }
 
-        $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::STRATEGY_IMAGE);
+        $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::MODE_IMAGE);
 
         if (is_wp_error($prompt)) {
             return $prompt;
@@ -477,7 +483,7 @@ class DocumentAnalyzer {
      *
      * @param array<string, mixed> $log_extra
      */
-    private function analyze_text(string $text, array $log_extra = []): array|\WP_Error {
+    private function analyze_text(string $text, array $log_extra = [], string $analysis_mode = EvidenceInstructions::MODE_TEXT): array|\WP_Error {
         // Sanitize text to valid UTF-8
         $text = $this->sanitize_utf8_string($text);
 
@@ -488,30 +494,36 @@ class DocumentAnalyzer {
             $text .= "\n\n[Document truncated due to size]";
         }
 
-        $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::STRATEGY_DOCUMENT_TEXT);
+        $prompt = $this->resolve_analysis_prompt($analysis_mode);
 
         if (is_wp_error($prompt)) {
             return $prompt;
         }
 
-        $full_prompt = $prompt . "\n\n---\n\n**Documento:**\n\n" . $text;
+        $full_prompt = $prompt . "\n\n---\n\n**Document:**\n\n" . $text;
 
         return CoreAI::generate_json_from_text($full_prompt, $this->generation_options($log_extra));
     }
 
     /**
-     * Resolve base prompt and append standardized evidence instructions.
+     * Resolve base prompt sections in deterministic order.
+     *
+     * analysis_mode selects task wording and evidence rules (image/text/pdf_*).
      *
      * @return string|\WP_Error
      */
-    private function resolve_analysis_prompt(string $evidence_strategy): string|\WP_Error {
-        $prompt = $this->get_prompt();
+    private function resolve_analysis_prompt(string $analysis_mode): string|\WP_Error {
+        $prompt = AnalysisPromptComposer::compose(
+            (int) ($this->collection_id ?? 0),
+            $this->get_user_prompt(),
+            $analysis_mode
+        );
 
         if ($prompt === '') {
             return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
         }
 
-        return EvidenceInstructions::append_to_prompt($prompt, $evidence_strategy);
+        return $prompt;
     }
 
     /**
@@ -527,12 +539,12 @@ class DocumentAnalyzer {
     }
 
     /**
-     * Debug payload for the composed analysis prompt (user + fields + evidence + attachment note).
+     * Debug payload for the composed analysis prompt sections + attachment note.
      *
      * @return array{
      *     prompt: string,
-     *     parts: array{user: string, fields: string, evidence: string},
-     *     evidence_strategy: string,
+     *     parts: array{user: string, task: string, rules: string, fields: string, schema: string, evidence: string, output: string},
+     *     analysis_mode: string,
      *     attachment_note: string
      * }|\WP_Error|null Null when prompt debug is disabled.
      */
@@ -554,22 +566,25 @@ class DocumentAnalyzer {
             $this->collection_id = $this->get_item_collection($this->item_id);
         }
 
-        $strategy = $this->guess_evidence_strategy($file_path, (string) $mime_type);
-        $user_section = trim($this->get_user_prompt());
-        $fields_section = $this->get_fields_section();
-        $base_prompt = $this->get_prompt();
+        $analysis_mode = $this->guess_analysis_mode($file_path, (string) $mime_type);
+        $sections = AnalysisPromptComposer::get_sections(
+            (int) ($this->collection_id ?? 0),
+            $this->get_user_prompt(),
+            $analysis_mode
+        );
+        $base_prompt = trim(implode("\n\n", array_filter($sections, static fn (string $value): bool => $value !== '')));
 
         if ($base_prompt === '') {
             return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
         }
 
-        $resolved = $this->resolve_analysis_prompt($strategy);
+        $resolved = $this->resolve_analysis_prompt($analysis_mode);
 
         if (is_wp_error($resolved)) {
             return $resolved;
         }
 
-        $attachment_note = $this->get_prompt_attachment_note($file_path, (string) $mime_type, $strategy);
+        $attachment_note = $this->get_prompt_attachment_note($file_path, (string) $mime_type, $analysis_mode);
         $prompt = $resolved;
 
         if ($attachment_note !== '') {
@@ -579,56 +594,48 @@ class DocumentAnalyzer {
         return [
             'prompt' => $prompt,
             'parts' => [
-                'user' => $user_section,
-                'fields' => $fields_section,
-                'evidence' => $this->get_evidence_instruction_block($strategy),
+                'user' => $sections['user'],
+                'task' => $sections['task'],
+                'rules' => $sections['rules'],
+                'fields' => $sections['fields'],
+                'schema' => $sections['schema'],
+                'evidence' => $sections['evidence'],
+                'output' => $sections['output'],
             ],
-            'evidence_strategy' => $strategy,
+            'analysis_mode' => $analysis_mode,
             'attachment_note' => $attachment_note,
         ];
     }
 
-    private function get_fields_section(): string {
-        if (!$this->collection_id) {
-            return '';
-        }
-
-        return ExtractionMetadata::get_instance()->build_instructions_section($this->collection_id);
-    }
-
-    private function get_evidence_instruction_block(string $strategy): string {
-        return trim(EvidenceInstructions::append_to_prompt('', $strategy));
-    }
-
-    private function guess_evidence_strategy(string $file_path, string $mime_type): string {
+    private function guess_analysis_mode(string $file_path, string $mime_type): string {
         if (in_array($mime_type, $this->supported_image_types, true)) {
-            return EvidenceInstructions::STRATEGY_IMAGE;
+            return EvidenceInstructions::MODE_IMAGE;
         }
 
         if (in_array($mime_type, ['text/plain', 'text/html'], true)) {
-            return EvidenceInstructions::STRATEGY_DOCUMENT_TEXT;
+            return EvidenceInstructions::MODE_TEXT;
         }
 
         if ($mime_type === 'application/pdf') {
             $text = $this->extract_pdf_text($file_path);
 
             if (!is_wp_error($text) && strlen(trim($text)) > 100) {
-                return EvidenceInstructions::STRATEGY_DOCUMENT_TEXT;
+                return EvidenceInstructions::MODE_PDF_TEXT;
             }
 
-            return EvidenceInstructions::STRATEGY_DOCUMENT_VISUAL;
+            return EvidenceInstructions::MODE_PDF_VISUAL;
         }
 
-        return EvidenceInstructions::STRATEGY_DOCUMENT_TEXT;
+        return EvidenceInstructions::MODE_TEXT;
     }
 
-    private function get_prompt_attachment_note(string $file_path, string $mime_type, string $strategy): string {
-        if ($strategy === EvidenceInstructions::STRATEGY_IMAGE) {
-            return __('[Image file attached to the model request]', 'tainacan-ai');
+    private function get_prompt_attachment_note(string $file_path, string $mime_type, string $analysis_mode): string {
+        if ($analysis_mode === EvidenceInstructions::MODE_IMAGE) {
+            return '[Image file attached to the model request]';
         }
 
-        if ($strategy === EvidenceInstructions::STRATEGY_DOCUMENT_VISUAL) {
-            return __('[PDF pages sent as images to the model]', 'tainacan-ai');
+        if ($analysis_mode === EvidenceInstructions::MODE_PDF_VISUAL) {
+            return '[PDF pages sent as images to the model]';
         }
 
         if (!is_readable($file_path)) {
@@ -652,10 +659,9 @@ class DocumentAnalyzer {
         $truncated = $length > $max_chars;
 
         return sprintf(
-            /* translators: 1: character count sent to the model, 2: truncated note */
-            __('--- Document body appended (%1$d characters%2$s) ---', 'tainacan-ai'),
+            '--- Document body appended (%1$d characters%2$s) ---',
             min($length, $max_chars),
-            $truncated ? ', ' . __('truncated', 'tainacan-ai') : ''
+            $truncated ? ', truncated' : ''
         );
     }
 
@@ -668,26 +674,6 @@ class DocumentAnalyzer {
         }
 
         return (string) ($this->options['default_prompt'] ?? '');
-    }
-
-    /**
-     * Compose the analysis prompt: user intro + extraction field list for the collection.
-     *
-     * Format and evidence rules are appended later in resolve_analysis_prompt().
-     */
-    private function get_prompt(): string {
-        $prompt = trim($this->get_user_prompt());
-        $fields_section = $this->get_fields_section();
-
-        if ($fields_section === '') {
-            return $prompt;
-        }
-
-        if ($prompt === '') {
-            return $fields_section;
-        }
-
-        return $prompt . "\n\n" . $fields_section;
     }
 
     /**

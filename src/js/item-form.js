@@ -582,10 +582,10 @@ import { addAction } from '@wordpress/hooks';
 							console.log( 'Fields section:', response.data.prompt_debug.parts.fields );
 							console.log( 'Evidence / format:', response.data.prompt_debug.parts.evidence );
 						}
-						if ( response.data.prompt_debug.evidence_strategy ) {
+						if ( response.data.prompt_debug.analysis_mode ) {
 							console.log(
-								'Evidence strategy:',
-								response.data.prompt_debug.evidence_strategy
+								'Analysis mode:',
+								response.data.prompt_debug.analysis_mode
 							);
 						}
 						if ( response.data.prompt_debug.attachment_note ) {
@@ -727,12 +727,11 @@ import { addAction } from '@wordpress/hooks';
 				}
 
 				return evidence
-					.map(
-						( entry, index ) =>
-							`<div class="tainacan-ai-evidence-item"><span class="tainacan-ai-evidence-index">${ index + 1 }.</span> ${ this.escapeHtml(
-								String( entry )
-							) }</div>`
-					)
+					.map( ( entry, index ) => {
+						return `<div class="tainacan-ai-evidence-item"><span class="tainacan-ai-evidence-index">${ index + 1 }.</span> ${ this.escapeHtml(
+							String( entry )
+						) }</div>`;
+					} )
 					.join( '' );
 			}
 
