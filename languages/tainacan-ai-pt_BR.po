@@ -1,5 +1,3 @@
-# Copyright (C) 2026 Sigismundo
-# This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
 "Project-Id-Version: Tainacan AI 0.1.0\n"
@@ -11,6 +9,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-05-22T18:36:35+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Language: \n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: tainacan-ai\n"
 
@@ -188,7 +187,7 @@ msgid "Unavailable"
 msgstr ""
 
 #: includes/admin/admin-page.php:349
-#: includes/PromptTemplates.php:33
+#: includes/PromptTemplates.php:34
 msgid "Image analysis"
 msgstr ""
 
@@ -344,62 +343,40 @@ msgstr ""
 msgid "Could not convert PDF to image. Install Imagick or Ghostscript."
 msgstr ""
 
-#. translators: %d: number of pages
-#: includes/DocumentAnalyzer.php:382
-msgid "The document has %d page(s). Analyze the visual content of all provided pages."
-msgstr ""
-
-#: includes/DocumentAnalyzer.php:422
+#: includes/DocumentAnalyzer.php:421
 msgid "No configured connector exposes a model that accepts image input in its metadata. Use text extraction or configure a vision-capable model."
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:442
+#: includes/DocumentAnalyzer.php:441
 msgid "Could not read image file."
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:448
+#: includes/DocumentAnalyzer.php:447
 msgid "Error encoding image to base64."
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:511
-#: includes/DocumentAnalyzer.php:563
+#: includes/DocumentAnalyzer.php:510
+#: includes/DocumentAnalyzer.php:562
 msgid "No analysis prompt configured."
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:548
+#: includes/DocumentAnalyzer.php:547
 msgid "File path not found."
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:627
-msgid "[Image file attached to the model request]"
-msgstr ""
-
-#: includes/DocumentAnalyzer.php:631
-msgid "[PDF pages sent as images to the model]"
-msgstr ""
-
-#. translators: 1: character count sent to the model, 2: truncated note
-#: includes/DocumentAnalyzer.php:656
-msgid "--- Document body appended (%1$d characters%2$s) ---"
-msgstr ""
-
-#: includes/DocumentAnalyzer.php:658
-msgid "truncated"
-msgstr ""
-
-#: includes/DocumentAnalyzer.php:757
+#: includes/DocumentAnalyzer.php:755
 msgid "Could not extract text from PDF. The document may be a scanned image."
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:985
+#: includes/DocumentAnalyzer.php:983
 msgid "Text Extraction"
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:990
+#: includes/DocumentAnalyzer.php:988
 msgid "Visual Analysis (PDF)"
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:995
+#: includes/DocumentAnalyzer.php:993
 msgid "EXIF Extraction"
 msgstr ""
 
@@ -552,42 +529,6 @@ msgstr ""
 
 #: includes/ExifExtractor.php:302
 msgid "Not fired"
-msgstr ""
-
-#: includes/ExtractionMetadata.php:148
-msgid "multivalued: use parallel arrays in \"value\" and \"evidence\""
-msgstr ""
-
-#: includes/ExtractionMetadata.php:152
-msgid "Extraction guidance:"
-msgstr ""
-
-#: includes/ExtractionMetadata.php:156
-msgid "Expected format hint:"
-msgstr ""
-
-#: includes/ExtractionMetadata.php:174
-msgid "Fields to extract"
-msgstr ""
-
-#: includes/ExtractionMetadata.php:176
-msgid "Extraction instructions"
-msgstr ""
-
-#: includes/ExtractionMetadata.php:177
-msgid "Extract information for EACH field listed above."
-msgstr ""
-
-#: includes/ExtractionMetadata.php:178
-msgid "Follow per-field extraction guidance when provided."
-msgstr ""
-
-#: includes/ExtractionMetadata.php:179
-msgid "Return JSON using EXACTLY the response keys below (metadata slugs)."
-msgstr ""
-
-#: includes/ExtractionMetadata.php:180
-msgid "Response keys"
 msgstr ""
 
 #: includes/ItemFormHook.php:63
@@ -831,15 +772,15 @@ msgstr ""
 msgid "All metadata is included in analysis by default. Check this box to omit the field from prompts and fill actions."
 msgstr ""
 
-#: includes/PromptTemplates.php:34
+#: includes/PromptTemplates.php:35
 msgid "Intro for visual and museological analysis. Fields and response format are appended by the plugin per collection."
 msgstr ""
 
-#: includes/PromptTemplates.php:38
+#: includes/PromptTemplates.php:39
 msgid "Document analysis"
 msgstr ""
 
-#: includes/PromptTemplates.php:39
+#: includes/PromptTemplates.php:40
 msgid "Intro for bibliographic and textual documents. Fields and response format are appended by the plugin per collection."
 msgstr ""
 
@@ -859,10 +800,10 @@ msgstr ""
 msgid "Stores analysis results to avoid repeated API calls"
 msgstr ""
 
-#: tainacan-ai.php:206
+#: tainacan-ai.php:212
 msgid "Tainacan AI requires the Tainacan plugin to be active."
 msgstr ""
 
-#: tainacan-ai.php:236
+#: tainacan-ai.php:242
 msgid "Settings"
 msgstr ""

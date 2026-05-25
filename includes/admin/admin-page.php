@@ -108,7 +108,7 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
                         <p class="tainacan-ai-card-description">
                             <?php
                             esc_html_e(
-                                'Write the introduction and analysis goals (role, domain, what to look for). This prompt is the default for every file type; use collection-level overrides when needed. The plugin appends the metadata field list per collection and the JSON response format automatically.',
+                                'Write extraction behavior here (role, domain context, priorities). This prompt is the default for every file type; use collection-level overrides when needed. The plugin appends global rules, evidence rules, metadata field blocks, and output keys automatically.',
                                 'tainacan-ai'
                             );
                             ?>
@@ -128,22 +128,22 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
 
                         <details class="tainacan-ai-prompt-templates">
                             <summary><?php esc_html_e('Suggested prompts', 'tainacan-ai'); ?></summary>
-                            <?php foreach ($tainacan_ai_prompt_templates as $template_key => $template) : ?>
+                            <?php foreach ($tainacan_ai_prompt_templates as $tainacan_ai_prompt_template_key => $tainacan_ai_prompt_template) : ?>
                                 <article class="tainacan-ai-prompt-template">
                                     <header class="tainacan-ai-prompt-template-header">
-                                        <h3><?php echo esc_html($template['label']); ?></h3>
+                                        <h3><?php echo esc_html($tainacan_ai_prompt_template['label']); ?></h3>
                                         <button
                                             type="button"
                                             class="button button-small tainacan-ai-use-prompt-template"
-                                            data-template-key="<?php echo esc_attr($template_key); ?>"
+                                            data-template-key="<?php echo esc_attr($tainacan_ai_prompt_template_key); ?>"
                                         >
                                             <?php esc_html_e('Use this template', 'tainacan-ai'); ?>
                                         </button>
                                     </header>
-                                    <?php if (!empty($template['description'])) : ?>
-                                        <p class="description"><?php echo esc_html($template['description']); ?></p>
+                                    <?php if (!empty($tainacan_ai_prompt_template['description'])) : ?>
+                                        <p class="description"><?php echo esc_html($tainacan_ai_prompt_template['description']); ?></p>
                                     <?php endif; ?>
-                                    <textarea readonly rows="10" class="large-text code"><?php echo esc_textarea($template['content']); ?></textarea>
+                                    <textarea readonly rows="10" class="large-text code"><?php echo esc_textarea($tainacan_ai_prompt_template['content']); ?></textarea>
                                 </article>
                             <?php endforeach; ?>
                         </details>

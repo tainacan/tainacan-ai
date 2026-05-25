@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Tainacan AI
  * Plugin URI: https://github.com/tainacan/tainacan-ai
- * Description: Automated metadata extraction in Tainacan using WordPress AI and Connectors. Supports image analysis, PDF documents, EXIF extraction and custom prompts per collection.
+ * Description: Automated metadata extraction for Tainacan using WordPress AI and Connectors. Images, PDFs, and custom prompts.
  * Version: 0.1.0
  * Author: Sigismundo
  * Author URI: https://seu-site.com

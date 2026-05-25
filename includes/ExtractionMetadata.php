@@ -129,7 +129,146 @@ class ExtractionMetadata {
     }
 
     /**
-     * Plugin-provided field list and JSON response keys for the analysis prompt.
+     * Complete the AI metadata payload with all expected slugs for this collection.
+     *
+     * @param array<string, mixed> $metadata
+     * @return array<string, array{value: mixed, evidence: mixed|null}>
+     */
+    public function complete_expected_fields(array $metadata, int $collection_id): array {
+        $fields = $this->get_fields_for_collection($collection_id);
+        $completed = [];
+
+        foreach ($metadata as $slug => $entry) {
+            if (!is_string($slug)) {
+                continue;
+            }
+
+            if (is_array($entry) && array_key_exists('value', $entry)) {
+                $completed[$slug] = [
+                    'value' => $entry['value'],
+                    'evidence' => $entry['evidence'] ?? null,
+                ];
+                continue;
+            }
+
+            $completed[$slug] = [
+                'value' => $entry,
+                'evidence' => null,
+            ];
+        }
+
+        foreach (array_keys($fields) as $slug) {
+            if (!array_key_exists($slug, $completed)) {
+                $completed[$slug] = [
+                    'value' => null,
+                    'evidence' => null,
+                ];
+            }
+        }
+
+        return $completed;
+    }
+
+    public function format_metadata_type(string $class_name): string {
+        $type = trim($class_name);
+
+        if ($type === '') {
+            return 'unknown';
+        }
+
+        if (str_contains($type, '\\')) {
+            $parts = explode('\\', $type);
+            $type = (string) end($parts);
+        }
+
+        $type = strtolower($type);
+
+        return $type !== '' ? $type : 'unknown';
+    }
+
+    /**
+     * @param array{
+     *     id: int,
+     *     slug: string,
+     *     name: string,
+     *     type: string,
+     *     multiple: bool,
+     *     description: string,
+     *     placeholder: string
+     * } $field
+     */
+    public function get_field_extraction_mode(array $field): string {
+        $type = $this->format_metadata_type((string) ($field['type'] ?? ''));
+
+        if (str_contains($type, 'taxonomy') || str_contains($type, 'relationship')) {
+            return 'exploratory';
+        }
+
+        return 'strict';
+    }
+
+    /**
+     * @param array<string, array{
+     *     id: int,
+     *     slug: string,
+     *     name: string,
+     *     type: string,
+     *     multiple: bool,
+     *     description: string,
+     *     placeholder: string
+     * }> $fields
+     */
+    public function build_fields_section(array $fields): string {
+        if ($fields === []) {
+            return '';
+        }
+
+        $lines = ['FIELDS'];
+
+        foreach ($fields as $slug => $field) {
+            $lines[] = '';
+            $lines[] = $slug;
+            $lines[] = '- type: ' . $this->format_metadata_type((string) $field['type']);
+            $lines[] = '- label: ' . $field['name'];
+            $lines[] = '- multivalued: ' . ($field['multiple'] ? 'true' : 'false');
+            $lines[] = '- mode: ' . $this->get_field_extraction_mode($field);
+
+            if ($field['description'] !== '') {
+                $lines[] = '- field_guidance: ' . $field['description'];
+            }
+
+            if ($field['placeholder'] !== '') {
+                $lines[] = '- expected_format_hint: ' . $field['placeholder'];
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * @param string[] $slugs
+     */
+    public function build_output_keys_section(array $slugs): string {
+        if ($slugs === []) {
+            return '';
+        }
+
+        return 'OUTPUT KEYS' . "\n" .
+            'Return one JSON object with exactly these keys:' . "\n" .
+            implode(', ', $slugs);
+    }
+
+    public function build_field_format_section(): string {
+        return 'FIELD FORMAT' . "\n" .
+            'Each slug maps to {"value": scalar|array|null, "evidence": string|array|null}.' . "\n" .
+            'Single-value fields: scalar value and string|null evidence.' . "\n" .
+            'Multivalued fields: value and evidence must be parallel arrays with equal length.' . "\n" .
+            'Missing support: set value to null, evidence null or omitted.' . "\n" .
+            'Output must be ONLY JSON (no markdown, no comments, no prose).';
+    }
+
+    /**
+     * Backward-compatible combined instructions section.
      */
     public function build_instructions_section(int $collection_id): string {
         $fields = $this->get_fields_for_collection($collection_id);
@@ -138,46 +277,8 @@ class ExtractionMetadata {
             return '';
         }
 
-        $fields_list = [];
-        $json_example = [];
-
-        foreach ($fields as $slug => $field) {
-            $line = '- **' . $slug . '** (' . $field['name'] . ')';
-
-            if ($field['multiple']) {
-                $line .= ' — ' . __('multivalued: use parallel arrays in "value" and "evidence"', 'tainacan-ai');
-            }
-
-            if ($field['description'] !== '') {
-                $line .= "\n  - " . __('Extraction guidance:', 'tainacan-ai') . ' ' . $field['description'];
-            }
-
-            if ($field['placeholder'] !== '') {
-                $line .= "\n  - " . __('Expected format hint:', 'tainacan-ai') . ' ' . $field['placeholder'];
-            }
-
-            $fields_list[] = $line;
-            $json_example[$slug] = $field['multiple']
-                ? [
-                    'value' => ['example 1', 'example 2'],
-                    'evidence' => ['source for example 1', 'source for example 2'],
-                ]
-                : [
-                    'value' => null,
-                    'evidence' => '',
-                ];
-        }
-
-        $fields_text = implode("\n", $fields_list);
-        $json_text = json_encode($json_example, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-
-        return '## ' . __('Fields to extract', 'tainacan-ai') . "\n" .
-            $fields_text . "\n\n" .
-            '## ' . __('Extraction instructions', 'tainacan-ai') . "\n" .
-            '- ' . __('Extract information for EACH field listed above.', 'tainacan-ai') . "\n" .
-            '- ' . __('Follow per-field extraction guidance when provided.', 'tainacan-ai') . "\n" .
-            '- ' . __('Return JSON using EXACTLY the response keys below (metadata slugs).', 'tainacan-ai') . "\n\n" .
-            '## ' . __('Response keys', 'tainacan-ai') . "\n" .
-            $json_text;
+        return $this->build_fields_section($fields) . "\n\n" .
+            $this->build_field_format_section() . "\n\n" .
+            $this->build_output_keys_section(array_keys($fields));
     }
 }
