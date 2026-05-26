@@ -61,7 +61,7 @@ class EvidenceInstructions {
     }
 
     /**
-     * Normalize AI metadata so each field is { value, evidence } with parallel arrays for multivalued data.
+     * Normalize AI metadata so each field is { value, evidence, label? } with parallel arrays for multivalued data.
      *
      * @param array<string, mixed> $metadata
      * @return array<string, mixed>
@@ -81,7 +81,7 @@ class EvidenceInstructions {
     }
 
     /**
-     * @return array{value: mixed, evidence: mixed|null}
+     * @return array{value: mixed, evidence: mixed|null, label?: mixed}
      */
     private static function normalize_field(mixed $data): array {
         if (is_array($data) && self::is_list_of_value_evidence_objects($data)) {
@@ -89,14 +89,16 @@ class EvidenceInstructions {
         }
 
         if (!is_array($data) || !array_key_exists('value', $data)) {
-            return [
+            $normalized = [
                 'value' => $data,
                 'evidence' => null,
             ];
+            return $normalized;
         }
 
         $value = $data['value'] ?? null;
         $evidence = $data['evidence'] ?? null;
+        $label = $data['label'] ?? null;
 
         if (is_array($value) && self::is_list_of_value_evidence_objects($value)) {
             $coalesced = self::coalesce_value_evidence_objects($value);
@@ -105,13 +107,23 @@ class EvidenceInstructions {
                 $evidence = $coalesced['evidence'];
             }
 
+            if ($label === null || $label === '' || (is_array($label) && $label === [])) {
+                $label = $coalesced['label'];
+            }
+
             $value = $coalesced['value'];
         }
 
-        return [
+        $normalized = [
             'value' => $value,
             'evidence' => $evidence,
         ];
+
+        if ($label !== null && $label !== '' && (!is_array($label) || $label !== [])) {
+            $normalized['label'] = $label;
+        }
+
+        return $normalized;
     }
 
     /**
@@ -133,20 +145,27 @@ class EvidenceInstructions {
 
     /**
      * @param array<int, array<string, mixed>> $items
-     * @return array{value: array<int, mixed>, evidence: array<int, string>}
+     * @return array{value: array<int, mixed>, evidence: array<int, string>, label: array<int, string>}
      */
     private static function coalesce_value_evidence_objects(array $items): array {
         $values = [];
         $evidences = [];
+        $labels = [];
 
         foreach ($items as $item) {
             $values[] = $item['value'] ?? null;
             $evidences[] = isset($item['evidence']) ? (string) $item['evidence'] : '';
+            if (array_key_exists('label', $item) && $item['label'] !== null) {
+                $labels[] = (string) $item['label'];
+            } else {
+                $labels[] = '';
+            }
         }
 
         return [
             'value' => $values,
             'evidence' => $evidences,
+            'label' => $labels,
         ];
     }
 

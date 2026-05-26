@@ -165,7 +165,7 @@ Multivalued fields use **parallel arrays** inside one object (`value` and `evide
 
 The plugin appends field blocks for metadata marked for extraction (slug as JSON key). These blocks include optional guidance from description/placeholder and optional constraints derived from metadata settings, such as `required`, multivalue limits (`max_items`), type limits (`min/max/step`, `max_length`, `mask`), `allowed_values` for selectboxes, and taxonomy/relationship structure hints. It does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)). Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
 
-You can customize this per metadatum via `tainacan_ai_extraction_field`. The plugin itself now uses this same hook to inject built-in type hints, so custom metadata types or site-specific rules can reuse one API.
+You can customize this per metadatum via `tainacan_ai_extraction_field`. The plugin itself now uses this same hook to inject built-in type hints, so custom metadata types or site-specific rules can reuse one API. Catalog-style hints (for example `taxonomy_allowed_values` on the item form) use rows `{ "value", "label" }`: `value` is the machine-readable payload for REST (term ID today), and `label` is the string shown in prompts and in the UI.
 
 Taxonomy insertion/creation is not part of this phase: taxonomy values remain suggestion-oriented in extraction output. Insertion strategy is tracked separately in [issue #8](https://github.com/tainacan/tainacan-ai/issues/8).
 

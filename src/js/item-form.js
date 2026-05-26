@@ -661,7 +661,7 @@ import { addAction } from '@wordpress/hooks';
 		},
 
 		/**
-		 * Coerce AI field payload to { value, evidence } (parallel arrays when multivalued).
+		 * Coerce AI field payload to { value, evidence, label? } (parallel arrays when multivalued).
 		 */
 		parseFieldEntry( data ) {
 			if (
@@ -681,6 +681,7 @@ import { addAction } from '@wordpress/hooks';
 			if ( data && typeof data === 'object' && 'value' in data ) {
 				let value = data.value;
 				let evidence = data.evidence ?? null;
+				let label = data.label ?? null;
 
 				if (
 					Array.isArray( value ) &&
@@ -704,12 +705,21 @@ import { addAction } from '@wordpress/hooks';
 					if ( ! hasEvidence ) {
 						evidence = coalesced.evidence;
 					}
+
+					const hasLabel =
+						label !== null &&
+						label !== undefined &&
+						label !== '' &&
+						! ( Array.isArray( label ) && label.length === 0 );
+					if ( ! hasLabel ) {
+						label = coalesced.label;
+					}
 				}
 
-				return { value, evidence };
+				return { value, evidence, label };
 			}
 
-			return { value: data, evidence: null };
+			return { value: data, evidence: null, label: null };
 		},
 
 		coalesceValueEvidenceObjects( items ) {
@@ -718,7 +728,19 @@ import { addAction } from '@wordpress/hooks';
 				evidence: items.map( ( item ) =>
 					item.evidence != null ? String( item.evidence ) : ''
 				),
+				label: items.map( ( item ) =>
+					item.label != null ? String( item.label ) : ''
+				),
 			};
+		},
+
+		isEmptyMetadataValue( value ) {
+			return (
+				value === null ||
+				value === undefined ||
+				value === '' ||
+				( Array.isArray( value ) && value.length === 0 )
+			);
 		},
 
 		formatEvidence( evidence ) {
@@ -768,21 +790,22 @@ import { addAction } from '@wordpress/hooks';
 			Object.entries( metadata ).forEach( ( [ key, data ], index ) => {
 				const formattedLabel = this.formatLabel( key );
 
-				const { value, evidence } = this.parseFieldEntry( data );
-				const formattedValue = this.formatValue( value );
-				const formattedEvidence = this.formatEvidence( evidence );
-				const isEmpty =
-					value === null ||
-					value === undefined ||
-					( Array.isArray( value ) && value.length === 0 ) ||
-					value === '';
-
 				const extractionFields = TainacanAI.extractionFields || {};
 				const extractionField = extractionFields[ key ];
+				const { value, evidence, label } = this.parseFieldEntry( data );
+				const displayValue = this.resolveDisplayValueForField(
+					value,
+					label,
+					extractionField
+				);
+				const formattedValue = this.formatValue( displayValue );
+				const formattedEvidence = this.formatEvidence( evidence );
+				const isEmpty = this.isEmptyMetadataValue( displayValue );
+				const hasFillValue = ! this.isEmptyMetadataValue( value );
 				const displayLabel = extractionField?.name
 					? this.escapeHtml( extractionField.name )
 					: formattedLabel;
-				const canFill = extractionField && ! isEmpty;
+				const canFill = extractionField && hasFillValue;
 				const notFoundText =
 					TainacanAI.texts?.valueNotFound || 'Not found in document';
 
@@ -974,8 +997,10 @@ import { addAction } from '@wordpress/hooks';
 					? this.state.lastResult.ai_metadata[ metadataKey ]
 					: undefined;
 			if ( metadataEntry !== undefined ) {
-				const { value } = this.parseFieldEntry( metadataEntry );
-				return this.stringifyClipboardValue( value );
+				const { value, label } = this.parseFieldEntry( metadataEntry );
+				return this.stringifyClipboardValue(
+					this.resolveDisplayValueForKey( metadataKey, value, label )
+				);
 			}
 
 			// Backward-compatible fallback for previously rendered nodes.
@@ -1012,8 +1037,10 @@ import { addAction } from '@wordpress/hooks';
 
 			const text = Object.entries( this.state.lastResult.ai_metadata )
 				.map( ( [ key, data ] ) => {
-					const { value } = this.parseFieldEntry( data );
-					const formattedValue = this.stringifyClipboardValue( value );
+					const { value, label } = this.parseFieldEntry( data );
+					const formattedValue = this.stringifyClipboardValue(
+						this.resolveDisplayValueForKey( key, value, label )
+					);
 					return `${ this.formatLabel( key ) }: ${ formattedValue }`;
 				} )
 				.join( '\n' );
@@ -1159,6 +1186,62 @@ import { addAction } from '@wordpress/hooks';
 			}
 
 			return this.escapeHtml( String( value ) );
+		},
+
+		resolveDisplayValue( value, label = null ) {
+			if ( ! this.isEmptyMetadataValue( label ) ) {
+				return label;
+			}
+
+			return value;
+		},
+
+		resolveDisplayValueForField( value, label = null, fieldInfo = null ) {
+			const explicitDisplayValue = this.resolveDisplayValue( value, label );
+			if ( explicitDisplayValue !== value ) {
+				return explicitDisplayValue;
+			}
+
+			const normalizedType = String( fieldInfo?.type || '' ).toLowerCase();
+			if ( ! normalizedType.includes( 'taxonomy' ) ) {
+				return value;
+			}
+
+			const taxonomyAllowedValues = fieldInfo?.taxonomy_allowed_values;
+			if (
+				! Array.isArray( taxonomyAllowedValues ) ||
+				taxonomyAllowedValues.length === 0
+			) {
+				return value;
+			}
+
+			const resolveOne = ( entry ) => {
+				const numericEntry = Number( entry );
+				if ( Number.isInteger( numericEntry ) && numericEntry > 0 ) {
+					const matched = taxonomyAllowedValues.find(
+						( candidate ) =>
+							candidate &&
+							typeof candidate === 'object' &&
+							Number( candidate.value ) === numericEntry &&
+							typeof candidate.label === 'string' &&
+							candidate.label.trim() !== ''
+					);
+					return matched ? matched.label : entry;
+				}
+				return entry;
+			};
+
+			if ( Array.isArray( value ) ) {
+				return value.map( resolveOne );
+			}
+
+			return resolveOne( value );
+		},
+
+		resolveDisplayValueForKey( metadataKey, value, label = null ) {
+			const extractionFields = TainacanAI.extractionFields || {};
+			const extractionField = metadataKey ? extractionFields[ metadataKey ] : null;
+			return this.resolveDisplayValueForField( value, label, extractionField );
 		},
 
 		/**
@@ -1333,7 +1416,9 @@ import { addAction } from '@wordpress/hooks';
 				}
 
 				const values = Array.isArray( value ) ? value : [ value ];
-				return values.map( ( entry ) => this.normalizeSingleValue( entry ) );
+				return values.map( ( entry ) =>
+					this.normalizeSingleValue( entry, fieldType )
+				);
 			}
 
 			if (
@@ -1346,15 +1431,25 @@ import { addAction } from '@wordpress/hooks';
 			}
 
 			if ( Array.isArray( value ) ) {
-				return value.length > 0 ? this.normalizeSingleValue( value[ 0 ] ) : '';
+				return value.length > 0
+					? this.normalizeSingleValue( value[ 0 ], fieldType )
+					: '';
 			}
 
-			return this.normalizeSingleValue( value );
+			return this.normalizeSingleValue( value, fieldType );
 		},
 
-		normalizeSingleValue( value ) {
+		normalizeSingleValue( value, fieldType = null ) {
 			if ( value === null || value === undefined ) {
 				return '';
+			}
+
+			const normalizedType = fieldType ? String( fieldType ).toLowerCase() : '';
+			if ( normalizedType.includes( 'taxonomy' ) ) {
+				const parsed = Number( value );
+				if ( Number.isInteger( parsed ) && parsed > 0 ) {
+					return parsed;
+				}
 			}
 
 			if ( typeof value === 'object' ) {
