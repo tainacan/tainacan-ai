@@ -21,22 +21,20 @@ class AnalysisPromptComposer {
 
     /**
      * @return array{
-     *     user: string,
-     *     task: string,
-     *     rules: string,
-     *     fields: string,
- *     schema: string,
- *     evidence: string,
-     *     output: string
+     *     fields: array<string, array<string, mixed>>,
+     *     expected_slugs: string[],
+     *     sections: array{user: string, task: string, rules: string, fields: string, schema: string, evidence: string, output: string},
+     *     prompt: string
      * }
      */
-    public static function get_sections(
+    public static function get_context(
         int $collection_id,
         string $user_preamble,
         string $analysis_mode
     ): array {
         $extraction = ExtractionMetadata::get_instance();
         $fields = $collection_id > 0 ? $extraction->get_fields_for_collection($collection_id) : [];
+        $expected_slugs = array_keys($fields);
 
         $sections = [
             'user' => $user_preamble,
@@ -45,7 +43,7 @@ class AnalysisPromptComposer {
             'fields' => $extraction->build_fields_section($fields),
             'schema' => $extraction->build_field_format_section(),
             'evidence' => EvidenceInstructions::get_mode_guidance($analysis_mode),
-            'output' => $extraction->build_output_keys_section(array_keys($fields)),
+            'output' => $extraction->build_output_keys_section($expected_slugs),
         ];
 
         /** @var array<string, string> $sections */
@@ -61,25 +59,23 @@ class AnalysisPromptComposer {
             $normalized[$key] = isset($sections[$key]) ? trim((string) $sections[$key]) : '';
         }
 
-        return $normalized;
-    }
-
-    public static function compose(
-        int $collection_id,
-        string $user_preamble,
-        string $analysis_mode
-    ): string {
-        $sections = self::get_sections($collection_id, $user_preamble, $analysis_mode);
-        $parts = array_values(array_filter($sections, static fn (string $value): bool => $value !== ''));
+        // Keep a final defensive cleanup because section filters may return empty blocks.
+        $parts = array_values(array_filter($normalized, static fn (string $value): bool => $value !== ''));
         $prompt = trim(implode("\n\n", $parts));
-
-        return (string) apply_filters(
+        $prompt = (string) apply_filters(
             'tainacan_ai_analysis_prompt',
             $prompt,
-            $sections,
+            $normalized,
             $analysis_mode,
             $collection_id
         );
+
+        return [
+            'fields' => $fields,
+            'expected_slugs' => $expected_slugs,
+            'sections' => $normalized,
+            'prompt' => $prompt,
+        ];
     }
 
     private static function build_task_section(string $analysis_mode): string {
