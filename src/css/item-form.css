@@ -389,11 +389,8 @@
 }
 
 .tainacan-ai-metadata-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--tainacan-ai-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 
 /* Empty Value */
@@ -597,6 +594,8 @@
     height: calc(100vh - 32px);
     background: var(--tainacan-ai-white);
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    border-start-start-radius: var(--tainacan-dropdownmenu-border-radius, 0px);
+    border-end-end-radius: var(--tainacan-dropdownmenu-border-radius, 0px);
     z-index: 99998;
     transition: right 0.3s ease;
     display: flex;
@@ -612,8 +611,6 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
-    background: linear-gradient(135deg, var(--tainacan-ai-primary) 0%, var(--tainacan-ai-primary-light) 100%);
-    color: var(--tainacan-ai-white);
     flex-shrink: 0;
 }
 
@@ -624,7 +621,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--tainacan-ai-white);
 }
 
 .tainacan-ai-sidebar-header h3 .dashicons {
@@ -634,7 +630,7 @@
 }
 
 .tainacan-ai-sidebar-close {
-    background: var(--tainacan-ai-bg);
+    background: var(--tainacan-ai-white);
     border: none;
     color: var(--tainacan-ai-text);
     width: 32px;
@@ -661,8 +657,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 20px;
-    background: var(--tainacan-ai-bg);
+    padding: 11px 20px;
     border-bottom: 1px solid var(--tainacan-ai-border);
     flex-shrink: 0;
 }
@@ -773,7 +768,7 @@
 }
 
 .tainacan-ai-metadata-main--not-found .tainacan-ai-metadata-label {
-    font-size: 10px;
+    font-size: 0.75rem;
     font-weight: 500;
     color: var(--tainacan-ai-text-light);
 }
@@ -803,7 +798,7 @@
 .tainacan-ai-metadata-value-box {
     background: var(--tainacan-ai-white);
     border-radius: 6px;
-    padding: 10px 12px;
+    padding: calc(.57em - 1px) var(--bulma-control-padding-horizontal, 12px);
     border: 1px solid var(--tainacan-ai-border);
 }
 
@@ -825,8 +820,8 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 10px;
-    font-weight: 600;
+    font-size: 0.688rem;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 4px;
