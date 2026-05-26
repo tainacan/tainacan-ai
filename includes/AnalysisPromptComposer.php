@@ -88,8 +88,10 @@ class AnalysisPromptComposer {
     private static function build_global_rules_section(): string {
         return 'GLOBAL RULES' . "\n" .
             '- For strict factual fields, never fabricate dates, personal names, authors, locations, identifiers, or coordinates.' . "\n" .
-            '- For taxonomy and relationship fields, you may suggest grounded vocabulary candidates to help discovery.' . "\n" .
-            '- Suggested relationships or classifications must cite support in evidence. Do not invent unsupported links.' . "\n" .
+            '- For taxonomy and relationship fields, suggest values only when evidence in the document supports them.' . "\n" .
+            '- If a taxonomy field provides allowed_values, first try to match a supported term from that list.' . "\n" .
+            '- If no listed term is adequately supported: when allow_new_terms is true, suggest one new term; when false, return value null.' . "\n" .
+            '- Never invent relationship values; every non-null suggestion must include direct evidence support.' . "\n" .
             '- Use value: null when there is no support in the document.' . "\n" .
             '- If field_guidance is missing, infer field intent from label and type.' . "\n" .
             '- Write evidence as a short, objective source note (quote, page, region, heading, or label).' . "\n" .

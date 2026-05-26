@@ -16,6 +16,7 @@ class ExtractionMetadata {
 
     public const META_KEY = 'tainacan_ai_exclude';
     public const POST_TYPE = 'tainacan-metadatum';
+    public const TAXONOMY_ALLOWED_VALUES_LIMIT = 100;
 
     private static ?self $instance = null;
 
@@ -84,7 +85,9 @@ class ExtractionMetadata {
      *     step: int|float|string|null,
      *     max_length: int|null,
      *     mask: string,
+     *     taxonomy_id: int|null,
      *     allow_new_terms: bool|null,
+     *     allowed_values_truncated: bool,
      *     target_collection: int|null,
      *     relationship_search_field: int|null,
      *     allowed_values: string[]
@@ -263,7 +266,9 @@ class ExtractionMetadata {
      *     step: int|float|string|null,
      *     max_length: int|null,
      *     mask: string,
+     *     taxonomy_id: int|null,
      *     allow_new_terms: bool|null,
+     *     allowed_values_truncated: bool,
      *     target_collection: int|null,
      *     relationship_search_field: int|null,
      *     allowed_values: string[]
@@ -295,7 +300,9 @@ class ExtractionMetadata {
      *     step: int|float|string|null,
      *     max_length: int|null,
      *     mask: string,
+     *     taxonomy_id: int|null,
      *     allow_new_terms: bool|null,
+     *     allowed_values_truncated: bool,
      *     target_collection: int|null,
      *     relationship_search_field: int|null,
      *     allowed_values: string[]
@@ -423,7 +430,9 @@ class ExtractionMetadata {
      *     step: int|float|string|null,
      *     max_length: int|null,
      *     mask: string,
+     *     taxonomy_id: int|null,
      *     allow_new_terms: bool|null,
+     *     allowed_values_truncated: bool,
      *     target_collection: int|null,
      *     relationship_search_field: int|null,
      *     allowed_values: string[]
@@ -453,6 +462,19 @@ class ExtractionMetadata {
         }
 
         if ($type === 'taxonomy') {
+            $taxonomy_id = $this->normalize_positive_int($metadata_type_options['taxonomy_id'] ?? null);
+            if ($taxonomy_id !== null) {
+                $field_hints['taxonomy_id'] = $taxonomy_id;
+
+                $taxonomy_allowed_values = $this->get_ranked_taxonomy_allowed_values($taxonomy_id);
+                if ($taxonomy_allowed_values['allowed_values'] !== []) {
+                    $field_hints['allowed_values'] = $taxonomy_allowed_values['allowed_values'];
+                }
+                if ($taxonomy_allowed_values['allowed_values_truncated']) {
+                    $field_hints['allowed_values_truncated'] = true;
+                }
+            }
+
             $field_hints['allow_new_terms'] = $this->normalize_yes_no_to_bool_or_null($metadata_type_options['allow_new_terms'] ?? null);
         }
 
@@ -466,6 +488,96 @@ class ExtractionMetadata {
         }
 
         return $field_hints;
+    }
+
+    /**
+     * @return array{allowed_values: string[], allowed_values_truncated: bool}
+     */
+    private function get_ranked_taxonomy_allowed_values(int $taxonomy_id): array {
+        $limit = (int) apply_filters(
+            'tainacan_ai_taxonomy_allowed_values_limit',
+            self::TAXONOMY_ALLOWED_VALUES_LIMIT,
+            $taxonomy_id
+        );
+        $limit = max(1, $limit);
+
+        $term_names = $this->fetch_ranked_taxonomy_term_names($taxonomy_id, $limit + 1);
+        $term_names = array_values(array_unique(array_filter($term_names, static fn (string $name): bool => $name !== '')));
+
+        $is_truncated = count($term_names) > $limit;
+        if ($is_truncated) {
+            $term_names = array_slice($term_names, 0, $limit);
+        }
+
+        /** @var string[] $term_names */
+        $term_names = (array) apply_filters(
+            'tainacan_ai_taxonomy_allowed_values',
+            $term_names,
+            $taxonomy_id,
+            $is_truncated
+        );
+
+        return [
+            'allowed_values' => array_values(array_unique(array_filter(
+                array_map(static fn ($name): string => is_string($name) ? trim($name) : '', $term_names),
+                static fn (string $name): bool => $name !== ''
+            ))),
+            'allowed_values_truncated' => $is_truncated,
+        ];
+    }
+
+    /**
+     * @return string[]
+     */
+    private function fetch_ranked_taxonomy_term_names(int $taxonomy_id, int $limit): array {
+        if ($taxonomy_id <= 0 || $limit <= 0) {
+            return [];
+        }
+
+        $terms_repository = null;
+        if (function_exists('tainacan_terms')) {
+            $terms_repository = tainacan_terms();
+        } elseif (class_exists('\Tainacan\Repositories\Terms')) {
+            $terms_repository = \Tainacan\Repositories\Terms::get_instance();
+        }
+
+        if (!$terms_repository || !method_exists($terms_repository, 'fetch')) {
+            return [];
+        }
+
+        $terms = $terms_repository->fetch(
+            [
+                'hide_empty' => false,
+                'orderby' => 'count',
+                'order' => 'DESC',
+                'number' => $limit,
+            ],
+            $taxonomy_id
+        );
+
+        if (!is_array($terms)) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($terms as $term) {
+            if ($term instanceof \Tainacan\Entities\Term && method_exists($term, 'get_name')) {
+                $name = trim((string) $term->get_name());
+                if ($name !== '') {
+                    $names[] = $name;
+                }
+                continue;
+            }
+
+            if ($term instanceof \WP_Term) {
+                $name = trim((string) $term->name);
+                if ($name !== '') {
+                    $names[] = $name;
+                }
+            }
+        }
+
+        return $names;
     }
 
     private function normalize_scalar_constraint(mixed $value): int|float|string|null {
