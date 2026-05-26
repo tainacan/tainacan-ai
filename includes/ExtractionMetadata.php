@@ -449,6 +449,10 @@ class ExtractionMetadata {
             $field_hints['max'] = $this->normalize_scalar_constraint($metadata_type_options['max'] ?? null);
         }
 
+        if ($type === 'date') {
+            $field_hints['expected_format_hint'] = 'YYYY-MM-DD';
+        }
+
         if ($type === 'numeric') {
             $field_hints['step'] = $this->normalize_scalar_constraint($metadata_type_options['step'] ?? null);
         }
@@ -476,6 +480,10 @@ class ExtractionMetadata {
             }
 
             $field_hints['allow_new_terms'] = $this->normalize_yes_no_to_bool_or_null($metadata_type_options['allow_new_terms'] ?? null);
+        }
+
+        if ($type === 'geocoordinate') {
+            $field_hints['expected_format_hint'] = '[lat,lng] in decimal degrees (e.g., [-14.4086569,-51.31668])';
         }
 
         if ($type === 'relationship') {
