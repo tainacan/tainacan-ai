@@ -21,22 +21,20 @@ class AnalysisPromptComposer {
 
     /**
      * @return array{
-     *     user: string,
-     *     task: string,
-     *     rules: string,
-     *     fields: string,
- *     schema: string,
- *     evidence: string,
-     *     output: string
+     *     fields: array<string, array<string, mixed>>,
+     *     expected_slugs: string[],
+     *     sections: array{user: string, task: string, rules: string, fields: string, schema: string, evidence: string, output: string},
+     *     prompt: string
      * }
      */
-    public static function get_sections(
+    public static function get_context(
         int $collection_id,
         string $user_preamble,
         string $analysis_mode
     ): array {
         $extraction = ExtractionMetadata::get_instance();
         $fields = $collection_id > 0 ? $extraction->get_fields_for_collection($collection_id) : [];
+        $expected_slugs = array_keys($fields);
 
         $sections = [
             'user' => $user_preamble,
@@ -45,7 +43,7 @@ class AnalysisPromptComposer {
             'fields' => $extraction->build_fields_section($fields),
             'schema' => $extraction->build_field_format_section(),
             'evidence' => EvidenceInstructions::get_mode_guidance($analysis_mode),
-            'output' => $extraction->build_output_keys_section(array_keys($fields)),
+            'output' => $extraction->build_output_keys_section($expected_slugs),
         ];
 
         /** @var array<string, string> $sections */
@@ -61,25 +59,23 @@ class AnalysisPromptComposer {
             $normalized[$key] = isset($sections[$key]) ? trim((string) $sections[$key]) : '';
         }
 
-        return $normalized;
-    }
-
-    public static function compose(
-        int $collection_id,
-        string $user_preamble,
-        string $analysis_mode
-    ): string {
-        $sections = self::get_sections($collection_id, $user_preamble, $analysis_mode);
-        $parts = array_values(array_filter($sections, static fn (string $value): bool => $value !== ''));
+        // Keep a final defensive cleanup because section filters may return empty blocks.
+        $parts = array_values(array_filter($normalized, static fn (string $value): bool => $value !== ''));
         $prompt = trim(implode("\n\n", $parts));
-
-        return (string) apply_filters(
+        $prompt = (string) apply_filters(
             'tainacan_ai_analysis_prompt',
             $prompt,
-            $sections,
+            $normalized,
             $analysis_mode,
             $collection_id
         );
+
+        return [
+            'fields' => $fields,
+            'expected_slugs' => $expected_slugs,
+            'sections' => $normalized,
+            'prompt' => $prompt,
+        ];
     }
 
     private static function build_task_section(string $analysis_mode): string {
@@ -92,8 +88,10 @@ class AnalysisPromptComposer {
     private static function build_global_rules_section(): string {
         return 'GLOBAL RULES' . "\n" .
             '- For strict factual fields, never fabricate dates, personal names, authors, locations, identifiers, or coordinates.' . "\n" .
-            '- For taxonomy and relationship fields, you may suggest grounded vocabulary candidates to help discovery.' . "\n" .
-            '- Suggested relationships or classifications must cite support in evidence. Do not invent unsupported links.' . "\n" .
+            '- For taxonomy and relationship fields, suggest values only when evidence in the document supports them.' . "\n" .
+            '- If a taxonomy field provides allowed_values, first try to match a supported term from that list.' . "\n" .
+            '- If no listed term is adequately supported: when allow_new_terms is true, suggest one new term; when false, return value null.' . "\n" .
+            '- Never invent relationship values; every non-null suggestion must include direct evidence support.' . "\n" .
             '- Use value: null when there is no support in the document.' . "\n" .
             '- If field_guidance is missing, infer field intent from label and type.' . "\n" .
             '- Write evidence as a short, objective source note (quote, page, region, heading, or label).' . "\n" .

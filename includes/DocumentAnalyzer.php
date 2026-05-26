@@ -24,6 +24,8 @@ class DocumentAnalyzer {
     private ?int $current_attachment_id = null;
     private ExifExtractor $exif_extractor;
     private CollectionPrompts $collection_prompts;
+    /** @var array<string, array{prompt: string, sections: array<string, string>, expected_slugs: string[]}> */
+    private array $prompt_context_cache = [];
 
     /**
      * Supported MIME types
@@ -60,6 +62,7 @@ class DocumentAnalyzer {
     public function set_context(?int $collection_id = null, ?int $item_id = null): self {
         $this->collection_id = $collection_id;
         $this->item_id = $item_id;
+        $this->prompt_context_cache = [];
         return $this;
     }
 
@@ -171,6 +174,7 @@ class DocumentAnalyzer {
         $result = [];
         $document_type = 'unknown';
         $extraction_method = null;
+        $analysis_mode = EvidenceInstructions::MODE_TEXT;
 
         // Analysis based on type
         if (in_array($mime_type, $this->supported_image_types)) {
@@ -188,12 +192,14 @@ class DocumentAnalyzer {
             // AI analysis
             $ai_result = $this->analyze_image($attachment_id, $file_path, $mime_type);
             $extraction_method = 'vision';
+            $analysis_mode = EvidenceInstructions::MODE_IMAGE;
 
         } elseif ($mime_type === 'application/pdf') {
             $document_type = 'pdf';
             $pdf_result = $this->analyze_pdf_smart($file_path);
             $ai_result = $pdf_result['result'];
             $extraction_method = $pdf_result['method'];
+            $analysis_mode = $pdf_result['analysis_mode'] ?? EvidenceInstructions::MODE_TEXT;
 
         } elseif (in_array($mime_type, ['text/plain', 'text/html'])) {
             $document_type = 'text';
@@ -206,6 +212,7 @@ class DocumentAnalyzer {
                 EvidenceInstructions::MODE_TEXT
             );
             $extraction_method = 'text';
+            $analysis_mode = EvidenceInstructions::MODE_TEXT;
 
         } else {
             return new \WP_Error(
@@ -234,7 +241,17 @@ class DocumentAnalyzer {
             $normalized = EvidenceInstructions::normalize_metadata($raw_metadata);
 
             if ($this->collection_id) {
-                $normalized = ExtractionMetadata::get_instance()->complete_expected_fields($normalized, $this->collection_id);
+                $context = $this->resolve_analysis_prompt_context($analysis_mode);
+                $expected_slugs = !is_wp_error($context) ? ($context['expected_slugs'] ?? []) : [];
+
+                if (is_array($expected_slugs) && $expected_slugs !== []) {
+                    $normalized = ExtractionMetadata::get_instance()->complete_expected_fields_with_slugs(
+                        $normalized,
+                        $expected_slugs
+                    );
+                } else {
+                    $normalized = ExtractionMetadata::get_instance()->complete_expected_fields($normalized, $this->collection_id);
+                }
             }
 
             $result['ai_metadata'] = $normalized;
@@ -547,6 +564,7 @@ class DocumentAnalyzer {
             return [
                 'result' => $result,
                 'method' => 'text_extraction',
+                'analysis_mode' => EvidenceInstructions::MODE_PDF_TEXT,
             ];
         }
 
@@ -558,6 +576,7 @@ class DocumentAnalyzer {
                 return [
                     'result' => $visual_result,
                     'method' => 'visual_analysis',
+                    'analysis_mode' => EvidenceInstructions::MODE_PDF_VISUAL,
                 ];
             }
 
@@ -584,6 +603,7 @@ class DocumentAnalyzer {
         return [
             'result' => new \WP_Error('pdf_analysis_failed', trim($error_msg)),
             'method' => 'failed',
+            'analysis_mode' => EvidenceInstructions::MODE_TEXT,
         ];
     }
 
@@ -725,11 +745,13 @@ class DocumentAnalyzer {
             $text .= "\n\n[Document truncated due to size]";
         }
 
-        $prompt = $this->resolve_analysis_prompt($analysis_mode);
+        $context = $this->resolve_analysis_prompt_context($analysis_mode);
 
-        if (is_wp_error($prompt)) {
-            return $prompt;
+        if (is_wp_error($context)) {
+            return $context;
         }
+
+        $prompt = $context['prompt'];
 
         $full_prompt = $prompt . "\n\n---\n\n**Document:**\n\n" . $text;
 
@@ -744,17 +766,42 @@ class DocumentAnalyzer {
      * @return string|\WP_Error
      */
     private function resolve_analysis_prompt(string $analysis_mode): string|\WP_Error {
-        $prompt = AnalysisPromptComposer::compose(
+        $context = $this->resolve_analysis_prompt_context($analysis_mode);
+
+        if (is_wp_error($context)) {
+            return $context;
+        }
+
+        return $context['prompt'];
+    }
+
+    /**
+     * @return array{prompt: string, sections: array<string, string>, expected_slugs: string[]}|\WP_Error
+     */
+    private function resolve_analysis_prompt_context(string $analysis_mode): array|\WP_Error {
+        if (isset($this->prompt_context_cache[$analysis_mode])) {
+            return $this->prompt_context_cache[$analysis_mode];
+        }
+
+        $context = AnalysisPromptComposer::get_context(
             (int) ($this->collection_id ?? 0),
             $this->get_user_prompt(),
             $analysis_mode
         );
 
+        $prompt = trim((string) ($context['prompt'] ?? ''));
         if ($prompt === '') {
             return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
         }
 
-        return $prompt;
+        $resolved = [
+            'prompt' => $prompt,
+            'sections' => is_array($context['sections'] ?? null) ? $context['sections'] : [],
+            'expected_slugs' => is_array($context['expected_slugs'] ?? null) ? array_values($context['expected_slugs']) : [],
+        ];
+
+        $this->prompt_context_cache[$analysis_mode] = $resolved;
+        return $resolved;
     }
 
     /**
@@ -798,25 +845,15 @@ class DocumentAnalyzer {
         }
 
         $analysis_mode = $this->guess_analysis_mode($file_path, (string) $mime_type);
-        $sections = AnalysisPromptComposer::get_sections(
-            (int) ($this->collection_id ?? 0),
-            $this->get_user_prompt(),
-            $analysis_mode
-        );
-        $base_prompt = trim(implode("\n\n", array_filter($sections, static fn (string $value): bool => $value !== '')));
+        $context = $this->resolve_analysis_prompt_context($analysis_mode);
 
-        if ($base_prompt === '') {
-            return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
-        }
-
-        $resolved = $this->resolve_analysis_prompt($analysis_mode);
-
-        if (is_wp_error($resolved)) {
-            return $resolved;
+        if (is_wp_error($context)) {
+            return $context;
         }
 
         $attachment_note = $this->get_prompt_attachment_note($file_path, (string) $mime_type, $analysis_mode);
-        $prompt = $resolved;
+        $prompt = $context['prompt'];
+        $sections = $context['sections'];
 
         if ($attachment_note !== '') {
             $prompt .= "\n\n" . $attachment_note;

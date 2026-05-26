@@ -126,7 +126,7 @@ At analysis time, the plugin composes the final prompt in a fixed order (single 
 3. **Global rules**  
    Non-fabrication boundaries and JSON-only output requirement.
 4. **Field blocks**  
-   Built from extraction-enabled metadata in the collection, using metadata **slug** as JSON key and including type, label, mode (`strict`/`exploratory`), and optional field hints.
+   Built from extraction-enabled metadata in the collection, using metadata **slug** as JSON key and including type, label, mode (`strict`/`exploratory`), plus optional constraints (for example `required`, `max_items`, `min/max/step`, `max_length`, `allowed_values`, taxonomy and relationship hints). For taxonomy fields, `allowed_values` can include a ranked list of existing terms.
 5. **Field format contract**  
    Compact `{ "value", "evidence" }` format rules, including multivalue parallel arrays.
 6. **Evidence rules module**  
@@ -135,13 +135,16 @@ At analysis time, the plugin composes the final prompt in a fixed order (single 
    Explicit list of expected slugs.
 
 Implementation reference:
-- `AnalysisPromptComposer::get_sections()` and `AnalysisPromptComposer::compose()`
+- `AnalysisPromptComposer::get_context()`
 - `DocumentAnalyzer::resolve_analysis_prompt()`
 
 Available prompt customization filters:
 - `tainacan_ai_analysis_prompt_sections` (section array before join)
 - `tainacan_ai_analysis_prompt` (final composed prompt)
 - `tainacan_ai_evidence_instructions` (evidence rules block)
+- `tainacan_ai_extraction_field` (per-metadatum field block data before serialization)
+- `tainacan_ai_taxonomy_allowed_values_limit` (max ranked taxonomy terms sent in `allowed_values`)
+- `tainacan_ai_taxonomy_allowed_values` (final ranked taxonomy term list before prompt serialization)
 
 ### AI response shape
 
@@ -160,7 +163,11 @@ Evidence instructions are appended automatically at analysis time (image vs. tex
 
 Multivalued fields use **parallel arrays** inside one object (`value` and `evidence` with the same length), not an array of per-item `{ value, evidence }` objects.
 
-The plugin appends field blocks for metadata marked for extraction (slug as JSON key, plus optional field hints from description/placeholder) to your collection or default prompt. It does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)). Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
+The plugin appends field blocks for metadata marked for extraction (slug as JSON key). These blocks include optional guidance from description/placeholder and optional constraints derived from metadata settings, such as `required`, multivalue limits (`max_items`), type limits (`min/max/step`, `max_length`, `mask`), `allowed_values` for selectboxes, and taxonomy/relationship structure hints. It does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)). Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
+
+You can customize this per metadatum via `tainacan_ai_extraction_field`. The plugin itself now uses this same hook to inject built-in type hints, so custom metadata types or site-specific rules can reuse one API.
+
+Taxonomy insertion/creation is not part of this phase: taxonomy values remain suggestion-oriented in extraction output. Insertion strategy is tracked separately in [issue #8](https://github.com/tainacan/tainacan-ai/issues/8).
 
 Filter: `tainacan_ai_evidence_instructions` to customize the appended evidence block.
 
