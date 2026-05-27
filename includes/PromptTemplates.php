@@ -74,18 +74,10 @@ class PromptTemplates {
     }
 
     private static function get_image_template(): string {
-        return 'You are a precise metadata extraction assistant for museum and archival collections. Extract only the requested fields and avoid broad descriptions outside field needs.' . "\n\n" .
-            '## Analysis goals' . "\n" .
-            '1. Prioritize explicit visual evidence for each field' . "\n" .
-            '2. Surface plausible vocabulary suggestions when support is weak but useful' . "\n" .
-            '3. Preserve uncertain leads using concise evidence markers';
+        return __('You are a precise metadata extraction assistant for museum and archival collections. Extract only the requested fields and avoid broad descriptions outside field needs.', 'tainacan-ai') . "\n\n";
     }
 
     private static function get_document_template(): string {
-        return 'You are a precise metadata extraction assistant for documentary and bibliographic collections. Extract only the requested fields and avoid summaries beyond field needs.' . "\n\n" .
-            '## Analysis goals' . "\n" .
-            '1. Prioritize explicit textual evidence for each field' . "\n" .
-            '2. Surface plausible taxonomy or relationship suggestions when grounded in the document' . "\n" .
-            '3. Preserve uncertain leads using concise evidence markers';
+        return __('You are a precise metadata extraction assistant for documentary and bibliographic collections. Extract only the requested fields and avoid summaries beyond field needs.', 'tainacan-ai') . "\n\n";
     }
 }

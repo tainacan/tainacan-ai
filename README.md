@@ -124,14 +124,16 @@ At analysis time, the plugin composes the final prompt in a fixed order (single 
 2. **Task**  
    A short instruction with **analysis mode** (`image`, `text`, `pdf_text`, `pdf_visual`).
 3. **Global rules**  
-   Non-fabrication boundaries and JSON-only output requirement.
+   Non-fabrication boundaries, JSON-only output requirement.
 4. **Field blocks**  
    Built from extraction-enabled metadata in the collection, using metadata **slug** as JSON key and including type, label, mode (`strict`/`exploratory`), plus optional constraints (for example `required`, `max_items`, `min/max/step`, `max_length`, `allowed_values`, taxonomy and relationship hints). For taxonomy fields, `allowed_values` can include a ranked list of existing terms.
 5. **Field format contract**  
    Compact `{ "value", "evidence" }` format rules, including multivalue parallel arrays.
-6. **Evidence rules module**  
+6. **Output language**
+   Rules for translating the text-free value based on content and site settings, despite prompt bein in English.
+7. **Evidence rules module**  
    Injected using the same **analysis mode** (`image`, `text`, `pdf_text`, `pdf_visual`) based on file type/content.
-7. **Output keys closure**  
+8. **Output keys closure**  
    Explicit list of expected slugs.
 
 Implementation reference:
@@ -141,6 +143,7 @@ Implementation reference:
 Available prompt customization filters:
 - `tainacan_ai_analysis_prompt_sections` (section array before join)
 - `tainacan_ai_analysis_prompt` (final composed prompt)
+- `tainacan_ai_analysis_site_locale_for_prompt` (locale string embedded in global output-language rules)
 - `tainacan_ai_evidence_instructions` (evidence rules block)
 - `tainacan_ai_extraction_field` (per-metadatum field block data before serialization)
 - `tainacan_ai_taxonomy_allowed_values_limit` (max ranked taxonomy terms sent in `allowed_values`)

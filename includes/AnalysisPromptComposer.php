@@ -42,6 +42,7 @@ class AnalysisPromptComposer {
             'rules' => self::build_global_rules_section(),
             'fields' => $extraction->build_fields_section($fields),
             'schema' => $extraction->build_field_format_section(),
+            'language' => self::build_output_language_section(),
             'evidence' => EvidenceInstructions::get_mode_guidance($analysis_mode),
             'output' => $extraction->build_output_keys_section($expected_slugs),
         ];
@@ -55,7 +56,7 @@ class AnalysisPromptComposer {
         );
 
         $normalized = [];
-        foreach (['user', 'task', 'rules', 'fields', 'schema', 'evidence', 'output'] as $key) {
+        foreach (['user', 'task', 'rules', 'fields', 'schema', 'language', 'evidence', 'output'] as $key) {
             $normalized[$key] = isset($sections[$key]) ? trim((string) $sections[$key]) : '';
         }
 
@@ -85,18 +86,34 @@ class AnalysisPromptComposer {
             sprintf('Extract structured metadata from the attached %s. Return ONLY valid JSON.', $label);
     }
 
+    public function build_output_language_section(): string {
+        $site_locale = function_exists('get_locale') ? (string) get_locale() : 'en_US';
+        /**
+         * WordPress locale string shown in GLOBAL RULES as the default for ambiguous free-text language.
+         *
+         * @param string $site_locale   Locale from get_locale().
+         */
+        $site_locale = (string) apply_filters('tainacan_ai_analysis_site_locale_for_prompt', $site_locale);
+
+        return 'OUTPUT LANGUAGE:' . "\n" .
+            'Output language for free-text field values (unless explicitly asked in the first section of this prompt) should follow these rules:' . "\n" .
+            '- For fields with allowed_values (taxonomy, selectbox, etc.), when you pick from that list use the exact string from allowed_values (language follows the list).' . "\n" .
+            '- Otherwise prefer the primary language of the document when it is clear from quoted or cited content.' . "\n" .
+            '- When the document language is unclear (e.g. image-only or mixed/ambiguous text), default free-text values to the site locale: ' . $site_locale . '.' . "\n";
+    }
+
     private static function build_global_rules_section(): string {
         return 'GLOBAL RULES' . "\n" .
             '- For strict factual fields, never fabricate dates, personal names, authors, locations, identifiers, or coordinates.' . "\n" .
             '- For taxonomy and relationship fields, suggest values only when evidence in the document supports them.' . "\n" .
             '- If a taxonomy field provides allowed_values, first try to match a supported term from that list.' . "\n" .
             '- If one or more allowed_values terms are supported, return only those matched terms for that taxonomy field.' . "\n" .
-            '- Only when no allowed_values term is supported: if allow_new_terms is true, you may suggest one new term label not present in allowed_values; if false, return value null.' . "\n" .
+            '- Only when no allowed_values term is supported: if allow_new_terms=true, you may suggest one new term label not present in allowed_values; if false, return value null.' . "\n" .
             '- Never mix allowed_values matches and a new taxonomy term in the same field response.' . "\n" .
             '- Never invent relationship values; every non-null suggestion must include direct evidence support.' . "\n" .
             '- Use value: null when there is no support in the document.' . "\n" .
             '- If field_guidance is missing, infer field intent from label and type.' . "\n" .
             '- Write evidence as a short, objective source note (quote, page, region, heading, or label).' . "\n" .
-            '- Process internally: analyze, match fields, validate, output JSON only.';
+            '- Process internally: analyze, match fields, validate, output JSON only.' . "\n";
     }
 }

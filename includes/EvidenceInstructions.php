@@ -174,18 +174,18 @@ class EvidenceInstructions {
             case self::MODE_IMAGE:
                 return 'EVIDENCE RULES: IMAGE' . "\n" .
                     '- Cite visible text, labels, inscriptions, or marks when available.' . "\n" .
-                    '- Mention region/object anchors (e.g. lower-right signature, frame caption).' . "\n" .
+                    '- Mention region/object anchors (e.g. ' . __('lower-right signature, frame caption', 'tainacan-ai') . ').' . "\n" .
                     '- Include concise cues on style, material, technique, or condition when relevant.';
 
             case self::MODE_PDF_VISUAL:
                 return 'EVIDENCE RULES: PDF_VISUAL' . "\n" .
-                    '- Cite page number and visual region (header, footer, caption, table, cover).' . "\n" .
+                    '- Cite page number and visual region (' . __('header, footer, caption, table, cover', 'tainacan-ai') . ').' . "\n" .
                     '- Quote short visible snippets when legible.';
 
             case self::MODE_PDF_TEXT:
                 return 'EVIDENCE RULES: PDF_TEXT' . "\n" .
-                    '- Cite page number whenever possible (e.g. "page 2").' . "\n" .
-                    '- Cite PDF structure anchors when available (header, footer, caption, table, cover, section heading).' . "\n" .
+                    '- Cite page number whenever possible.' . "\n" .
+                    '- Cite PDF structure anchors when available (' . __('header, footer, caption, table, cover, section heading', 'tainacan-ai') . ').' . "\n" .
                     '- Include a short quote or concise paraphrase supporting the value.';
 
             case self::MODE_TEXT:
