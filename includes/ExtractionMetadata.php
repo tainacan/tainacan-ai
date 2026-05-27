@@ -775,7 +775,7 @@ class ExtractionMetadata {
             'Single-value fields: scalar value and string|null evidence.' . "\n" .
             'Multivalued fields: value and evidence must be parallel arrays with equal length.' . "\n" .
             'Use label only when a human-readable display differs from value (for example taxonomy names for term IDs).' . "\n" .
-            'Missing support: set value to null, evidence null or omitted.' . "\n" .
+            'When evidence is insufficient or ambiguous: set value to null, evidence to null or omitted.' . "\n" .
             'Output must be ONLY JSON (no markdown, no comments, no prose).';
     }
 
