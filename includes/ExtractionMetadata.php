@@ -181,7 +181,7 @@ class ExtractionMetadata {
      * Complete the AI metadata payload with all expected slugs for this collection.
      *
      * @param array<string, mixed> $metadata
-     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed}>
+     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}>
      */
     public function complete_expected_fields(array $metadata, int $collection_id): array {
         $fields = $this->get_fields_for_collection($collection_id);
@@ -193,7 +193,7 @@ class ExtractionMetadata {
      *
      * @param array<string, mixed> $metadata
      * @param string[] $expected_slugs
-     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed}>
+     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}>
      */
     public function complete_expected_fields_with_slugs(array $metadata, array $expected_slugs): array {
         $completed = [];
@@ -210,6 +210,9 @@ class ExtractionMetadata {
                 ];
                 if (array_key_exists('label', $entry)) {
                     $normalized_entry['label'] = $entry['label'];
+                }
+                if (array_key_exists('pending_new_terms', $entry) && is_array($entry['pending_new_terms'])) {
+                    $normalized_entry['pending_new_terms'] = $entry['pending_new_terms'];
                 }
                 $completed[$slug] = $normalized_entry;
                 continue;

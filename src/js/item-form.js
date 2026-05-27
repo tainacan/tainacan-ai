@@ -202,6 +202,22 @@ import { addAction } from '@wordpress/hooks';
 				} );
 			} );
 
+			$( document ).on(
+				'click',
+				'.tainacan-ai-create-pending-term',
+				async ( e ) => {
+					const $btn = $( e.currentTarget );
+					const metadataKey = String( $btn.data( 'metadata-key' ) || '' );
+					const termIndex = Number( $btn.data( 'term-index' ) );
+
+					await this.createPendingTermAndFill(
+						metadataKey,
+						termIndex,
+						$btn
+					);
+				}
+			);
+
 			// Fill all extraction-enabled fields
 			$( document ).on( 'click', '#tainacan-ai-fill-all', async () => {
 				await this.fillAllExtractionFields();
@@ -682,6 +698,9 @@ import { addAction } from '@wordpress/hooks';
 				let value = data.value;
 				let evidence = data.evidence ?? null;
 				let label = data.label ?? null;
+				const pendingNewTerms = this.normalizePendingNewTerms(
+					data.pending_new_terms
+				);
 
 				if (
 					Array.isArray( value ) &&
@@ -716,10 +735,45 @@ import { addAction } from '@wordpress/hooks';
 					}
 				}
 
-				return { value, evidence, label };
+				return { value, evidence, label, pendingNewTerms };
 			}
 
-			return { value: data, evidence: null, label: null };
+			return {
+				value: data,
+				evidence: null,
+				label: null,
+				pendingNewTerms: [],
+			};
+		},
+
+		normalizePendingNewTerms( pendingTerms ) {
+			if ( ! Array.isArray( pendingTerms ) ) {
+				return [];
+			}
+
+			return pendingTerms
+				.map( ( row ) => {
+					if ( ! row || typeof row !== 'object' || Array.isArray( row ) ) {
+						return null;
+					}
+
+					const label =
+						typeof row.label === 'string' ? row.label.trim() : '';
+					if ( ! label ) {
+						return null;
+					}
+
+					const evidence =
+						row.evidence === null || row.evidence === undefined
+							? null
+							: String( row.evidence ).trim();
+
+					return {
+						label,
+						evidence: evidence || null,
+					};
+				} )
+				.filter( Boolean );
 		},
 
 		coalesceValueEvidenceObjects( items ) {
@@ -765,6 +819,71 @@ import { addAction } from '@wordpress/hooks';
 			return this.escapeHtml( String( evidence ) );
 		},
 
+		renderPendingNewTermsBlock(
+			metadataKey,
+			pendingTerms,
+			canCreatePendingTerms = false
+		) {
+			const title =
+				TainacanAI.texts?.pendingTermsTitle || 'Suggested new terms';
+			const helperText =
+				TainacanAI.texts?.pendingTermsHint ||
+				'No existing term matched. Review and create if appropriate.';
+			const createText =
+				TainacanAI.texts?.createTermAndApply || 'Create';
+
+			const rows = pendingTerms
+				.map( (term, index) => {
+					const evidence = term?.evidence
+						? `<div class="tainacan-ai-pending-term-evidence">${ this.escapeHtml(
+								String( term.evidence )
+						  ) }</div>`
+						: '';
+
+					return `
+                        <div class="tainacan-ai-pending-term-row">
+                            <div class="tainacan-ai-pending-term-controls">
+                                <input
+                                    type="text"
+                                    class="tainacan-ai-pending-term-input"
+                                    data-metadata-key="${ this.escapeHtml(
+										metadataKey
+									) }"
+                                    data-term-index="${ index }"
+                                    value="${ this.escapeHtml( term.label ) }"
+                                />
+                                ${
+									canCreatePendingTerms
+										? `<button type="button"
+                                    class="button button-secondary tainacan-ai-create-pending-term"
+                                    data-metadata-key="${ this.escapeHtml(
+										metadataKey
+									) }"
+                                    data-term-index="${ index }">
+                                    ${ this.escapeHtml( createText ) }
+                                </button>`
+										: ''
+								}
+                            </div>
+                            ${ evidence }
+                        </div>
+                    `;
+				} )
+				.join( '' );
+
+			return `
+                <div class="tainacan-ai-pending-terms-block">
+                    <div class="tainacan-ai-pending-terms-title">${ this.escapeHtml(
+						title
+					) }</div>
+                    <div class="tainacan-ai-pending-terms-hint">${ this.escapeHtml(
+						helperText
+					) }</div>
+                    <div class="tainacan-ai-pending-terms-list">${ rows }</div>
+                </div>
+            `;
+		},
+
 		/**
 		 * Render metadata in sidebar panel with evidence
 		 */
@@ -792,7 +911,8 @@ import { addAction } from '@wordpress/hooks';
 
 				const extractionFields = TainacanAI.extractionFields || {};
 				const extractionField = extractionFields[ key ];
-				const { value, evidence, label } = this.parseFieldEntry( data );
+				const { value, evidence, label, pendingNewTerms } =
+					this.parseFieldEntry( data );
 				const displayValue = this.resolveDisplayValueForField(
 					value,
 					label,
@@ -802,16 +922,32 @@ import { addAction } from '@wordpress/hooks';
 				const formattedEvidence = this.formatEvidence( evidence );
 				const isEmpty = this.isEmptyMetadataValue( displayValue );
 				const hasFillValue = ! this.isEmptyMetadataValue( value );
+				const hasPendingNewTerms =
+					Array.isArray( pendingNewTerms ) && pendingNewTerms.length > 0;
 				const displayLabel = extractionField?.name
 					? this.escapeHtml( extractionField.name )
 					: formattedLabel;
 				const canFill = extractionField && hasFillValue;
+				const canCreatePendingTerms =
+					extractionField &&
+					extractionField.allow_new_terms === true &&
+					String( extractionField?.type || '' )
+						.toLowerCase()
+						.includes( 'taxonomy' ) &&
+					Number( extractionField?.taxonomy_id ) > 0;
 				const notFoundText =
 					TainacanAI.texts?.valueNotFound || 'Not found in document';
+				const pendingTermsHtml = hasPendingNewTerms
+					? this.renderPendingNewTermsBlock(
+							key,
+							pendingNewTerms,
+							canCreatePendingTerms
+					  )
+					: '';
 
 				let $item;
 
-				if ( isEmpty ) {
+				if ( isEmpty && ! hasPendingNewTerms ) {
 					$item = $( `
                     <div class="tainacan-ai-metadata-item-with-evidence is-not-found"
                          style="animation-delay: ${ index * 0.05 }s"
@@ -833,16 +969,6 @@ import { addAction } from '@wordpress/hooks';
                             <div class="tainacan-ai-metadata-top">
                                 <div class="tainacan-ai-metadata-label-with-copy">
                                     <span class="tainacan-ai-metadata-label">${ displayLabel }</span>
-                                    ${
-										canFill
-											? `<span class="tainacan-ai-extraction-field-badge" title="${ TainacanAI.texts?.fieldLabel || 'Tainacan field: ' }${ this.escapeHtml(
-													extractionField.name ||
-														extractionField
-											  ) }">
-                                        <span class="dashicons dashicons-yes-alt"></span>
-                                    </span>`
-											: ''
-									}
                                 </div>
                                 <div class="tainacan-ai-metadata-actions-mini">
                                     ${
@@ -873,9 +999,14 @@ import { addAction } from '@wordpress/hooks';
                                     </button>
                                 </div>
                             </div>
-                            <div class="tainacan-ai-metadata-value-box">
+                            ${
+								isEmpty
+									? ''
+									: `<div class="tainacan-ai-metadata-value-box">
                                 <div class="tainacan-ai-metadata-value-text">${ formattedValue }</div>
-                            </div>
+                            </div>`
+							}
+                            ${ pendingTermsHtml }
                         </div>
                         ${
 							formattedEvidence
@@ -1244,6 +1375,221 @@ import { addAction } from '@wordpress/hooks';
 			return this.resolveDisplayValueForField( value, label, extractionField );
 		},
 
+		mergeFieldTermIds( existingValue, newTermId ) {
+			const merged = [];
+			const pushIfValid = ( candidate ) => {
+				const parsed = Number( candidate );
+				if ( ! Number.isInteger( parsed ) || parsed <= 0 ) {
+					return;
+				}
+				if ( ! merged.includes( parsed ) ) {
+					merged.push( parsed );
+				}
+			};
+
+			if ( Array.isArray( existingValue ) ) {
+				existingValue.forEach( pushIfValid );
+			} else {
+				pushIfValid( existingValue );
+			}
+			pushIfValid( newTermId );
+
+			return merged;
+		},
+
+		updateMetadataEntryAfterPendingCreate(
+			metadataKey,
+			termIndex,
+			newTermId,
+			newLabel,
+			isMultiple
+		) {
+			if ( ! this.state.lastResult?.ai_metadata ) {
+				return;
+			}
+
+			const rawEntry = this.state.lastResult.ai_metadata[ metadataKey ];
+			if ( ! rawEntry || typeof rawEntry !== 'object' || Array.isArray( rawEntry ) ) {
+				return;
+			}
+
+			const updated = { ...rawEntry };
+			const mergedIds = this.mergeFieldTermIds( updated.value, newTermId );
+
+			if ( isMultiple ) {
+				updated.value = mergedIds;
+				const currentLabels = Array.isArray( updated.label )
+					? updated.label
+						.map( (entry) =>
+							typeof entry === 'string' ? entry.trim() : ''
+						)
+						.filter( Boolean )
+					: [];
+				if ( newLabel && ! currentLabels.includes( newLabel ) ) {
+					currentLabels.push( newLabel );
+				}
+				if ( currentLabels.length > 0 ) {
+					updated.label = currentLabels;
+				}
+			} else {
+				updated.value = mergedIds[ 0 ] || newTermId;
+				if ( newLabel ) {
+					updated.label = newLabel;
+				}
+			}
+
+			const pending = this.normalizePendingNewTerms( updated.pending_new_terms );
+			updated.pending_new_terms = pending.filter(
+				( _, index ) => index !== termIndex
+			);
+			if ( updated.pending_new_terms.length === 0 ) {
+				delete updated.pending_new_terms;
+			}
+
+			this.state.lastResult.ai_metadata[ metadataKey ] = updated;
+		},
+
+		async createTaxonomyTerm( taxonomyId, payload ) {
+			const baseUrl = this.getTainacanApiBaseUrl();
+			const url = `${ baseUrl }/taxonomy/${ taxonomyId }/terms`;
+
+			return $.ajax( {
+				url,
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify( payload ),
+				processData: false,
+				headers: {
+					'X-WP-Nonce': TainacanAI.restNonce,
+				},
+			} );
+		},
+
+		extractTermIdFromResponse( response ) {
+			const candidates = [
+				response?.id,
+				response?.data?.id,
+				response?.term_id,
+				response?.data?.term_id,
+			];
+
+			for ( const candidate of candidates ) {
+				const parsed = Number( candidate );
+				if ( Number.isInteger( parsed ) && parsed > 0 ) {
+					return parsed;
+				}
+			}
+
+			return null;
+		},
+
+		async createPendingTermAndFill( metadataKey, termIndex, $btn = null ) {
+			const extractionFields = TainacanAI.extractionFields || {};
+			const fieldInfo = extractionFields[ metadataKey ];
+			if ( ! fieldInfo ) {
+				this.showError(
+					TainacanAI.texts?.noExtractionFields ||
+						'No extraction-enabled metadata found'
+				);
+				return;
+			}
+
+			const taxonomyId = Number( fieldInfo?.taxonomy_id || 0 );
+			if ( taxonomyId <= 0 ) {
+				this.showError(
+					TainacanAI.texts?.createTermMissingTaxonomy ||
+						'Taxonomy field is not configured for term creation.'
+				);
+				return;
+			}
+
+			const aiEntry = this.state.lastResult?.ai_metadata?.[ metadataKey ];
+			const parsedEntry = this.parseFieldEntry( aiEntry );
+			const pendingTerms = parsedEntry.pendingNewTerms || [];
+			const pending = pendingTerms[ termIndex ];
+			if ( ! pending ) {
+				this.showError(
+					TainacanAI.texts?.pendingTermNotFound ||
+						'Suggested term is no longer available.'
+				);
+				return;
+			}
+
+			const selector = `.tainacan-ai-pending-term-input[data-metadata-key="${ this.escapeHtml(
+				metadataKey
+			) }"][data-term-index="${ termIndex }"]`;
+			const inputValue = $( selector ).val();
+			const termLabel = String( inputValue ?? pending.label ?? '' ).trim();
+			if ( termLabel === '' ) {
+				this.showError(
+					TainacanAI.texts?.pendingTermEmpty ||
+						'Please provide a term name before creating it.'
+				);
+				return;
+			}
+
+			if ( $btn && $btn.length ) {
+				$btn.prop( 'disabled', true );
+			}
+
+			let createdTermId = null;
+			try {
+				const created = await this.createTaxonomyTerm( taxonomyId, {
+					name: termLabel,
+					item_id: this.state.itemId,
+					metadatum_id: fieldInfo.id,
+				} );
+				createdTermId = this.extractTermIdFromResponse( created );
+				if ( ! createdTermId ) {
+					throw new Error(
+						TainacanAI.texts?.createTermMissingId ||
+							'The created term response did not include an ID.'
+					);
+				}
+			} catch ( error ) {
+				const parsedError = this.parseMetadataUpdateError( error );
+				this.showError(
+					`${ TainacanAI.texts?.createTermFailed || 'Could not create term.' }: ${
+						parsedError.message
+					}`
+				);
+				if ( $btn && $btn.length ) {
+					$btn.prop( 'disabled', false );
+				}
+				return;
+			}
+
+			const mergedIds = this.mergeFieldTermIds( parsedEntry.value, createdTermId );
+			const valueToFill = fieldInfo.multiple === true ? mergedIds : createdTermId;
+			const fillResult = await this.fillTainacanField(
+				metadataKey,
+				valueToFill,
+				null,
+				{
+					dispatchReloadEvent: true,
+				}
+			);
+
+			if ( ! fillResult.success ) {
+				if ( $btn && $btn.length ) {
+					$btn.prop( 'disabled', false );
+				}
+				return;
+			}
+
+			this.updateMetadataEntryAfterPendingCreate(
+				metadataKey,
+				termIndex,
+				createdTermId,
+				termLabel,
+				fieldInfo.multiple === true
+			);
+			this.renderMetadataInPanel( this.state.lastResult.ai_metadata );
+			this.showToast(
+				TainacanAI.texts?.termCreatedAndApplied || 'Term created and applied.'
+			);
+		},
+
 		/**
 		 * Fill a Tainacan field via Tainacan REST API.
 		 */
@@ -1297,12 +1643,30 @@ import { addAction } from '@wordpress/hooks';
 				fieldValue = parsedEntry.value;
 			}
 
+			const aiEntry = this.state.lastResult?.ai_metadata?.[ metadataKey ];
+			const parsedEntry = this.parseFieldEntry( aiEntry );
+			const hasPendingNewTerms =
+				Array.isArray( parsedEntry.pendingNewTerms ) &&
+				parsedEntry.pendingNewTerms.length > 0;
+
 			if (
 				fieldValue === null ||
 				fieldValue === undefined ||
 				fieldValue === '' ||
 				( Array.isArray( fieldValue ) && fieldValue.length === 0 )
 			) {
+				if ( hasPendingNewTerms ) {
+					const message =
+						TainacanAI.texts?.pendingTermsNeedCreation ||
+						'Create suggested terms first, then fill this field.';
+					this.showToast( message );
+					return {
+						success: false,
+						error: message,
+						skipped: true,
+					};
+				}
+
 				const message =
 					TainacanAI.texts?.noFieldsToFill || 'No fields to fill';
 				return {

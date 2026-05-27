@@ -819,9 +819,9 @@ class DocumentAnalyzer {
     }
 
     /**
-     * @param array<string, array{value: mixed, evidence: mixed|null, label?: mixed}> $metadata
+     * @param array<string, array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}> $metadata
      * @param array<string, array<string, mixed>> $fields
-     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed}>
+     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}>
      */
     private function normalize_metadata_values_for_api(array $metadata, array $fields): array {
         $metadata_helper = ExtractionMetadata::get_instance();
@@ -851,20 +851,10 @@ class DocumentAnalyzer {
     }
 
     /**
-     * Match LLM `value` (prompt strings) to catalog rows `{ value: API, label: prompt }`.
-     *
-     * Taxonomy uses term IDs as `value` and term names as `label`. The same catalog shape
-     * can back relationship (item ID + title) or other whitelist fields later.
-     *
-     * @param array{value: mixed, evidence: mixed|null, label?: mixed} $entry
      * @param array<int, array<string, mixed>> $allowed_options
-     * @return array{value: mixed, evidence: mixed|null, label?: mixed}
+     * @return array<string, int|float|string>
      */
-    private function normalize_catalog_metadata_entry(array $entry, bool $is_multiple, array $allowed_options): array {
-        $raw_value = $entry['value'] ?? null;
-        $candidates = is_array($raw_value) ? $raw_value : [$raw_value];
-        $resolved_values = [];
-        $resolved_labels = [];
+    private function build_catalog_value_by_label(array $allowed_options): array {
         $value_by_label = [];
 
         foreach ($allowed_options as $row) {
@@ -896,6 +886,26 @@ class DocumentAnalyzer {
                 $value_by_label[$label] = $api;
             }
         }
+
+        return $value_by_label;
+    }
+
+    /**
+     * Match LLM `value` (prompt strings) to catalog rows `{ value: API, label: prompt }`.
+     *
+     * Taxonomy uses term IDs as `value` and term names as `label`. The same catalog shape
+     * can back relationship (item ID + title) or other whitelist fields later.
+     *
+     * @param array{value: mixed, evidence: mixed|null, label?: mixed} $entry
+     * @param array<int, array<string, mixed>> $allowed_options
+     * @return array{value: mixed, evidence: mixed|null, label?: mixed}
+     */
+    private function normalize_catalog_metadata_entry(array $entry, bool $is_multiple, array $allowed_options): array {
+        $raw_value = $entry['value'] ?? null;
+        $candidates = is_array($raw_value) ? $raw_value : [$raw_value];
+        $resolved_values = [];
+        $resolved_labels = [];
+        $value_by_label = $this->build_catalog_value_by_label($allowed_options);
 
         foreach ($candidates as $candidate) {
             $match_label = is_scalar($candidate) ? trim((string) $candidate) : '';
@@ -941,9 +951,12 @@ class DocumentAnalyzer {
     /**
      * Taxonomy: catalog normalization using `taxonomy_allowed_values`.
      *
-     * @param array{value: mixed, evidence: mixed|null, label?: mixed} $entry
+     * When `allow_new_terms` is true, unmatched string suggestions are preserved in
+     * `pending_new_terms` so the UI can offer user-driven term creation.
+     *
+     * @param array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>} $entry
      * @param array<string, mixed> $field
-     * @return array{value: mixed, evidence: mixed|null, label?: mixed}
+     * @return array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}
      */
     private function normalize_taxonomy_metadata_entry(array $entry, array $field): array {
         $taxonomy_id = isset($field['taxonomy_id']) ? (int) $field['taxonomy_id'] : 0;
@@ -955,8 +968,67 @@ class DocumentAnalyzer {
             ? $field['taxonomy_allowed_values']
             : [];
         $is_multiple = isset($field['multiple']) && $field['multiple'] === true;
+        $allow_new_terms = ($field['allow_new_terms'] ?? null) === true;
 
-        return $this->normalize_catalog_metadata_entry($entry, $is_multiple, $catalog);
+        $normalized = $this->normalize_catalog_metadata_entry($entry, $is_multiple, $catalog);
+
+        if (!$allow_new_terms) {
+            unset($normalized['pending_new_terms']);
+            return $normalized;
+        }
+
+        $value_by_label = $this->build_catalog_value_by_label($catalog);
+        $raw_value = $entry['value'] ?? null;
+        $candidates = is_array($raw_value) ? array_values($raw_value) : [$raw_value];
+        $raw_evidence = $entry['evidence'] ?? null;
+        $candidate_evidence = is_array($raw_evidence) ? array_values($raw_evidence) : [];
+        $shared_evidence = !is_array($raw_evidence) && is_scalar($raw_evidence)
+            ? trim((string) $raw_evidence)
+            : '';
+        $pending_new_terms = [];
+        $seen_pending_labels = [];
+
+        foreach ($candidates as $index => $candidate) {
+            $candidate_label = is_scalar($candidate) ? trim((string) $candidate) : '';
+            if ($candidate_label === '' || isset($value_by_label[$candidate_label]) || isset($seen_pending_labels[$candidate_label])) {
+                continue;
+            }
+
+            $evidence = null;
+            if (array_key_exists($index, $candidate_evidence) && is_scalar($candidate_evidence[$index])) {
+                $candidate_evidence_value = trim((string) $candidate_evidence[$index]);
+                if ($candidate_evidence_value !== '') {
+                    $evidence = $candidate_evidence_value;
+                }
+            } elseif ($shared_evidence !== '') {
+                $evidence = $shared_evidence;
+            }
+
+            $pending_new_terms[] = [
+                'label' => $candidate_label,
+                'evidence' => $evidence,
+            ];
+            $seen_pending_labels[$candidate_label] = true;
+        }
+
+        $has_resolved_values = false;
+        if (array_key_exists('value', $normalized)) {
+            $normalized_value = $normalized['value'];
+            if (is_array($normalized_value)) {
+                $has_resolved_values = count($normalized_value) > 0;
+            } else {
+                $has_resolved_values = $normalized_value !== null && $normalized_value !== '';
+            }
+        }
+
+        // Keep pending terms only when no catalog term was resolved.
+        if ($pending_new_terms !== [] && !$has_resolved_values) {
+            $normalized['pending_new_terms'] = $pending_new_terms;
+        } else {
+            unset($normalized['pending_new_terms']);
+        }
+
+        return $normalized;
     }
 
     /**
