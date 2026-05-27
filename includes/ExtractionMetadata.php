@@ -181,7 +181,7 @@ class ExtractionMetadata {
      * Complete the AI metadata payload with all expected slugs for this collection.
      *
      * @param array<string, mixed> $metadata
-     * @return array<string, array{value: mixed, evidence: mixed|null}>
+     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}>
      */
     public function complete_expected_fields(array $metadata, int $collection_id): array {
         $fields = $this->get_fields_for_collection($collection_id);
@@ -193,7 +193,7 @@ class ExtractionMetadata {
      *
      * @param array<string, mixed> $metadata
      * @param string[] $expected_slugs
-     * @return array<string, array{value: mixed, evidence: mixed|null}>
+     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}>
      */
     public function complete_expected_fields_with_slugs(array $metadata, array $expected_slugs): array {
         $completed = [];
@@ -204,10 +204,17 @@ class ExtractionMetadata {
             }
 
             if (is_array($entry) && array_key_exists('value', $entry)) {
-                $completed[$slug] = [
+                $normalized_entry = [
                     'value' => $entry['value'],
                     'evidence' => $entry['evidence'] ?? null,
                 ];
+                if (array_key_exists('label', $entry)) {
+                    $normalized_entry['label'] = $entry['label'];
+                }
+                if (array_key_exists('pending_new_terms', $entry) && is_array($entry['pending_new_terms'])) {
+                    $normalized_entry['pending_new_terms'] = $entry['pending_new_terms'];
+                }
+                $completed[$slug] = $normalized_entry;
                 continue;
             }
 
@@ -269,6 +276,7 @@ class ExtractionMetadata {
      *     taxonomy_id: int|null,
      *     allow_new_terms: bool|null,
      *     allowed_values_truncated: bool,
+     *     taxonomy_allowed_values: array<int, array{value: int, label: string}>,
      *     target_collection: int|null,
      *     relationship_search_field: int|null,
      *     allowed_values: string[]
@@ -323,7 +331,10 @@ class ExtractionMetadata {
             $lines[] = '- multivalued: ' . ($field['multiple'] ? 'true' : 'false');
             $lines[] = '- mode: ' . $this->get_field_extraction_mode($field);
 
-            foreach ($this->build_field_prompt_hints($field) as $key => $value) {
+            $field_prompt_hints = $this->build_field_prompt_hints($field);
+            unset($field_prompt_hints['taxonomy_allowed_values']);
+
+            foreach ($field_prompt_hints as $key => $value) {
                 $lines[] = '- ' . $key . ': ' . $this->format_prompt_value($value);
             }
         }
@@ -364,6 +375,8 @@ class ExtractionMetadata {
             'max_items' => true,
             'description' => true,
             'placeholder' => true,
+            // Internal runtime taxonomy catalog, not a prompt instruction.
+            'taxonomy_allowed_values' => true,
         ];
 
         foreach ($field as $key => $value) {
@@ -384,6 +397,23 @@ class ExtractionMetadata {
             }
 
             $field_hints[$key] = $value;
+        }
+
+        if (isset($field['taxonomy_allowed_values']) && is_array($field['taxonomy_allowed_values'])) {
+            $labels = [];
+            foreach ($field['taxonomy_allowed_values'] as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+                $label = trim((string) ($entry['label'] ?? ''));
+                if ($label !== '') {
+                    $labels[] = $label;
+                }
+            }
+
+            if ($labels !== []) {
+                $field_hints['allowed_values'] = array_values(array_unique($labels));
+            }
         }
 
         return $field_hints;
@@ -471,8 +501,8 @@ class ExtractionMetadata {
                 $field_hints['taxonomy_id'] = $taxonomy_id;
 
                 $taxonomy_allowed_values = $this->get_ranked_taxonomy_allowed_values($taxonomy_id);
-                if ($taxonomy_allowed_values['allowed_values'] !== []) {
-                    $field_hints['allowed_values'] = $taxonomy_allowed_values['allowed_values'];
+                if ($taxonomy_allowed_values['taxonomy_allowed_values'] !== []) {
+                    $field_hints['taxonomy_allowed_values'] = $taxonomy_allowed_values['taxonomy_allowed_values'];
                 }
                 if ($taxonomy_allowed_values['allowed_values_truncated']) {
                     $field_hints['allowed_values_truncated'] = true;
@@ -499,7 +529,10 @@ class ExtractionMetadata {
     }
 
     /**
-     * @return array{allowed_values: string[], allowed_values_truncated: bool}
+     * @return array{
+     *     taxonomy_allowed_values: array<int, array{value: int, label: string}>,
+     *     allowed_values_truncated: bool,
+     * }
      */
     private function get_ranked_taxonomy_allowed_values(int $taxonomy_id): array {
         $limit = (int) apply_filters(
@@ -509,8 +542,11 @@ class ExtractionMetadata {
         );
         $limit = max(1, $limit);
 
-        $term_names = $this->fetch_ranked_taxonomy_term_names($taxonomy_id, $limit + 1);
-        $term_names = array_values(array_unique(array_filter($term_names, static fn (string $name): bool => $name !== '')));
+        $terms = $this->fetch_ranked_taxonomy_terms($taxonomy_id, $limit + 1);
+        $term_names = array_values(array_unique(array_filter(
+            array_map(static fn (array $term): string => trim((string) ($term['label'] ?? '')), $terms),
+            static fn (string $name): bool => $name !== ''
+        )));
 
         $is_truncated = count($term_names) > $limit;
         if ($is_truncated) {
@@ -525,19 +561,36 @@ class ExtractionMetadata {
             $is_truncated
         );
 
+        $allowed_labels = array_values(array_unique(array_filter(
+            array_map(static fn ($name): string => is_string($name) ? trim($name) : '', $term_names),
+            static fn (string $name): bool => $name !== ''
+        )));
+
+        $taxonomy_allowed_values = [];
+        foreach ($terms as $term) {
+            $label = trim((string) ($term['label'] ?? ''));
+            $id = isset($term['value']) ? (int) $term['value'] : 0;
+            if ($label === '' || $id <= 0 || !in_array($label, $allowed_labels, true)) {
+                continue;
+            }
+            $taxonomy_allowed_values[] = [
+                'value' => $id,
+                'label' => $label,
+            ];
+        }
+
+        $taxonomy_allowed_values = array_values(array_unique($taxonomy_allowed_values, SORT_REGULAR));
+
         return [
-            'allowed_values' => array_values(array_unique(array_filter(
-                array_map(static fn ($name): string => is_string($name) ? trim($name) : '', $term_names),
-                static fn (string $name): bool => $name !== ''
-            ))),
+            'taxonomy_allowed_values' => $taxonomy_allowed_values,
             'allowed_values_truncated' => $is_truncated,
         ];
     }
 
     /**
-     * @return string[]
+     * @return array<int, array{value: int, label: string}>
      */
-    private function fetch_ranked_taxonomy_term_names(int $taxonomy_id, int $limit): array {
+    private function fetch_ranked_taxonomy_terms(int $taxonomy_id, int $limit): array {
         if ($taxonomy_id <= 0 || $limit <= 0) {
             return [];
         }
@@ -567,25 +620,33 @@ class ExtractionMetadata {
             return [];
         }
 
-        $names = [];
+        $terms_list = [];
         foreach ($terms as $term) {
-            if ($term instanceof \Tainacan\Entities\Term && method_exists($term, 'get_name')) {
+            if ($term instanceof \Tainacan\Entities\Term && method_exists($term, 'get_name') && method_exists($term, 'get_id')) {
+                $id = (int) $term->get_id();
                 $name = trim((string) $term->get_name());
-                if ($name !== '') {
-                    $names[] = $name;
+                if ($name !== '' && $id > 0) {
+                    $terms_list[] = [
+                        'value' => $id,
+                        'label' => $name,
+                    ];
                 }
                 continue;
             }
 
             if ($term instanceof \WP_Term) {
+                $id = (int) $term->term_id;
                 $name = trim((string) $term->name);
-                if ($name !== '') {
-                    $names[] = $name;
+                if ($name !== '' && $id > 0) {
+                    $terms_list[] = [
+                        'value' => $id,
+                        'label' => $name,
+                    ];
                 }
             }
         }
 
-        return $names;
+        return $terms_list;
     }
 
     private function normalize_scalar_constraint(mixed $value): int|float|string|null {
@@ -710,9 +771,10 @@ class ExtractionMetadata {
 
     public function build_field_format_section(): string {
         return 'FIELD FORMAT' . "\n" .
-            'Each slug maps to {"value": scalar|array|null, "evidence": string|array|null}.' . "\n" .
+            'Each slug maps to {"value": scalar|array|null, "evidence": string|array|null, "label"?: scalar|array|null}.' . "\n" .
             'Single-value fields: scalar value and string|null evidence.' . "\n" .
             'Multivalued fields: value and evidence must be parallel arrays with equal length.' . "\n" .
+            'Use label only when a human-readable display differs from value (for example taxonomy names for term IDs).' . "\n" .
             'Missing support: set value to null, evidence null or omitted.' . "\n" .
             'Output must be ONLY JSON (no markdown, no comments, no prose).';
     }

@@ -159,15 +159,31 @@ Each extracted field should be returned as an object:
 }
 ```
 
+For taxonomy fields with `allow_new_terms: true`, responses may also include `pending_new_terms` when the AI found evidence for a term label that does not match current `allowed_values`:
+
+```json
+{
+  "assunto": {
+    "value": [],
+    "evidence": ["Caption under photo"],
+    "pending_new_terms": [
+      { "label": "Photomontage", "evidence": "Caption under photo" }
+    ]
+  }
+}
+```
+
+In that case, the item form shows these suggestions in a dedicated block and offers explicit term creation. Creation is user-driven (no automatic insertion during analysis).
+
 Evidence instructions are appended automatically at analysis time (image vs. text vs. scanned PDF). Prompt templates list example field keys only; they do not define per-field evidence text.
 
 Multivalued fields use **parallel arrays** inside one object (`value` and `evidence` with the same length), not an array of per-item `{ value, evidence }` objects.
 
 The plugin appends field blocks for metadata marked for extraction (slug as JSON key). These blocks include optional guidance from description/placeholder and optional constraints derived from metadata settings, such as `required`, multivalue limits (`max_items`), type limits (`min/max/step`, `max_length`, `mask`), `allowed_values` for selectboxes, and taxonomy/relationship structure hints. It does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)). Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
 
-You can customize this per metadatum via `tainacan_ai_extraction_field`. The plugin itself now uses this same hook to inject built-in type hints, so custom metadata types or site-specific rules can reuse one API.
+You can customize this per metadatum via `tainacan_ai_extraction_field`. The plugin itself now uses this same hook to inject built-in type hints, so custom metadata types or site-specific rules can reuse one API. Catalog-style hints (for example `taxonomy_allowed_values` on the item form) use rows `{ "value", "label" }`: `value` is the machine-readable payload for REST (term ID today), and `label` is the string shown in prompts and in the UI.
 
-Taxonomy insertion/creation is not part of this phase: taxonomy values remain suggestion-oriented in extraction output. Insertion strategy is tracked separately in [issue #8](https://github.com/tainacan/tainacan-ai/issues/8).
+Taxonomy insertion/creation is not automatic during analysis: taxonomy values remain suggestion-oriented in extraction output. New terms can be created explicitly from the item form when `allow_new_terms` is enabled.
 
 Filter: `tainacan_ai_evidence_instructions` to customize the appended evidence block.
 

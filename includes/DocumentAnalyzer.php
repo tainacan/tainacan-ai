@@ -24,7 +24,7 @@ class DocumentAnalyzer {
     private ?int $current_attachment_id = null;
     private ExifExtractor $exif_extractor;
     private CollectionPrompts $collection_prompts;
-    /** @var array<string, array{prompt: string, sections: array<string, string>, expected_slugs: string[]}> */
+    /** @var array<string, array{prompt: string, sections: array<string, string>, expected_slugs: string[], fields: array<string, array<string, mixed>>}> */
     private array $prompt_context_cache = [];
 
     /**
@@ -239,10 +239,14 @@ class DocumentAnalyzer {
         $raw_metadata = $ai_result['metadata'] ?? $ai_result;
         if (is_array($raw_metadata)) {
             $normalized = EvidenceInstructions::normalize_metadata($raw_metadata);
+            $field_definitions = [];
 
             if ($this->collection_id) {
                 $context = $this->resolve_analysis_prompt_context($analysis_mode);
                 $expected_slugs = !is_wp_error($context) ? ($context['expected_slugs'] ?? []) : [];
+                $field_definitions = !is_wp_error($context) && is_array($context['fields'] ?? null)
+                    ? $context['fields']
+                    : [];
 
                 if (is_array($expected_slugs) && $expected_slugs !== []) {
                     $normalized = ExtractionMetadata::get_instance()->complete_expected_fields_with_slugs(
@@ -252,6 +256,10 @@ class DocumentAnalyzer {
                 } else {
                     $normalized = ExtractionMetadata::get_instance()->complete_expected_fields($normalized, $this->collection_id);
                 }
+            }
+
+            if (is_array($field_definitions) && $field_definitions !== []) {
+                $normalized = $this->normalize_metadata_values_for_api($normalized, $field_definitions);
             }
 
             $result['ai_metadata'] = $normalized;
@@ -776,7 +784,12 @@ class DocumentAnalyzer {
     }
 
     /**
-     * @return array{prompt: string, sections: array<string, string>, expected_slugs: string[]}|\WP_Error
+     * @return array{
+     *     prompt: string,
+     *     sections: array<string, string>,
+     *     expected_slugs: string[],
+     *     fields: array<string, array<string, mixed>>
+     * }|\WP_Error
      */
     private function resolve_analysis_prompt_context(string $analysis_mode): array|\WP_Error {
         if (isset($this->prompt_context_cache[$analysis_mode])) {
@@ -798,10 +811,250 @@ class DocumentAnalyzer {
             'prompt' => $prompt,
             'sections' => is_array($context['sections'] ?? null) ? $context['sections'] : [],
             'expected_slugs' => is_array($context['expected_slugs'] ?? null) ? array_values($context['expected_slugs']) : [],
+            'fields' => is_array($context['fields'] ?? null) ? $context['fields'] : [],
         ];
 
         $this->prompt_context_cache[$analysis_mode] = $resolved;
         return $resolved;
+    }
+
+    /**
+     * @param array<string, array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}> $metadata
+     * @param array<string, array<string, mixed>> $fields
+     * @return array<string, array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}>
+     */
+    private function normalize_metadata_values_for_api(array $metadata, array $fields): array {
+        $metadata_helper = ExtractionMetadata::get_instance();
+
+        foreach ($metadata as $slug => $entry) {
+            if (!is_string($slug) || !is_array($entry) || !array_key_exists($slug, $fields) || !array_key_exists('value', $entry)) {
+                continue;
+            }
+
+            $field = $fields[$slug];
+            $type = $metadata_helper->format_metadata_type((string) ($field['type'] ?? ''));
+
+            if ($type === 'taxonomy') {
+                $metadata[$slug] = $this->normalize_taxonomy_metadata_entry($entry, $field);
+                continue;
+            }
+
+            // Future: relationship fields can reuse normalize_catalog_metadata_entry with
+            // relationship_allowed_values (same { value, label } catalog shape).
+
+            if ($type === 'date') {
+                $metadata[$slug] = $this->normalize_date_metadata_entry($entry);
+            }
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $allowed_options
+     * @return array<string, int|float|string>
+     */
+    private function build_catalog_value_by_label(array $allowed_options): array {
+        $value_by_label = [];
+
+        foreach ($allowed_options as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $label = trim((string) ($row['label'] ?? ''));
+            $api = $row['value'] ?? null;
+
+            if ($label === '' || !is_scalar($api) || is_bool($api)) {
+                continue;
+            }
+
+            if (is_string($api)) {
+                $api = trim($api);
+                if ($api === '') {
+                    continue;
+                }
+            } elseif (is_int($api) || is_float($api)) {
+                if ($api <= 0) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+
+            if (!isset($value_by_label[$label])) {
+                $value_by_label[$label] = $api;
+            }
+        }
+
+        return $value_by_label;
+    }
+
+    /**
+     * Match LLM `value` (prompt strings) to catalog rows `{ value: API, label: prompt }`.
+     *
+     * Taxonomy uses term IDs as `value` and term names as `label`. The same catalog shape
+     * can back relationship (item ID + title) or other whitelist fields later.
+     *
+     * @param array{value: mixed, evidence: mixed|null, label?: mixed} $entry
+     * @param array<int, array<string, mixed>> $allowed_options
+     * @return array{value: mixed, evidence: mixed|null, label?: mixed}
+     */
+    private function normalize_catalog_metadata_entry(array $entry, bool $is_multiple, array $allowed_options): array {
+        $raw_value = $entry['value'] ?? null;
+        $candidates = is_array($raw_value) ? $raw_value : [$raw_value];
+        $resolved_values = [];
+        $resolved_labels = [];
+        $value_by_label = $this->build_catalog_value_by_label($allowed_options);
+
+        foreach ($candidates as $candidate) {
+            $match_label = is_scalar($candidate) ? trim((string) $candidate) : '';
+            if ($match_label === '' || !isset($value_by_label[$match_label])) {
+                continue;
+            }
+
+            $resolved_values[] = $value_by_label[$match_label];
+            $resolved_labels[] = $match_label;
+        }
+
+        $resolved_values = array_values(array_unique($resolved_values, SORT_REGULAR));
+        $resolved_labels = array_values(array_unique(array_filter(
+            array_map(
+                static function ($lbl): string {
+                    return is_string($lbl) ? trim($lbl) : '';
+                },
+                $resolved_labels
+            ),
+            static fn (string $lbl): bool => $lbl !== ''
+        )));
+
+        if ($is_multiple) {
+            $entry['value'] = $resolved_values;
+            if ($resolved_labels !== []) {
+                $entry['label'] = $resolved_labels;
+            } else {
+                unset($entry['label']);
+            }
+            return $entry;
+        }
+
+        $entry['value'] = $resolved_values[0] ?? null;
+        if ($resolved_labels !== []) {
+            $entry['label'] = $resolved_labels[0];
+        } else {
+            unset($entry['label']);
+        }
+
+        return $entry;
+    }
+
+    /**
+     * Taxonomy: catalog normalization using `taxonomy_allowed_values`.
+     *
+     * When `allow_new_terms` is true, unmatched string suggestions are preserved in
+     * `pending_new_terms` so the UI can offer user-driven term creation.
+     *
+     * @param array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>} $entry
+     * @param array<string, mixed> $field
+     * @return array{value: mixed, evidence: mixed|null, label?: mixed, pending_new_terms?: array<int, array{label: string, evidence: string|null}>}
+     */
+    private function normalize_taxonomy_metadata_entry(array $entry, array $field): array {
+        $taxonomy_id = isset($field['taxonomy_id']) ? (int) $field['taxonomy_id'] : 0;
+        if ($taxonomy_id <= 0) {
+            return $entry;
+        }
+
+        $catalog = is_array($field['taxonomy_allowed_values'] ?? null)
+            ? $field['taxonomy_allowed_values']
+            : [];
+        $is_multiple = isset($field['multiple']) && $field['multiple'] === true;
+        $allow_new_terms = ($field['allow_new_terms'] ?? null) === true;
+
+        $normalized = $this->normalize_catalog_metadata_entry($entry, $is_multiple, $catalog);
+
+        if (!$allow_new_terms) {
+            unset($normalized['pending_new_terms']);
+            return $normalized;
+        }
+
+        $value_by_label = $this->build_catalog_value_by_label($catalog);
+        $raw_value = $entry['value'] ?? null;
+        $candidates = is_array($raw_value) ? array_values($raw_value) : [$raw_value];
+        $raw_evidence = $entry['evidence'] ?? null;
+        $candidate_evidence = is_array($raw_evidence) ? array_values($raw_evidence) : [];
+        $shared_evidence = !is_array($raw_evidence) && is_scalar($raw_evidence)
+            ? trim((string) $raw_evidence)
+            : '';
+        $pending_new_terms = [];
+        $seen_pending_labels = [];
+
+        foreach ($candidates as $index => $candidate) {
+            $candidate_label = is_scalar($candidate) ? trim((string) $candidate) : '';
+            if ($candidate_label === '' || isset($value_by_label[$candidate_label]) || isset($seen_pending_labels[$candidate_label])) {
+                continue;
+            }
+
+            $evidence = null;
+            if (array_key_exists($index, $candidate_evidence) && is_scalar($candidate_evidence[$index])) {
+                $candidate_evidence_value = trim((string) $candidate_evidence[$index]);
+                if ($candidate_evidence_value !== '') {
+                    $evidence = $candidate_evidence_value;
+                }
+            } elseif ($shared_evidence !== '') {
+                $evidence = $shared_evidence;
+            }
+
+            $pending_new_terms[] = [
+                'label' => $candidate_label,
+                'evidence' => $evidence,
+            ];
+            $seen_pending_labels[$candidate_label] = true;
+        }
+
+        $has_resolved_values = false;
+        if (array_key_exists('value', $normalized)) {
+            $normalized_value = $normalized['value'];
+            if (is_array($normalized_value)) {
+                $has_resolved_values = count($normalized_value) > 0;
+            } else {
+                $has_resolved_values = $normalized_value !== null && $normalized_value !== '';
+            }
+        }
+
+        // Keep pending terms only when no catalog term was resolved.
+        if ($pending_new_terms !== [] && !$has_resolved_values) {
+            $normalized['pending_new_terms'] = $pending_new_terms;
+        } else {
+            unset($normalized['pending_new_terms']);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array{value: mixed, evidence: mixed|null, label?: mixed} $entry
+     * @return array{value: mixed, evidence: mixed|null, label?: mixed}
+     */
+    private function normalize_date_metadata_entry(array $entry): array {
+        $value = $entry['value'] ?? null;
+
+        if (!is_string($value)) {
+            return $entry;
+        }
+
+        $normalized_value = trim($value);
+        if ($normalized_value === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $normalized_value)) {
+            return $entry;
+        }
+
+        $timestamp = strtotime($normalized_value . ' 00:00:00');
+        if ($timestamp === false) {
+            return $entry;
+        }
+
+        $date_format = (string) get_option('date_format', 'Y-m-d');
+        $entry['label'] = wp_date($date_format, $timestamp);
+        return $entry;
     }
 
     /**

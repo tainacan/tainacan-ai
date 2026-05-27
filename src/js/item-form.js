@@ -99,7 +99,9 @@ import { addAction } from '@wordpress/hooks';
                 <div class="tainacan-ai-sidebar-panel">
                     <div class="tainacan-ai-sidebar-header">
                         <h3>
-                            <span class="dashicons dashicons-format-aside"></span>
+                            <svg class="tainacan-ai-icon" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" id="svg5" width="32" height="32" version="1.1" viewBox="0 0 8.467 8.467">
+								<g id="layer1" transform="translate(-51.439 -147.782)"><path id="path11554" d="m58.994 153.057-.247.062-.349.082c.124.134.217.267.282.396.158.318.161.607.012.927v.002l-.005.007c-.172.37-.412.548-.824.616-.002 0-.004 0-.005.002-.074.012-.16.018-.257.018-.383 0-.864-.118-1.415-.372l-.009-.005a.534.534 0 0 0-.078-.033 4.111 4.111 0 0 1-.427-.191h-.004c-.016.064-.03.131-.05.21a3.34 3.34 0 0 1-.083.302l-.01.029c.144.07.273.124.38.164l.037.019c.608.282 1.165.426 1.658.426.122 0 .24-.007.352-.026a1.588 1.588 0 0 0 1.235-.927l.003-.007c.215-.46.212-.95-.014-1.405-.051-.102-.111-.2-.182-.297z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><path id="path11552" d="M57.188 148.868c-.079 0-.16.006-.241.017-.359.047-.732.2-1.112.455.028.116.055.228.077.311.095.025.226.055.36.087.266-.158.536-.28.748-.307.366-.05.646.046.91.31h.003v.002c.27.272.363.549.314.915a1.85 1.85 0 0 1-.213.62l.055.216c.01.04.017.061.026.091.03.01.053.016.094.027l.238.058c.19-.32.306-.634.346-.94a1.592 1.592 0 0 0-.467-1.375l-.004-.003a1.583 1.583 0 0 0-1.134-.484z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><path id="path1" d="M53.574 148.312a1.671 1.671 0 0 0-.67.161l-.006.003c-1.05.493-1.246 1.706-.527 3.248l.015.034c.122.323.356.82.783 1.372a5.33 5.33 0 0 0-.208 1.435v.148h.148c.285 0 .731-.031 1.282-.17-.036-.007-.067-.016-.108-.025a3.406 3.406 0 0 1-.301-.083.791.791 0 0 1-.16-.071.441.441 0 0 1-.222-.295h-.002c-.028-.15 0-.435.101-.79a.55.55 0 0 0-.096-.486 4.834 4.834 0 0 1-.717-1.266l-.016-.034c-.328-.704-.421-1.293-.356-1.697.066-.404.238-.642.618-.82l.004-.002c.168-.078.323-.117.476-.115v-.001c.153 0 .305.042.465.122.15.075.33.237.496.415l.03-.121c.033-.14.067-.281.11-.409l.036-.092v-.001a2.172 2.172 0 0 0-.424-.284 1.605 1.605 0 0 0-.75-.176z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><g id="path6974" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(1.07603 0 0 1.0728 -16.96 -11.535)"><path id="path10029" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g><g id="path6968" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(1.51152 0 0 1.50697 -44.11 -74.969)"><path id="path10038" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g><g id="path6976" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(.77239 0 0 .77006 3.277 37.782)"><path id="path10046" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g></g>
+							</svg>
                             ${
 								TainacanAI.texts?.analysisResults ||
 								'Analysis Results'
@@ -192,16 +194,33 @@ import { addAction } from '@wordpress/hooks';
 			} );
 
 			// Fill individual field
-			$( document ).on( 'click', '.tainacan-ai-fill-field', ( e ) => {
+			$( document ).on( 'click', '.tainacan-ai-fill-field', async ( e ) => {
 				const $btn = $( e.currentTarget );
 				const metadataKey = $btn.data( 'metadata-key' );
-				const value = $btn.data( 'value' );
-				this.fillTainacanField( metadataKey, value, $btn );
+				await this.fillTainacanField( metadataKey, null, $btn, {
+					dispatchReloadEvent: true,
+				} );
 			} );
 
+			$( document ).on(
+				'click',
+				'.tainacan-ai-create-pending-term',
+				async ( e ) => {
+					const $btn = $( e.currentTarget );
+					const metadataKey = String( $btn.data( 'metadata-key' ) || '' );
+					const termIndex = Number( $btn.data( 'term-index' ) );
+
+					await this.createPendingTermAndFill(
+						metadataKey,
+						termIndex,
+						$btn
+					);
+				}
+			);
+
 			// Fill all extraction-enabled fields
-			$( document ).on( 'click', '#tainacan-ai-fill-all', () => {
-				this.fillAllExtractionFields();
+			$( document ).on( 'click', '#tainacan-ai-fill-all', async () => {
+				await this.fillAllExtractionFields();
 			} );
 
 			// Open panel via indicator
@@ -658,7 +677,7 @@ import { addAction } from '@wordpress/hooks';
 		},
 
 		/**
-		 * Coerce AI field payload to { value, evidence } (parallel arrays when multivalued).
+		 * Coerce AI field payload to { value, evidence, label? } (parallel arrays when multivalued).
 		 */
 		parseFieldEntry( data ) {
 			if (
@@ -678,6 +697,10 @@ import { addAction } from '@wordpress/hooks';
 			if ( data && typeof data === 'object' && 'value' in data ) {
 				let value = data.value;
 				let evidence = data.evidence ?? null;
+				let label = data.label ?? null;
+				const pendingNewTerms = this.normalizePendingNewTerms(
+					data.pending_new_terms
+				);
 
 				if (
 					Array.isArray( value ) &&
@@ -701,12 +724,56 @@ import { addAction } from '@wordpress/hooks';
 					if ( ! hasEvidence ) {
 						evidence = coalesced.evidence;
 					}
+
+					const hasLabel =
+						label !== null &&
+						label !== undefined &&
+						label !== '' &&
+						! ( Array.isArray( label ) && label.length === 0 );
+					if ( ! hasLabel ) {
+						label = coalesced.label;
+					}
 				}
 
-				return { value, evidence };
+				return { value, evidence, label, pendingNewTerms };
 			}
 
-			return { value: data, evidence: null };
+			return {
+				value: data,
+				evidence: null,
+				label: null,
+				pendingNewTerms: [],
+			};
+		},
+
+		normalizePendingNewTerms( pendingTerms ) {
+			if ( ! Array.isArray( pendingTerms ) ) {
+				return [];
+			}
+
+			return pendingTerms
+				.map( ( row ) => {
+					if ( ! row || typeof row !== 'object' || Array.isArray( row ) ) {
+						return null;
+					}
+
+					const label =
+						typeof row.label === 'string' ? row.label.trim() : '';
+					if ( ! label ) {
+						return null;
+					}
+
+					const evidence =
+						row.evidence === null || row.evidence === undefined
+							? null
+							: String( row.evidence ).trim();
+
+					return {
+						label,
+						evidence: evidence || null,
+					};
+				} )
+				.filter( Boolean );
 		},
 
 		coalesceValueEvidenceObjects( items ) {
@@ -715,7 +782,19 @@ import { addAction } from '@wordpress/hooks';
 				evidence: items.map( ( item ) =>
 					item.evidence != null ? String( item.evidence ) : ''
 				),
+				label: items.map( ( item ) =>
+					item.label != null ? String( item.label ) : ''
+				),
 			};
+		},
+
+		isEmptyMetadataValue( value ) {
+			return (
+				value === null ||
+				value === undefined ||
+				value === '' ||
+				( Array.isArray( value ) && value.length === 0 )
+			);
 		},
 
 		formatEvidence( evidence ) {
@@ -738,6 +817,71 @@ import { addAction } from '@wordpress/hooks';
 			}
 
 			return this.escapeHtml( String( evidence ) );
+		},
+
+		renderPendingNewTermsBlock(
+			metadataKey,
+			pendingTerms,
+			canCreatePendingTerms = false
+		) {
+			const title =
+				TainacanAI.texts?.pendingTermsTitle || 'Suggested new terms';
+			const helperText =
+				TainacanAI.texts?.pendingTermsHint ||
+				'No existing term matched. Review and create if appropriate.';
+			const createText =
+				TainacanAI.texts?.createTermAndApply || 'Create';
+
+			const rows = pendingTerms
+				.map( (term, index) => {
+					const evidence = term?.evidence
+						? `<div class="tainacan-ai-pending-term-evidence">${ this.escapeHtml(
+								String( term.evidence )
+						  ) }</div>`
+						: '';
+
+					return `
+                        <div class="tainacan-ai-pending-term-row">
+                            <div class="tainacan-ai-pending-term-controls">
+                                <input
+                                    type="text"
+                                    class="tainacan-ai-pending-term-input"
+                                    data-metadata-key="${ this.escapeHtml(
+										metadataKey
+									) }"
+                                    data-term-index="${ index }"
+                                    value="${ this.escapeHtml( term.label ) }"
+                                />
+                                ${
+									canCreatePendingTerms
+										? `<button type="button"
+                                    class="button button-secondary tainacan-ai-create-pending-term"
+                                    data-metadata-key="${ this.escapeHtml(
+										metadataKey
+									) }"
+                                    data-term-index="${ index }">
+                                    ${ this.escapeHtml( createText ) }
+                                </button>`
+										: ''
+								}
+                            </div>
+                            ${ evidence }
+                        </div>
+                    `;
+				} )
+				.join( '' );
+
+			return `
+                <div class="tainacan-ai-pending-terms-block">
+                    <div class="tainacan-ai-pending-terms-title">${ this.escapeHtml(
+						title
+					) }</div>
+                    <div class="tainacan-ai-pending-terms-hint">${ this.escapeHtml(
+						helperText
+					) }</div>
+                    <div class="tainacan-ai-pending-terms-list">${ rows }</div>
+                </div>
+            `;
 		},
 
 		/**
@@ -765,38 +909,45 @@ import { addAction } from '@wordpress/hooks';
 			Object.entries( metadata ).forEach( ( [ key, data ], index ) => {
 				const formattedLabel = this.formatLabel( key );
 
-				const { value, evidence } = this.parseFieldEntry( data );
-				const formattedValue = this.formatValue( value );
-				const formattedEvidence = this.formatEvidence( evidence );
-				// Convert arrays to comma-separated string for field filling
-				let rawValue;
-				if ( Array.isArray( value ) ) {
-					rawValue = value.join( ', ' );
-				} else if ( typeof value === 'string' ) {
-					rawValue = value;
-				} else if ( value === null || value === undefined ) {
-					rawValue = '';
-				} else {
-					rawValue = JSON.stringify( value );
-				}
-				const isEmpty =
-					value === null ||
-					value === undefined ||
-					( Array.isArray( value ) && value.length === 0 ) ||
-					value === '';
-
 				const extractionFields = TainacanAI.extractionFields || {};
 				const extractionField = extractionFields[ key ];
+				const { value, evidence, label, pendingNewTerms } =
+					this.parseFieldEntry( data );
+				const displayValue = this.resolveDisplayValueForField(
+					value,
+					label,
+					extractionField
+				);
+				const formattedValue = this.formatValue( displayValue );
+				const formattedEvidence = this.formatEvidence( evidence );
+				const isEmpty = this.isEmptyMetadataValue( displayValue );
+				const hasFillValue = ! this.isEmptyMetadataValue( value );
+				const hasPendingNewTerms =
+					Array.isArray( pendingNewTerms ) && pendingNewTerms.length > 0;
 				const displayLabel = extractionField?.name
 					? this.escapeHtml( extractionField.name )
 					: formattedLabel;
-				const canFill = extractionField && ! isEmpty;
+				const canFill = extractionField && hasFillValue;
+				const canCreatePendingTerms =
+					extractionField &&
+					extractionField.allow_new_terms === true &&
+					String( extractionField?.type || '' )
+						.toLowerCase()
+						.includes( 'taxonomy' ) &&
+					Number( extractionField?.taxonomy_id ) > 0;
 				const notFoundText =
 					TainacanAI.texts?.valueNotFound || 'Not found in document';
+				const pendingTermsHtml = hasPendingNewTerms
+					? this.renderPendingNewTermsBlock(
+							key,
+							pendingNewTerms,
+							canCreatePendingTerms
+					  )
+					: '';
 
 				let $item;
 
-				if ( isEmpty ) {
+				if ( isEmpty && ! hasPendingNewTerms ) {
 					$item = $( `
                     <div class="tainacan-ai-metadata-item-with-evidence is-not-found"
                          style="animation-delay: ${ index * 0.05 }s"
@@ -818,16 +969,6 @@ import { addAction } from '@wordpress/hooks';
                             <div class="tainacan-ai-metadata-top">
                                 <div class="tainacan-ai-metadata-label-with-copy">
                                     <span class="tainacan-ai-metadata-label">${ displayLabel }</span>
-                                    ${
-										canFill
-											? `<span class="tainacan-ai-extraction-field-badge" title="${ TainacanAI.texts?.fieldLabel || 'Tainacan field: ' }${ this.escapeHtml(
-													extractionField.name ||
-														extractionField
-											  ) }">
-                                        <span class="dashicons dashicons-yes-alt"></span>
-                                    </span>`
-											: ''
-									}
                                 </div>
                                 <div class="tainacan-ai-metadata-actions-mini">
                                     ${
@@ -836,9 +977,6 @@ import { addAction } from '@wordpress/hooks';
                                     <button type="button" class="tainacan-ai-fill-field"
                                             data-metadata-key="${ this.escapeHtml(
 												key
-											) }"
-                                            data-value="${ this.escapeHtml(
-												rawValue
 											) }"
                                             title="${
 												TainacanAI.texts?.fillField ||
@@ -850,8 +988,8 @@ import { addAction } from '@wordpress/hooks';
 											: ''
 									}
                                     <button type="button" class="tainacan-ai-copy-mini"
-                                            data-value="${ this.escapeHtml(
-												rawValue
+                                            data-metadata-key="${ this.escapeHtml(
+												key
 											) }"
                                             title="${
 												TainacanAI.texts?.copy ||
@@ -861,9 +999,14 @@ import { addAction } from '@wordpress/hooks';
                                     </button>
                                 </div>
                             </div>
-                            <div class="tainacan-ai-metadata-value-box">
+                            ${
+								isEmpty
+									? ''
+									: `<div class="tainacan-ai-metadata-value-box">
                                 <div class="tainacan-ai-metadata-value-text">${ formattedValue }</div>
-                            </div>
+                            </div>`
+							}
+                            ${ pendingTermsHtml }
                         </div>
                         ${
 							formattedEvidence
@@ -962,7 +1105,8 @@ import { addAction } from '@wordpress/hooks';
 		 * Copy value to clipboard
 		 */
 		async copyValue( $btn ) {
-			const value = $btn.data( 'value' );
+			const metadataKey = $btn.data( 'metadataKey' );
+			const value = this.resolveClipboardValueForMetadata( metadataKey, $btn );
 
 			try {
 				await navigator.clipboard.writeText( value );
@@ -978,6 +1122,44 @@ import { addAction } from '@wordpress/hooks';
 			}
 		},
 
+		resolveClipboardValueForMetadata( metadataKey, $btn = null ) {
+			const metadataEntry =
+				metadataKey && this.state.lastResult?.ai_metadata
+					? this.state.lastResult.ai_metadata[ metadataKey ]
+					: undefined;
+			if ( metadataEntry !== undefined ) {
+				const { value, label } = this.parseFieldEntry( metadataEntry );
+				return this.stringifyClipboardValue(
+					this.resolveDisplayValueForKey( metadataKey, value, label )
+				);
+			}
+
+			// Backward-compatible fallback for previously rendered nodes.
+			return String( $btn?.data( 'value' ) ?? '' );
+		},
+
+		stringifyClipboardValue( value ) {
+			if ( Array.isArray( value ) ) {
+				return value
+					.map( ( entry ) =>
+						entry === null || entry === undefined
+							? ''
+							: typeof entry === 'object'
+							? JSON.stringify( entry )
+							: String( entry )
+					)
+					.join( ', ' );
+			}
+
+			if ( value === null || value === undefined ) {
+				return '';
+			}
+
+			return typeof value === 'object'
+				? JSON.stringify( value )
+				: String( value );
+		},
+
 		/**
 		 * Copy all values
 		 */
@@ -986,11 +1168,10 @@ import { addAction } from '@wordpress/hooks';
 
 			const text = Object.entries( this.state.lastResult.ai_metadata )
 				.map( ( [ key, data ] ) => {
-					const { value } = this.parseFieldEntry( data );
-					const formattedValue =
-						typeof value === 'string'
-							? value
-							: JSON.stringify( value );
+					const { value, label } = this.parseFieldEntry( data );
+					const formattedValue = this.stringifyClipboardValue(
+						this.resolveDisplayValueForKey( key, value, label )
+					);
 					return `${ this.formatLabel( key ) }: ${ formattedValue }`;
 				} )
 				.join( '\n' );
@@ -1138,326 +1319,591 @@ import { addAction } from '@wordpress/hooks';
 			return this.escapeHtml( String( value ) );
 		},
 
-		/**
-		 * Fill a Tainacan field with extracted value
-		 */
-		fillTainacanField( metadataKey, value, $btn = null ) {
-			const extractionFields = TainacanAI.extractionFields || {};
-			const fieldInfo = extractionFields[ metadataKey ];
-
-			if ( ! fieldInfo ) {
-				console.log(
-					`[TainacanAI] Field "${ metadataKey }" is not enabled for extraction`
-				);
-				return false;
+		resolveDisplayValue( value, label = null ) {
+			if ( ! this.isEmptyMetadataValue( label ) ) {
+				return label;
 			}
 
-			// Try to find the Tainacan field
-			const metadataId = fieldInfo.id || fieldInfo;
-			console.log(
-				`[TainacanAI] Attempting to fill "${ metadataKey }" -> id=${ metadataId }, slug=${ fieldInfo.slug }`
-			);
-
-			const $field = this.findTainacanField( metadataId, fieldInfo.slug );
-
-			if ( ! $field || ! $field.length ) {
-				console.log(
-					`[TainacanAI] Field "${ metadataKey }" NOT found in DOM`
-				);
-				return false;
-			}
-
-			console.log(
-				`[TainacanAI] Field "${ metadataKey }" FOUND:`,
-				$field[ 0 ]
-			);
-
-			// Fill field based on type
-			const success = this.setFieldValue( $field, value, fieldInfo.type );
-
-			if ( success ) {
-				// Visual feedback
-				if ( $btn ) {
-					const $icon = $btn.find( '.dashicons' );
-					$icon
-						.removeClass( 'dashicons-download' )
-						.addClass( 'dashicons-yes' );
-					$btn.addClass( 'filled' );
-					setTimeout( () => {
-						$icon
-							.removeClass( 'dashicons-yes' )
-							.addClass( 'dashicons-download' );
-						$btn.removeClass( 'filled' );
-					}, 2000 );
-				}
-
-				// Highlight filled field
-				$field.addClass( 'tainacan-ai-field-filled' );
-				setTimeout( () => {
-					$field.removeClass( 'tainacan-ai-field-filled' );
-				}, 3000 );
-
-				return true;
-			}
-
-			return false;
+			return value;
 		},
 
-		/**
-		 * Find Tainacan field in DOM
-		 */
-		findTainacanField( metadataId, slug ) {
-			// Try several strategies to find the field
-			let $field;
+		resolveDisplayValueForField( value, label = null, fieldInfo = null ) {
+			const explicitDisplayValue = this.resolveDisplayValue( value, label );
+			if ( explicitDisplayValue !== value ) {
+				return explicitDisplayValue;
+			}
 
-			// 1. MAIN: By input ID in Tainacan format (tainacan-item-metadatum_id-{ID})
-			$field = $( `#tainacan-item-metadatum_id-${ metadataId }` );
-			if ( $field.length ) {
-				// If it's a container (div), find input/textarea inside it
-				if ( $field.is( 'div, span, section' ) ) {
-					const $innerField = $field
-						.find( 'input:not([type="hidden"]), textarea' )
-						.first();
-					if ( $innerField.length ) {
-						console.log(
-							'[findField] Found via tainacan-item-metadatum_id (inner)'
-						);
-						return $innerField;
-					}
-				}
-				// If it's input/textarea directly
-				if ( $field.is( 'input, textarea' ) ) {
-					console.log(
-						'[findField] Found via tainacan-item-metadatum_id'
+			const normalizedType = String( fieldInfo?.type || '' ).toLowerCase();
+			if ( ! normalizedType.includes( 'taxonomy' ) ) {
+				return value;
+			}
+
+			const taxonomyAllowedValues = fieldInfo?.taxonomy_allowed_values;
+			if (
+				! Array.isArray( taxonomyAllowedValues ) ||
+				taxonomyAllowedValues.length === 0
+			) {
+				return value;
+			}
+
+			const resolveOne = ( entry ) => {
+				const numericEntry = Number( entry );
+				if ( Number.isInteger( numericEntry ) && numericEntry > 0 ) {
+					const matched = taxonomyAllowedValues.find(
+						( candidate ) =>
+							candidate &&
+							typeof candidate === 'object' &&
+							Number( candidate.value ) === numericEntry &&
+							typeof candidate.label === 'string' &&
+							candidate.label.trim() !== ''
 					);
-					return $field;
+					return matched ? matched.label : entry;
+				}
+				return entry;
+			};
+
+			if ( Array.isArray( value ) ) {
+				return value.map( resolveOne );
+			}
+
+			return resolveOne( value );
+		},
+
+		resolveDisplayValueForKey( metadataKey, value, label = null ) {
+			const extractionFields = TainacanAI.extractionFields || {};
+			const extractionField = metadataKey ? extractionFields[ metadataKey ] : null;
+			return this.resolveDisplayValueForField( value, label, extractionField );
+		},
+
+		mergeFieldTermIds( existingValue, newTermId ) {
+			const merged = [];
+			const pushIfValid = ( candidate ) => {
+				const parsed = Number( candidate );
+				if ( ! Number.isInteger( parsed ) || parsed <= 0 ) {
+					return;
+				}
+				if ( ! merged.includes( parsed ) ) {
+					merged.push( parsed );
+				}
+			};
+
+			if ( Array.isArray( existingValue ) ) {
+				existingValue.forEach( pushIfValid );
+			} else {
+				pushIfValid( existingValue );
+			}
+			pushIfValid( newTermId );
+
+			return merged;
+		},
+
+		updateMetadataEntryAfterPendingCreate(
+			metadataKey,
+			termIndex,
+			newTermId,
+			newLabel,
+			isMultiple
+		) {
+			if ( ! this.state.lastResult?.ai_metadata ) {
+				return;
+			}
+
+			const rawEntry = this.state.lastResult.ai_metadata[ metadataKey ];
+			if ( ! rawEntry || typeof rawEntry !== 'object' || Array.isArray( rawEntry ) ) {
+				return;
+			}
+
+			const updated = { ...rawEntry };
+			const mergedIds = this.mergeFieldTermIds( updated.value, newTermId );
+
+			if ( isMultiple ) {
+				updated.value = mergedIds;
+				const currentLabels = Array.isArray( updated.label )
+					? updated.label
+						.map( (entry) =>
+							typeof entry === 'string' ? entry.trim() : ''
+						)
+						.filter( Boolean )
+					: [];
+				if ( newLabel && ! currentLabels.includes( newLabel ) ) {
+					currentLabels.push( newLabel );
+				}
+				if ( currentLabels.length > 0 ) {
+					updated.label = currentLabels;
+				}
+			} else {
+				updated.value = mergedIds[ 0 ] || newTermId;
+				if ( newLabel ) {
+					updated.label = newLabel;
 				}
 			}
 
-			// 2. By metadata ID in Vue/Tainacan (various formats)
-			$field = $(
-				`[data-metadatum-id="${ metadataId }"] input:not([type="hidden"]), [data-metadatum-id="${ metadataId }"] textarea`
-			).first();
-			if ( $field.length ) {
-				console.log( '[findField] Found via data-metadatum-id' );
-				return $field;
-			}
-
-			// 3. By tainacan-metadatum-id attribute (Vue)
-			$field = $(
-				`[tainacan-metadatum-id="${ metadataId }"] input, [tainacan-metadatum-id="${ metadataId }"] textarea`
-			).first();
-			if ( $field.length ) {
-				console.log(
-					'[findField] Found via tainacan-metadatum-id attr'
-				);
-				return $field;
-			}
-
-			// 4. By other ID formats
-			$field = $(
-				`#tainacan-metadata-${ metadataId }, #metadatum-${ metadataId }, #metadata-${ metadataId }`
+			const pending = this.normalizePendingNewTerms( updated.pending_new_terms );
+			updated.pending_new_terms = pending.filter(
+				( _, index ) => index !== termIndex
 			);
-			if ( $field.length ) {
-				console.log( '[findField] Found via alternative ID' );
-				return $field;
+			if ( updated.pending_new_terms.length === 0 ) {
+				delete updated.pending_new_terms;
 			}
 
-			// 4. By field name
-			$field = $(
-				`[name="metadata[${ metadataId }]"], [name="tainacan_metadatum[${ metadataId }]"], [name="metadatum_id_${ metadataId }"]`
-			);
-			if ( $field.length ) {
-				console.log( '[findField] Found via strategy 4' );
-				return $field;
-			}
+			this.state.lastResult.ai_metadata[ metadataKey ] = updated;
+		},
 
-			// 5. By slug/class - with several variations
-			if ( slug ) {
-				// Try with exact and partial slug
-				const slugVariations = [
-					slug,
-					slug.replace( /-\d+$/, '' ),
-					slug.replace( /-/g, '_' ),
-				];
-				for ( const s of slugVariations ) {
-					$field = $(
-						`.tainacan-metadatum-${ s } input, .tainacan-metadatum-${ s } textarea`
-					).first();
-					if ( $field.length ) {
-						console.log(
-							'[findField] Found via slug class:',
-							s
-						);
-						return $field;
-					}
+		async createTaxonomyTerm( taxonomyId, payload ) {
+			const baseUrl = this.getTainacanApiBaseUrl();
+			const url = `${ baseUrl }/taxonomy/${ taxonomyId }/terms`;
 
-					$field = $(
-						`[data-metadatum-slug="${ s }"] input, [data-metadatum-slug="${ s }"] textarea`
-					).first();
-					if ( $field.length ) {
-						console.log(
-							'[findField] Found via data-slug:',
-							s
-						);
-						return $field;
-					}
+			return $.ajax( {
+				url,
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify( payload ),
+				processData: false,
+				headers: {
+					'X-WP-Nonce': TainacanAI.restNonce,
+				},
+			} );
+		},
+
+		extractTermIdFromResponse( response ) {
+			const candidates = [
+				response?.id,
+				response?.data?.id,
+				response?.term_id,
+				response?.data?.term_id,
+			];
+
+			for ( const candidate of candidates ) {
+				const parsed = Number( candidate );
+				if ( Number.isInteger( parsed ) && parsed > 0 ) {
+					return parsed;
 				}
-			}
-
-			// 6. Search in Tainacan Vue form
-			$field = $(
-				`.tainacan-item-metadatum[data-metadatum-id="${ metadataId }"]`
-			)
-				.find( 'input:not([type="hidden"]), textarea' )
-				.first();
-			if ( $field.length ) {
-				console.log( '[findField] Found via strategy 6' );
-				return $field;
-			}
-
-			// 7. Search by aria-label or placeholder containing slug
-			if ( slug ) {
-				const slugBase = slug.replace( /-\d+$/, '' );
-				$field = $(
-					`input[aria-label*="${ slugBase }"], textarea[aria-label*="${ slugBase }"]`
-				).first();
-				if ( $field.length ) {
-					console.log( '[findField] Found via aria-label' );
-					return $field;
-				}
-			}
-
-			// 8. Search by label (by metadata name)
-			if ( slug ) {
-				const $labels = $( 'label' );
-				$labels.each( function () {
-					const labelText = $( this ).text().toLowerCase().trim();
-					const slugLower = slug
-						.toLowerCase()
-						.replace( /-\d+$/, '' )
-						.replace( /dc/g, '' );
-					if (
-						labelText.includes( slugLower ) ||
-						slugLower.includes( labelText.replace( /[^a-z]/g, '' ) )
-					) {
-						const forId = $( this ).attr( 'for' );
-						if ( forId ) {
-							$field = $( `#${ forId }` );
-							if ( $field.length ) {
-								console.log(
-									'[findField] Found via label for:',
-									labelText
-								);
-								return false; // break
-							}
-						}
-						// Try to get input/textarea in same container
-						$field = $( this )
-							.closest(
-								'.field, .tainacan-metadatum, .form-group, [class*="metadatum"]'
-							)
-							.find( 'input:not([type="hidden"]), textarea' )
-							.first();
-						if ( $field.length ) {
-							console.log(
-								'[findField] Found via label container:',
-								labelText
-							);
-							return false; // break
-						}
-					}
-				} );
-				if ( $field && $field.length ) return $field;
-			}
-
-			// 9. Debug: show all available inputs/textareas
-			if ( TainacanAI.debug ) {
-				console.log( '[findField] Available inputs in DOM:' );
-				$( 'input:not([type="hidden"]), textarea' ).each(
-					function ( i ) {
-						if ( i < 20 ) {
-							// limit to 20 to avoid clutter
-							console.log( `  - ${ this.tagName }`, {
-								id: this.id,
-								name: this.name,
-								class: this.className,
-								'data-*': this.dataset,
-							} );
-						}
-					}
-				);
 			}
 
 			return null;
 		},
 
-		/**
-		 * Set field value
-		 */
-		setFieldValue( $field, value, fieldType ) {
-			try {
-				// Convert arrays to string if necessary
-				let finalValue = value;
-				if ( Array.isArray( value ) ) {
-					finalValue = value.join( ', ' );
-				} else if ( typeof value === 'object' ) {
-					finalValue = JSON.stringify( value );
-				}
-
-				const tagName = $field.prop( 'tagName' ).toLowerCase();
-				const inputType = $field.attr( 'type' );
-
-				// Text/textarea fields
-				if (
-					tagName === 'textarea' ||
-					inputType === 'text' ||
-					! inputType
-				) {
-					// For Vue/React, trigger events to update state
-					$field.val( finalValue );
-					$field.trigger( 'input' );
-					$field.trigger( 'change' );
-
-					// Try to dispatch native event for reactive frameworks
-					const nativeEvent = new Event( 'input', { bubbles: true } );
-					$field[ 0 ].dispatchEvent( nativeEvent );
-
-					return true;
-				}
-
-				// Selection fields
-				if ( tagName === 'select' ) {
-					$field.val( finalValue ).trigger( 'change' );
-					return true;
-				}
-
-				// Checkbox
-				if ( inputType === 'checkbox' ) {
-					const shouldCheck =
-						finalValue === true ||
-						finalValue === '1' ||
-						finalValue === 'true';
-					$field.prop( 'checked', shouldCheck ).trigger( 'change' );
-					return true;
-				}
-
-				// Other input types
-				$field.val( finalValue ).trigger( 'input' ).trigger( 'change' );
-				return true;
-			} catch ( error ) {
-				console.error(
-					'[TainacanAI] Error setting field value:',
-					error
+		async createPendingTermAndFill( metadataKey, termIndex, $btn = null ) {
+			const extractionFields = TainacanAI.extractionFields || {};
+			const fieldInfo = extractionFields[ metadataKey ];
+			if ( ! fieldInfo ) {
+				this.showError(
+					TainacanAI.texts?.noExtractionFields ||
+						'No extraction-enabled metadata found'
 				);
-				return false;
+				return;
 			}
+
+			const taxonomyId = Number( fieldInfo?.taxonomy_id || 0 );
+			if ( taxonomyId <= 0 ) {
+				this.showError(
+					TainacanAI.texts?.createTermMissingTaxonomy ||
+						'Taxonomy field is not configured for term creation.'
+				);
+				return;
+			}
+
+			const aiEntry = this.state.lastResult?.ai_metadata?.[ metadataKey ];
+			const parsedEntry = this.parseFieldEntry( aiEntry );
+			const pendingTerms = parsedEntry.pendingNewTerms || [];
+			const pending = pendingTerms[ termIndex ];
+			if ( ! pending ) {
+				this.showError(
+					TainacanAI.texts?.pendingTermNotFound ||
+						'Suggested term is no longer available.'
+				);
+				return;
+			}
+
+			const selector = `.tainacan-ai-pending-term-input[data-metadata-key="${ this.escapeHtml(
+				metadataKey
+			) }"][data-term-index="${ termIndex }"]`;
+			const inputValue = $( selector ).val();
+			const termLabel = String( inputValue ?? pending.label ?? '' ).trim();
+			if ( termLabel === '' ) {
+				this.showError(
+					TainacanAI.texts?.pendingTermEmpty ||
+						'Please provide a term name before creating it.'
+				);
+				return;
+			}
+
+			if ( $btn && $btn.length ) {
+				$btn.prop( 'disabled', true );
+			}
+
+			let createdTermId = null;
+			try {
+				const created = await this.createTaxonomyTerm( taxonomyId, {
+					name: termLabel,
+					item_id: this.state.itemId,
+					metadatum_id: fieldInfo.id,
+				} );
+				createdTermId = this.extractTermIdFromResponse( created );
+				if ( ! createdTermId ) {
+					throw new Error(
+						TainacanAI.texts?.createTermMissingId ||
+							'The created term response did not include an ID.'
+					);
+				}
+			} catch ( error ) {
+				const parsedError = this.parseMetadataUpdateError( error );
+				this.showError(
+					`${ TainacanAI.texts?.createTermFailed || 'Could not create term.' }: ${
+						parsedError.message
+					}`
+				);
+				if ( $btn && $btn.length ) {
+					$btn.prop( 'disabled', false );
+				}
+				return;
+			}
+
+			const mergedIds = this.mergeFieldTermIds( parsedEntry.value, createdTermId );
+			const valueToFill = fieldInfo.multiple === true ? mergedIds : createdTermId;
+			const fillResult = await this.fillTainacanField(
+				metadataKey,
+				valueToFill,
+				null,
+				{
+					dispatchReloadEvent: true,
+				}
+			);
+
+			if ( ! fillResult.success ) {
+				if ( $btn && $btn.length ) {
+					$btn.prop( 'disabled', false );
+				}
+				return;
+			}
+
+			this.updateMetadataEntryAfterPendingCreate(
+				metadataKey,
+				termIndex,
+				createdTermId,
+				termLabel,
+				fieldInfo.multiple === true
+			);
+			this.renderMetadataInPanel( this.state.lastResult.ai_metadata );
+			this.showToast(
+				TainacanAI.texts?.termCreatedAndApplied || 'Term created and applied.'
+			);
+		},
+
+		/**
+		 * Fill a Tainacan field via Tainacan REST API.
+		 */
+		async fillTainacanField(
+			metadataKey,
+			value = null,
+			$btn = null,
+			options = {}
+		) {
+			const extractionFields = TainacanAI.extractionFields || {};
+			const fieldInfo = extractionFields[ metadataKey ];
+			const dispatchReloadEvent = options.dispatchReloadEvent !== false;
+
+			if ( ! fieldInfo ) {
+				const message =
+					TainacanAI.texts?.noExtractionFields ||
+					'No extraction-enabled metadata found';
+				this.showError( message );
+				return {
+					success: false,
+					error: message,
+				};
+			}
+
+			if ( ! this.state.itemId ) {
+				const message =
+					TainacanAI.texts?.noDocument || 'No document found in this item.';
+				this.showError( message );
+				return {
+					success: false,
+					error: message,
+				};
+			}
+
+			const metadataId = fieldInfo.id || fieldInfo;
+			if ( ! metadataId ) {
+				const message = `${
+					TainacanAI.texts?.fillFailed || 'Could not update field.'
+				} (${ metadataKey })`;
+				this.showError( message );
+				return {
+					success: false,
+					error: message,
+				};
+			}
+
+			let fieldValue = value;
+			if ( fieldValue === null || fieldValue === undefined ) {
+				const aiEntry = this.state.lastResult?.ai_metadata?.[ metadataKey ];
+				const parsedEntry = this.parseFieldEntry( aiEntry );
+				fieldValue = parsedEntry.value;
+			}
+
+			const aiEntry = this.state.lastResult?.ai_metadata?.[ metadataKey ];
+			const parsedEntry = this.parseFieldEntry( aiEntry );
+			const hasPendingNewTerms =
+				Array.isArray( parsedEntry.pendingNewTerms ) &&
+				parsedEntry.pendingNewTerms.length > 0;
+
+			if (
+				fieldValue === null ||
+				fieldValue === undefined ||
+				fieldValue === '' ||
+				( Array.isArray( fieldValue ) && fieldValue.length === 0 )
+			) {
+				if ( hasPendingNewTerms ) {
+					const message =
+						TainacanAI.texts?.pendingTermsNeedCreation ||
+						'Create suggested terms first, then fill this field.';
+					this.showToast( message );
+					return {
+						success: false,
+						error: message,
+						skipped: true,
+					};
+				}
+
+				const message =
+					TainacanAI.texts?.noFieldsToFill || 'No fields to fill';
+				return {
+					success: false,
+					error: message,
+					skipped: true,
+				};
+			}
+
+			const payload = {
+				values: this.normalizeValueForMetadata(
+					fieldValue,
+					fieldInfo.multiple === true,
+					fieldInfo.type
+				),
+			};
+
+			if ( TainacanAI.debug ) {
+				console.log(
+					`[TainacanAI] Updating metadata "${ metadataKey }" (ID ${ metadataId })`,
+					payload
+				);
+			}
+
+			if ( $btn && $btn.length ) {
+				$btn.prop( 'disabled', true );
+			}
+
+			try {
+				await this.updateItemMetadataValue(
+					this.state.itemId,
+					metadataId,
+					payload
+				);
+			} catch ( error ) {
+				const parsedError = this.parseMetadataUpdateError( error );
+				const fieldLabel = fieldInfo?.name || this.formatLabel( metadataKey );
+				const errorPrefix =
+					TainacanAI.texts?.fillFailedFor || 'Failed to update';
+				const message = `${ errorPrefix } "${ fieldLabel }": ${
+					parsedError.message
+				}`;
+				this.showError( message );
+				return {
+					success: false,
+					error: message,
+				};
+			} finally {
+				if ( $btn && $btn.length ) {
+					$btn.prop( 'disabled', false );
+				}
+			}
+
+			if ( dispatchReloadEvent ) {
+				this.dispatchTainacanMetadataReload(
+					this.state.itemId,
+					metadataId
+				);
+			}
+
+			if ( $btn && $btn.length ) {
+				const $icon = $btn.find( '.dashicons' );
+				$icon.removeClass( 'dashicons-download' ).addClass( 'dashicons-yes' );
+				$btn.addClass( 'filled' );
+				setTimeout( () => {
+					$icon
+						.removeClass( 'dashicons-yes' )
+						.addClass( 'dashicons-download' );
+					$btn.removeClass( 'filled' );
+				}, 2000 );
+			}
+
+			return {
+				success: true,
+			};
+		},
+
+		getTainacanApiBaseUrl() {
+			const explicitBase = TainacanAI.tainacanApiUrl;
+			if ( typeof explicitBase === 'string' && explicitBase !== '' ) {
+				return explicitBase.replace( /\/+$/, '' );
+			}
+			return '';
+		},
+
+		async updateItemMetadataValue( itemId, metadatumId, payload ) {
+			const baseUrl = this.getTainacanApiBaseUrl();
+			const url = `${ baseUrl }/item/${ itemId }/metadata/${ metadatumId }`;
+
+			return $.ajax( {
+				url,
+				method: 'PUT',
+				contentType: 'application/json',
+				data: JSON.stringify( payload ),
+				processData: false,
+				headers: {
+					'X-WP-Nonce': TainacanAI.restNonce,
+				},
+			} );
+		},
+
+		normalizeValueForMetadata( value, isMultiple, fieldType ) {
+			if ( isMultiple ) {
+				if (
+					value === null ||
+					value === undefined ||
+					value === '' ||
+					( Array.isArray( value ) && value.length === 0 )
+				) {
+					return [];
+				}
+
+				const values = Array.isArray( value ) ? value : [ value ];
+				return values.map( ( entry ) =>
+					this.normalizeSingleValue( entry, fieldType )
+				);
+			}
+
+			if (
+				Array.isArray( value ) &&
+				fieldType &&
+				String( fieldType ).toLowerCase().includes( 'geocoordinate' ) &&
+				value.length >= 2
+			) {
+				return `[${ value[ 0 ] },${ value[ 1 ] }]`;
+			}
+
+			if ( Array.isArray( value ) ) {
+				return value.length > 0
+					? this.normalizeSingleValue( value[ 0 ], fieldType )
+					: '';
+			}
+
+			return this.normalizeSingleValue( value, fieldType );
+		},
+
+		normalizeSingleValue( value, fieldType = null ) {
+			if ( value === null || value === undefined ) {
+				return '';
+			}
+
+			const normalizedType = fieldType ? String( fieldType ).toLowerCase() : '';
+			if ( normalizedType.includes( 'taxonomy' ) ) {
+				const parsed = Number( value );
+				if ( Number.isInteger( parsed ) && parsed > 0 ) {
+					return parsed;
+				}
+			}
+
+			if ( typeof value === 'object' ) {
+				return JSON.stringify( value );
+			}
+
+			return value;
+		},
+
+		parseMetadataUpdateError( error ) {
+			const responseJSON = error?.responseJSON || {};
+			const status = Number( error?.status || responseJSON?.data?.status || 0 );
+
+			if ( status === 401 ) {
+				return {
+					message:
+						TainacanAI.texts?.fillUnauthorized ||
+						'You are not authorized to update this metadata.',
+				};
+			}
+
+			if ( status === 403 ) {
+				return {
+					message:
+						TainacanAI.texts?.fillForbidden ||
+						'Access denied while updating metadata.',
+				};
+			}
+
+			let message =
+				responseJSON?.error_message ||
+				responseJSON?.message ||
+				error?.statusText ||
+				error?.message ||
+				'Unknown error';
+
+			if ( Array.isArray( responseJSON?.errors ) && responseJSON.errors.length ) {
+				const details = responseJSON.errors
+					.map( (entry) => {
+						if ( ! entry || typeof entry !== 'object' ) {
+							return '';
+						}
+						const firstValue = Object.values( entry )[ 0 ];
+						return firstValue ? String( firstValue ) : '';
+					} )
+					.filter( Boolean );
+
+				if ( details.length ) {
+					message += ` (${ details.join( '; ' ) })`;
+				}
+			}
+
+			return { message };
+		},
+
+		dispatchTainacanMetadataReload( itemId = null, metadatumId = null ) {
+			if ( ! TainacanAI.features?.supportsMetadataReloadEvent ) {
+				return;
+			}
+
+			if ( typeof window === 'undefined' || typeof window.dispatchEvent !== 'function' ) {
+				return;
+			}
+
+			if (
+				itemId !== null &&
+				metadatumId !== null &&
+				itemId !== undefined &&
+				metadatumId !== undefined
+			) {
+				window.dispatchEvent(
+					new CustomEvent( 'TainacanReloadItemMetadataForm', {
+						detail: {
+							itemId,
+							metadatumId,
+						},
+					} )
+				);
+				return;
+			}
+
+			window.dispatchEvent(
+				new CustomEvent( 'TainacanReloadItemMetadataForm' )
+			);
 		},
 
 		/**
 		 * Fill all extraction-enabled fields that have values in the AI result.
 		 */
-		fillAllExtractionFields() {
+		async fillAllExtractionFields() {
 			if ( ! this.state.lastResult?.ai_metadata ) {
 				this.showToast(
 					TainacanAI.texts?.noResults || 'No results available'
@@ -1467,7 +1913,10 @@ import { addAction } from '@wordpress/hooks';
 
 			const extractionFields = TainacanAI.extractionFields || {};
 			let filledCount = 0;
+			let failedCount = 0;
+			let skippedCount = 0;
 			let totalFillable = 0;
+			const fieldErrors = [];
 
 			if ( TainacanAI.debug ) {
 				console.log(
@@ -1480,43 +1929,59 @@ import { addAction } from '@wordpress/hooks';
 				);
 			}
 
-			Object.entries( this.state.lastResult.ai_metadata ).forEach(
-				( [ key, data ] ) => {
-					if ( TainacanAI.debug ) {
-						console.log(
-							`[TainacanAI] Checking key: "${ key }" -> extraction enabled:`,
-							!! extractionFields[ key ]
-						);
-					}
-					if ( ! extractionFields[ key ] ) return;
+			for ( const [ key, data ] of Object.entries(
+				this.state.lastResult.ai_metadata
+			) ) {
+				if ( TainacanAI.debug ) {
+					console.log(
+						`[TainacanAI] Checking key: "${ key }" -> extraction enabled:`,
+						!! extractionFields[ key ]
+					);
+				}
+				if ( ! extractionFields[ key ] ) {
+					continue;
+				}
 
-					totalFillable++;
+				totalFillable++;
+				const { value } = this.parseFieldEntry( data );
 
-					const { value } = this.parseFieldEntry( data );
+				const result = await this.fillTainacanField( key, value, null, {
+					dispatchReloadEvent: false,
+				} );
 
-					// Skip empty values
-					if (
-						value === null ||
-						value === undefined ||
-						value === '' ||
-						( Array.isArray( value ) && value.length === 0 )
-					) {
-						return;
-					}
-
-					if ( this.fillTainacanField( key, value ) ) {
-						filledCount++;
+				if ( result.success ) {
+					filledCount++;
+				} else if ( result.skipped ) {
+					skippedCount++;
+				} else {
+					failedCount++;
+					if ( result.error ) {
+						fieldErrors.push( result.error );
 					}
 				}
-			);
+			}
 
-			if ( filledCount > 0 ) {
+			if (
+				filledCount > 0 &&
+				TainacanAI.features?.supportsMetadataReloadEvent
+			) {
+				this.dispatchTainacanMetadataReload();
+			}
+
+			if ( filledCount > 0 || failedCount > 0 ) {
+				const filledLabel =
+					TainacanAI.texts?.fieldsFilled || 'fields filled';
+				const failedLabel =
+					TainacanAI.texts?.fieldsFailed || 'fields failed';
 				this.showToast(
-					(
-						TainacanAI.texts?.fieldsFilled ||
-						'{count} fields filled'
-					).replace( '{count}', filledCount )
+					`${ filledCount } ${ filledLabel }${
+						failedCount > 0 ? `, ${ failedCount } ${ failedLabel }` : ''
+					}`
 				);
+
+				if ( fieldErrors.length > 0 ) {
+					this.showError( fieldErrors.slice( 0, 3 ).join( ' | ' ) );
+				}
 			} else if ( totalFillable === 0 ) {
 				this.showToast(
 					TainacanAI.texts?.noExtractionFields ||
@@ -1524,8 +1989,9 @@ import { addAction } from '@wordpress/hooks';
 				);
 			} else {
 				this.showToast(
-					TainacanAI.texts?.noFieldsToFill ||
-						'No fields to fill'
+					skippedCount > 0
+						? TainacanAI.texts?.noFieldsToFill || 'No fields to fill'
+						: TainacanAI.texts?.fillFailed || 'Could not update field.'
 				);
 			}
 		},

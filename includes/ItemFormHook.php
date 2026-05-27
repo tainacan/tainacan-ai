@@ -187,13 +187,21 @@ class ItemFormHook {
         );
 
         $options = \Tainacan_AI::get_options();
+        $supports_metadata_reload_event = (
+            defined('TAINACAN_VERSION')
+            && version_compare((string) TAINACAN_VERSION, '1.1.0', '>=')
+        );
 
         // Extraction fields are loaded per collection via AJAX (see item-form.js).
         wp_localize_script('tainacan-ai-item', 'TainacanAI', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'restUrl' => rest_url('tainacan-ai/v1/'),
+            'tainacanApiUrl' => rest_url('tainacan/v2/'),
             'nonce' => wp_create_nonce('tainacan_ai_nonce'),
             'restNonce' => wp_create_nonce('wp_rest'),
+            'features' => [
+                'supportsMetadataReloadEvent' => $supports_metadata_reload_event,
+            ],
             'debug' => defined('WP_DEBUG') && WP_DEBUG,
             'extractionFields' => [],
             'texts' => [
@@ -223,8 +231,14 @@ class ItemFormHook {
                 'fillAllTooltip' => __('Automatically fills Tainacan fields with extracted values', 'tainacan-ai'),
                 'fillField' => __('Fill field', 'tainacan-ai'),
                 'fieldsFilled' => __('fields filled', 'tainacan-ai'),
+                'fieldsFailed' => __('fields failed', 'tainacan-ai'),
                 'noExtractionFields' => __('No extraction-enabled metadata found', 'tainacan-ai'),
                 'noFieldsToFill' => __('No fields to fill', 'tainacan-ai'),
+                'fillFailed' => __('Could not update field.', 'tainacan-ai'),
+                'fillFailedFor' => __('Failed to update', 'tainacan-ai'),
+                'fillUnauthorized' => __('You are not authorized to update this metadata.', 'tainacan-ai'),
+                'fillForbidden' => __('Access denied while updating metadata.', 'tainacan-ai'),
+                'fillNetworkError' => __('Network error while updating metadata.', 'tainacan-ai'),
                 'noResults' => __('No results available', 'tainacan-ai'),
                 'fieldNotFound' => __('Field not found on page', 'tainacan-ai'),
                 'openResults' => __('Open analysis results', 'tainacan-ai'),
@@ -232,6 +246,17 @@ class ItemFormHook {
                 'clickToAnalyze' => __('Click "Analyze Document" to extract metadata', 'tainacan-ai'),
                 'fieldLabel' => __('Tainacan field:', 'tainacan-ai'),
                 'valueNotFound' => __('Not found in document', 'tainacan-ai'),
+                'pendingTermsTitle' => __('Suggested new terms', 'tainacan-ai'),
+                'pendingTermsHint' => __('No existing term matched. Review and create if appropriate.', 'tainacan-ai'),
+                'newTerm' => __('New term', 'tainacan-ai'),
+                'createTermAndApply' => __('Create', 'tainacan-ai'),
+                'createTermFailed' => __('Could not create term.', 'tainacan-ai'),
+                'createTermMissingTaxonomy' => __('Taxonomy field is not configured for term creation.', 'tainacan-ai'),
+                'pendingTermNotFound' => __('Suggested term is no longer available.', 'tainacan-ai'),
+                'pendingTermEmpty' => __('Please provide a term name before creating it.', 'tainacan-ai'),
+                'createTermMissingId' => __('Created term response did not include an ID.', 'tainacan-ai'),
+                'termCreatedAndApplied' => __('Term created and applied.', 'tainacan-ai'),
+                'pendingTermsNeedCreation' => __('Create suggested terms first, then fill this field.', 'tainacan-ai'),
                 'viewOnGoogleMaps' => __('View on Google Maps', 'tainacan-ai'),
                 'camera' => __('Camera', 'tainacan-ai'),
                 'capture' => __('Capture', 'tainacan-ai'),
