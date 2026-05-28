@@ -12,12 +12,24 @@
 		"lint:css": "wp-scripts lint-style",
 		"format:js": "wp-scripts format-js",
 		"format": "wp-scripts format",
-		"plugin-zip": "wp-scripts plugin-zip",
+		"plugin-zip": "composer install --no-dev --optimize-autoloader && wp-scripts plugin-zip",
 		"packages-update": "wp-scripts packages-update"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "^31.3.0"
+		"@wordpress/scripts": "^32.3.0"
 	},
+	"files": [
+		"build/**",
+		"includes/**",
+		"languages/**",
+		"lib/**",
+		"vendor/**",
+		"composer.json",
+		"readme.txt",
+		"README.md",
+		"uninstall.php",
+		"tainacan-ai.php"
+	],
 	"engines": {
 		"node": ">=20.0.0",
 		"npm": ">=10.0.0"

@@ -1338,10 +1338,10 @@ import { addAction } from '@wordpress/hooks';
 				return value;
 			}
 
-			const taxonomyAllowedValues = fieldInfo?.taxonomy_allowed_values;
+			const allowedValueOptions = fieldInfo?.allowed_value_options;
 			if (
-				! Array.isArray( taxonomyAllowedValues ) ||
-				taxonomyAllowedValues.length === 0
+				! Array.isArray( allowedValueOptions ) ||
+				allowedValueOptions.length === 0
 			) {
 				return value;
 			}
@@ -1349,7 +1349,7 @@ import { addAction } from '@wordpress/hooks';
 			const resolveOne = ( entry ) => {
 				const numericEntry = Number( entry );
 				if ( Number.isInteger( numericEntry ) && numericEntry > 0 ) {
-					const matched = taxonomyAllowedValues.find(
+					const matched = allowedValueOptions.find(
 						( candidate ) =>
 							candidate &&
 							typeof candidate === 'object' &&

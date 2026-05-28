@@ -1,5 +1,11 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Hooks;
+
+use Tainacan\AI\Plugin;
+use Tainacan\AI\Extraction\DocumentAnalyzer;
+use Tainacan\AI\Extraction\ExtractionMetadata;
+use Tainacan\AI\Support\CoreAI;
+use Tainacan\AI\Support\DebugLog;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -20,8 +26,6 @@ class ItemFormHook {
         // AJAX endpoints
         add_action('wp_ajax_tainacan_ai_analyze', [$this, 'ajax_analyze']);
         add_action('wp_ajax_tainacan_ai_get_item_document', [$this, 'ajax_get_item_document']);
-        add_action('wp_ajax_tainacan_ai_clear_item_cache', [$this, 'ajax_clear_item_cache']);
-        add_action('wp_ajax_tainacan_ai_apply_metadata', [$this, 'ajax_apply_metadata']);
         add_action('wp_ajax_tainacan_ai_get_extraction_fields', [$this, 'ajax_get_extraction_fields']);
     }
 
@@ -46,7 +50,7 @@ class ItemFormHook {
             return '';
         }
 
-        $options = \Tainacan_AI::get_options();
+        $options = Plugin::get_options();
         $is_configured = CoreAI::is_supported_text_generation();
 
         ob_start();
@@ -186,7 +190,7 @@ class ItemFormHook {
             true
         );
 
-        $options = \Tainacan_AI::get_options();
+        $options = Plugin::get_options();
         $supports_metadata_reload_event = (
             defined('TAINACAN_VERSION')
             && version_compare((string) TAINACAN_VERSION, '1.1.0', '>=')
@@ -195,7 +199,6 @@ class ItemFormHook {
         // Extraction fields are loaded per collection via AJAX (see item-form.js).
         wp_localize_script('tainacan-ai-item', 'TainacanAI', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'restUrl' => rest_url('tainacan-ai/v1/'),
             'tainacanApiUrl' => rest_url('tainacan/v2/'),
             'nonce' => wp_create_nonce('tainacan_ai_nonce'),
             'restNonce' => wp_create_nonce('wp_rest'),
@@ -375,7 +378,7 @@ class ItemFormHook {
             }
 
             // Salva no cache
-            $options = \Tainacan_AI::get_options();
+            $options = Plugin::get_options();
             $cache_duration = $options['cache_duration'] ?? 3600;
             if ($cache_duration > 0) {
                 set_transient($cache_key, $result, $cache_duration);
@@ -393,10 +396,9 @@ class ItemFormHook {
             $error_file = basename($e->getFile());
             $error_line = $e->getLine();
 
-            // Detailed log for debug
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[TainacanAI] Error in ajax_analyze: {$error_message} in {$error_file}:{$error_line}");
-                error_log("[TainacanAI] Stack trace: " . $e->getTraceAsString());
+                DebugLog::log("Error in ajax_analyze: {$error_message} in {$error_file}:{$error_line}");
+                DebugLog::log('Stack trace: ' . $e->getTraceAsString());
             }
 
             wp_send_json_error(
@@ -424,71 +426,6 @@ class ItemFormHook {
             wp_send_json_success($document);
         } else {
             wp_send_json_error(__('Document not found.', 'tainacan-ai'));
-        }
-    }
-
-    /**
-     * AJAX: Limpa cache do item
-     */
-    public function ajax_clear_item_cache(): void {
-        check_ajax_referer('tainacan_ai_nonce', 'nonce');
-
-        $attachment_id = absint(wp_unslash($_POST['attachment_id'] ?? 0));
-
-        if (empty($attachment_id)) {
-            wp_send_json_error(__('Attachment ID not provided.', 'tainacan-ai'));
-        }
-
-        delete_transient('tainacan_ai_' . $attachment_id);
-
-        wp_send_json_success(__('Cache cleared!', 'tainacan-ai'));
-    }
-
-    /**
-     * AJAX: Aplica metadados ao item
-     */
-    public function ajax_apply_metadata(): void {
-        check_ajax_referer('tainacan_ai_nonce', 'nonce');
-
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        $item_id = absint(wp_unslash($_POST['item_id'] ?? 0));
-        $metadata_id = absint(wp_unslash($_POST['metadata_id'] ?? 0));
-        $value = sanitize_text_field(wp_unslash($_POST['value'] ?? ''));
-
-        if (empty($item_id) || empty($metadata_id)) {
-            wp_send_json_error(__('Insufficient data.', 'tainacan-ai'));
-        }
-
-        if (!class_exists('\Tainacan\Repositories\Item_Metadata')) {
-            wp_send_json_error(__('Tainacan not found.', 'tainacan-ai'));
-        }
-
-        try {
-            $items_repo = \Tainacan\Repositories\Items::get_instance();
-            $metadata_repo = \Tainacan\Repositories\Metadata::get_instance();
-            $item_metadata_repo = \Tainacan\Repositories\Item_Metadata::get_instance();
-
-            $item = $items_repo->fetch($item_id);
-            $metadata = $metadata_repo->fetch($metadata_id);
-
-            if (!$item || !$metadata) {
-                wp_send_json_error(__('Item or metadata not found.', 'tainacan-ai'));
-            }
-
-            $item_metadata = new \Tainacan\Entities\Item_Metadata_Entity($item, $metadata);
-            $item_metadata->set_value($value);
-
-            if ($item_metadata->validate()) {
-                $item_metadata_repo->insert($item_metadata);
-                wp_send_json_success(__('Metadata applied successfully!', 'tainacan-ai'));
-            } else {
-                wp_send_json_error(__('Invalid value for this metadata.', 'tainacan-ai'));
-            }
-        } catch (\Exception $e) {
-            wp_send_json_error($e->getMessage());
         }
     }
 

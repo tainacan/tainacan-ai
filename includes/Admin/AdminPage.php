@@ -1,5 +1,8 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Admin;
+
+use Tainacan\AI\Extraction\PromptTemplates;
+use Tainacan\AI\Support\CoreAI;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -96,7 +99,7 @@ class AdminPage extends \Tainacan\Pages {
                 'saving' => __('Saving...', 'tainacan-ai'),
                 'saved' => __('Saved successfully!', 'tainacan-ai'),
                 'loading' => __('Loading...', 'tainacan-ai'),
-                'confirmReplacePromptTemplate' => __('Replace the current prompt with this template?', 'tainacan-ai'),
+                'confirmReplacePreambleTemplate' => __('Replace the current preamble with this template?', 'tainacan-ai'),
                 'confirmClearCache' => __('Are you sure you want to clear all cache?', 'tainacan-ai'),
             ]
         ]);
@@ -116,7 +119,7 @@ class AdminPage extends \Tainacan\Pages {
         $options = get_option('tainacan_ai_options', []);
 
         // Long text fields (prompts)
-        $textarea_fields = ['default_prompt'];
+        $textarea_fields = ['default_preamble'];
         foreach ($textarea_fields as $field) {
             if (isset($input[$field])) {
                 $options[$field] = wp_kses_post($input[$field]);
@@ -162,7 +165,7 @@ class AdminPage extends \Tainacan\Pages {
     public function render_page_content() {
         $options = get_option('tainacan_ai_options', []);
 
-        include TAINACAN_AI_PLUGIN_DIR . 'includes/admin/admin-page.php';
+        include __DIR__ . '/settings-page.php';
     }
 
     /**

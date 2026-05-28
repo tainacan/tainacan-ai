@@ -1,5 +1,5 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Support;
 
 if (!defined('ABSPATH')) {
     exit;

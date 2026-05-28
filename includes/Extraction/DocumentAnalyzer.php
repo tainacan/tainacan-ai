@@ -1,5 +1,11 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Extraction;
+
+use Tainacan\AI\Plugin;
+use Tainacan\AI\Hooks\CollectionFormHook;
+use Tainacan\AI\Support\CoreAI;
+use Tainacan\AI\Support\CoreAIRequestLogging;
+use Tainacan\AI\Support\DebugLog;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -23,7 +29,6 @@ class DocumentAnalyzer {
     private ?int $item_id = null;
     private ?int $current_attachment_id = null;
     private ExifExtractor $exif_extractor;
-    private CollectionPrompts $collection_prompts;
     /** @var array<string, array{prompt: string, sections: array<string, string>, expected_slugs: string[], fields: array<string, array<string, mixed>>}> */
     private array $prompt_context_cache = [];
 
@@ -51,9 +56,8 @@ class DocumentAnalyzer {
     ];
 
     public function __construct() {
-        $this->options = \Tainacan_AI::get_options();
+        $this->options = Plugin::get_options();
         $this->exif_extractor = new ExifExtractor();
-        $this->collection_prompts = new CollectionPrompts();
     }
 
     /**
@@ -78,7 +82,7 @@ class DocumentAnalyzer {
         }
 
         // Check consent
-        if (!\Tainacan_AI::has_consent()) {
+        if (!Plugin::has_consent()) {
             return new \WP_Error('no_consent', __('Consent required to use AI features.', 'tainacan-ai'));
         }
 
@@ -131,7 +135,7 @@ class DocumentAnalyzer {
             );
         }
 
-        if (!\Tainacan_AI::has_consent()) {
+        if (!Plugin::has_consent()) {
             return new \WP_Error('no_consent', __('Consent required to use AI features.', 'tainacan-ai'));
         }
 
@@ -355,6 +359,7 @@ class DocumentAnalyzer {
         $file_mime_type = $this->detect_local_file_mime_type($tmp_file);
         $mime_type = $this->resolve_remote_mime_type(
             $tmp_file,
+            $document_url,
             $file_mime_type,
             $header_mime_type,
             $url_mime_type
@@ -399,6 +404,7 @@ class DocumentAnalyzer {
 
     private function resolve_remote_mime_type(
         string $file_path,
+        string $document_url,
         string $file_mime_type,
         string $header_mime_type,
         string $url_mime_type
@@ -415,66 +421,24 @@ class DocumentAnalyzer {
             }
         }
 
-        if ($this->file_looks_like_pdf($file_path)) {
-            return 'application/pdf';
-        }
-
-        if ($this->file_looks_like_html($file_path)) {
-            return 'text/html';
+        // WordPress-core style fallback: extension + content-based detection.
+        $filename = wp_basename((string) wp_parse_url($document_url, PHP_URL_PATH));
+        if ($filename !== '') {
+            $checked = wp_check_filetype_and_ext($file_path, $filename);
+            $checked_type = strtolower(trim((string) ($checked['type'] ?? '')));
+            if (in_array($checked_type, $this->supported_remote_document_types, true)) {
+                return $checked_type;
+            }
         }
 
         return $candidates[0] ?? '';
-    }
-
-    private function file_looks_like_pdf(string $file_path): bool {
-        if (!is_readable($file_path)) {
-            return false;
-        }
-
-        $handle = fopen($file_path, 'rb');
-        if (!$handle) {
-            return false;
-        }
-
-        $header = fread($handle, 5);
-        fclose($handle);
-
-        return $header === '%PDF-';
-    }
-
-    private function file_looks_like_html(string $file_path): bool {
-        if (!is_readable($file_path)) {
-            return false;
-        }
-
-        $handle = fopen($file_path, 'rb');
-        if (!$handle) {
-            return false;
-        }
-
-        $sample = fread($handle, 4096);
-        fclose($handle);
-
-        if (!is_string($sample) || $sample === '') {
-            return false;
-        }
-
-        $normalized = strtolower(ltrim($sample));
-        return strpos($normalized, '<!doctype html') === 0
-            || strpos($normalized, '<html') === 0
-            || strpos($normalized, '<head') === 0
-            || strpos($normalized, '<body') === 0;
     }
 
     /**
      * WP_DEBUG-only server log (no prompt or response body).
      */
     private function debug_log(string $message): void {
-        if (!defined('WP_DEBUG') || !WP_DEBUG) {
-            return;
-        }
-
-        error_log('[TainacanAI] ' . preg_replace('/\s+/', ' ', $message));
+        DebugLog::log((string) preg_replace('/\s+/', ' ', $message));
     }
 
     /**
@@ -488,10 +452,6 @@ class DocumentAnalyzer {
         string $model,
         ?string $error_message
     ): void {
-        if (!defined('WP_DEBUG') || !WP_DEBUG) {
-            return;
-        }
-
         $parts = [
             'analysis',
             'attachment_id=' . ($this->current_attachment_id ?? '0'),
@@ -512,7 +472,7 @@ class DocumentAnalyzer {
             $parts[] = 'error=' . preg_replace('/\s+/', ' ', $error_message);
         }
 
-        error_log('[TainacanAI] ' . implode(' ', $parts));
+        DebugLog::log(implode(' ', $parts));
     }
 
     /**
@@ -798,13 +758,13 @@ class DocumentAnalyzer {
 
         $context = AnalysisPromptComposer::get_context(
             (int) ($this->collection_id ?? 0),
-            $this->get_user_prompt(),
+            $this->get_user_preamble(),
             $analysis_mode
         );
 
         $prompt = trim((string) ($context['prompt'] ?? ''));
         if ($prompt === '') {
-            return new \WP_Error('no_prompt', __('No analysis prompt configured.', 'tainacan-ai'));
+            return new \WP_Error('no_preamble', __('No prompt preamble configured.', 'tainacan-ai'));
         }
 
         $resolved = [
@@ -839,8 +799,18 @@ class DocumentAnalyzer {
                 continue;
             }
 
-            // Future: relationship fields can reuse normalize_catalog_metadata_entry with
-            // relationship_allowed_values (same { value, label } catalog shape).
+            $allowed_value_options = $metadata_helper->get_allowed_value_options($field);
+            if ($allowed_value_options !== []) {
+                $is_multiple = isset($field['multiple']) && $field['multiple'] === true;
+                $metadata[$slug] = $this->normalize_allowed_value_options_entry(
+                    $entry,
+                    $is_multiple,
+                    $allowed_value_options
+                );
+                continue;
+            }
+
+            // Future: relationship fields can set allowed_value_options when ranked targets exist.
 
             if ($type === 'date') {
                 $metadata[$slug] = $this->normalize_date_metadata_entry($entry);
@@ -854,7 +824,7 @@ class DocumentAnalyzer {
      * @param array<int, array<string, mixed>> $allowed_options
      * @return array<string, int|float|string>
      */
-    private function build_catalog_value_by_label(array $allowed_options): array {
+    private function build_allowed_value_label_lookup(array $allowed_options): array {
         $value_by_label = [];
 
         foreach ($allowed_options as $row) {
@@ -891,21 +861,20 @@ class DocumentAnalyzer {
     }
 
     /**
-     * Match LLM `value` (prompt strings) to catalog rows `{ value: API, label: prompt }`.
+     * Match LLM `value` (prompt strings) to allowed_value_options rows `{ value: API, label: prompt }`.
      *
-     * Taxonomy uses term IDs as `value` and term names as `label`. The same catalog shape
-     * can back relationship (item ID + title) or other whitelist fields later.
+     * Taxonomy uses term IDs as `value` and term names as `label`. Relationship can reuse the same shape.
      *
      * @param array{value: mixed, evidence: mixed|null, label?: mixed} $entry
      * @param array<int, array<string, mixed>> $allowed_options
      * @return array{value: mixed, evidence: mixed|null, label?: mixed}
      */
-    private function normalize_catalog_metadata_entry(array $entry, bool $is_multiple, array $allowed_options): array {
+    private function normalize_allowed_value_options_entry(array $entry, bool $is_multiple, array $allowed_options): array {
         $raw_value = $entry['value'] ?? null;
         $candidates = is_array($raw_value) ? $raw_value : [$raw_value];
         $resolved_values = [];
         $resolved_labels = [];
-        $value_by_label = $this->build_catalog_value_by_label($allowed_options);
+        $value_by_label = $this->build_allowed_value_label_lookup($allowed_options);
 
         foreach ($candidates as $candidate) {
             $match_label = is_scalar($candidate) ? trim((string) $candidate) : '';
@@ -949,7 +918,7 @@ class DocumentAnalyzer {
     }
 
     /**
-     * Taxonomy: catalog normalization using `taxonomy_allowed_values`.
+     * Taxonomy: whitelist normalization using `allowed_value_options`.
      *
      * When `allow_new_terms` is true, unmatched string suggestions are preserved in
      * `pending_new_terms` so the UI can offer user-driven term creation.
@@ -964,20 +933,19 @@ class DocumentAnalyzer {
             return $entry;
         }
 
-        $catalog = is_array($field['taxonomy_allowed_values'] ?? null)
-            ? $field['taxonomy_allowed_values']
-            : [];
+        $metadata_helper = ExtractionMetadata::get_instance();
+        $allowed_value_options = $metadata_helper->get_allowed_value_options($field);
         $is_multiple = isset($field['multiple']) && $field['multiple'] === true;
         $allow_new_terms = ($field['allow_new_terms'] ?? null) === true;
 
-        $normalized = $this->normalize_catalog_metadata_entry($entry, $is_multiple, $catalog);
+        $normalized = $this->normalize_allowed_value_options_entry($entry, $is_multiple, $allowed_value_options);
 
         if (!$allow_new_terms) {
             unset($normalized['pending_new_terms']);
             return $normalized;
         }
 
-        $value_by_label = $this->build_catalog_value_by_label($catalog);
+        $value_by_label = $this->build_allowed_value_label_lookup($allowed_value_options);
         $raw_value = $entry['value'] ?? null;
         $candidates = is_array($raw_value) ? array_values($raw_value) : [$raw_value];
         $raw_evidence = $entry['evidence'] ?? null;
@@ -1021,7 +989,7 @@ class DocumentAnalyzer {
             }
         }
 
-        // Keep pending terms only when no catalog term was resolved.
+        // Keep pending terms only when no allowed option was resolved.
         if ($pending_new_terms !== [] && !$has_resolved_values) {
             $normalized['pending_new_terms'] = $pending_new_terms;
         } else {
@@ -1187,33 +1155,21 @@ class DocumentAnalyzer {
     }
 
     /**
-     * User-defined prompt: collection post meta, falling back to the site default option.
+     * User preamble: collection post meta, falling back to the site default option.
      */
-    private function get_user_prompt(): string {
+    private function get_user_preamble(): string {
         if ($this->collection_id) {
-            return $this->collection_prompts->get_effective_prompt($this->collection_id);
+            return CollectionFormHook::get_effective_preamble($this->collection_id);
         }
 
-        return (string) ($this->options['default_prompt'] ?? '');
+        return (string) ($this->options['default_preamble'] ?? '');
     }
 
     /**
      * Extract text from PDF using multiple methods
      */
     private function extract_pdf_text(string $file_path): string|\WP_Error {
-        // Method 1: Built-in plugin parser
-        try {
-            $parser = new PdfParser();
-            $text = $parser->parseFile($file_path)->getText();
-
-            if (!empty(trim($text))) {
-                return $text;
-            }
-        } catch (\Throwable $e) {
-            $this->debug_log('PdfParser error: ' . $e->getMessage());
-        }
-
-        // Method 2: smalot/pdfparser (if installed via Composer)
+        // Method 1: smalot/pdfparser (best quality for digital PDFs)
         if (class_exists('\Smalot\PdfParser\Parser')) {
             try {
                 $parser = new \Smalot\PdfParser\Parser();
@@ -1226,6 +1182,18 @@ class DocumentAnalyzer {
             } catch (\Throwable $e) {
                 $this->debug_log('Smalot PdfParser error: ' . $e->getMessage());
             }
+        }
+
+        // Method 2: Built-in plugin parser (fallback)
+        try {
+            $parser = new PdfParser();
+            $text = $parser->parseFile($file_path)->getText();
+
+            if (!empty(trim($text))) {
+                return $text;
+            }
+        } catch (\Throwable $e) {
+            $this->debug_log('PdfParser error: ' . $e->getMessage());
         }
 
         // Method 3: pdftotext (poppler-utils) - Linux/Mac

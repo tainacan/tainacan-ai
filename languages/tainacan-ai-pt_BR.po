@@ -39,175 +39,175 @@ msgstr ""
 msgid "https://seu-site.com"
 msgstr ""
 
-#: includes/admin/admin-page.php:85
+#: includes/Admin/settings-page.php:85
 msgid "Tainacan AI Tools"
 msgstr ""
 
-#: includes/admin/admin-page.php:101
-msgid "Default analysis prompt"
+#: includes/Admin/settings-page.php:93
+msgid "Default prompt preamble"
 msgstr ""
 
-#: includes/admin/admin-page.php:110
-msgid "Write the introduction and analysis goals (role, domain, what to look for). This prompt is the default for every file type; use collection-level overrides when needed. The plugin appends the metadata field list per collection and the JSON response format automatically."
+#: includes/Admin/settings-page.php:102
+msgid "Write extraction behavior here (role, domain context, priorities). This preamble is the default for every file type; use collection-level overrides when needed. The plugin appends task rules, global rules, metadata field blocks, evidence rules, and output keys automatically."
 msgstr ""
 
-#: includes/admin/admin-page.php:119
-msgid "Default prompt"
+#: includes/Admin/settings-page.php:111
+msgid "Preamble"
 msgstr ""
 
-#: includes/admin/admin-page.php:130
+#: includes/Admin/settings-page.php:130
 msgid "Suggested prompts"
 msgstr ""
 
-#: includes/admin/admin-page.php:140
+#: includes/Admin/settings-page.php:140
 msgid "Use this template"
 msgstr ""
 
-#: includes/admin/admin-page.php:158
+#: includes/Admin/settings-page.php:158
 msgid "Features"
 msgstr ""
 
-#: includes/admin/admin-page.php:173
+#: includes/Admin/settings-page.php:173
 msgid "Extract EXIF Data"
 msgstr ""
 
-#: includes/admin/admin-page.php:176
+#: includes/Admin/settings-page.php:176
 msgid "Extracts technical metadata from images"
 msgstr ""
 
-#: includes/admin/admin-page.php:191
+#: includes/Admin/settings-page.php:191
 msgid "Require Consent"
 msgstr ""
 
-#: includes/admin/admin-page.php:194
+#: includes/Admin/settings-page.php:194
 msgid "Integrates with WP Consent API"
 msgstr ""
 
-#: includes/admin/admin-page.php:207
+#: includes/Admin/settings-page.php:207
 msgid "Advanced Settings"
 msgstr ""
 
-#: includes/admin/admin-page.php:216
+#: includes/Admin/settings-page.php:216
 msgid "Max Tokens"
 msgstr ""
 
-#: includes/admin/admin-page.php:225
+#: includes/Admin/settings-page.php:225
 msgid "Token limit in response (100-8000)."
 msgstr ""
 
-#: includes/admin/admin-page.php:229
+#: includes/Admin/settings-page.php:229
 msgid "Temperature"
 msgstr ""
 
 #. translators: 1: minimum temperature, 2: maximum temperature
-#: includes/admin/admin-page.php:243
+#: includes/Admin/settings-page.php:243
 msgid "Randomness for the connector API (%1$s–%2$s; lower is more deterministic)."
 msgstr ""
 
-#: includes/admin/admin-page.php:252
+#: includes/Admin/settings-page.php:252
 msgid "AI request timeout (seconds)"
 msgstr ""
 
-#: includes/admin/admin-page.php:264
+#: includes/Admin/settings-page.php:264
 msgid "Max wait for the connector HTTP API call, capped by this site’s PHP max_execution_time."
 msgstr ""
 
-#: includes/admin/admin-page.php:266
+#: includes/Admin/settings-page.php:266
 msgid "Max wait for the connector HTTP API call. Does not extend browser limits for the full analyze action."
 msgstr ""
 
-#: includes/admin/admin-page.php:273
+#: includes/Admin/settings-page.php:273
 msgid "Cache Duration (seconds)"
 msgstr ""
 
-#: includes/admin/admin-page.php:282
+#: includes/Admin/settings-page.php:282
 msgid "0 to disable."
 msgstr ""
 
-#: includes/admin/admin-page.php:296
+#: includes/Admin/settings-page.php:296
 msgid "AI Connectors"
 msgstr ""
 
-#: includes/admin/admin-page.php:299
+#: includes/Admin/settings-page.php:299
 #: includes/ItemFormHook.php:68
 msgid "Configured"
 msgstr ""
 
-#: includes/admin/admin-page.php:301
+#: includes/Admin/settings-page.php:301
 #: includes/ItemFormHook.php:73
 msgid "Not configured"
 msgstr ""
 
 #. translators: %s: connectors admin URL
-#: includes/admin/admin-page.php:309
+#: includes/Admin/settings-page.php:309
 msgid "WordPress chooses the connector and model automatically. Configure credentials in <a href=\"%s\">Settings &rarr; Connectors</a>."
 msgstr ""
 
-#: includes/admin/admin-page.php:316
+#: includes/Admin/settings-page.php:316
 msgid "Image analysis depends on a connector model that accepts image input. The status below is based on connector metadata only; run analysis on an item to confirm."
 msgstr ""
 
-#: includes/admin/admin-page.php:318
+#: includes/Admin/settings-page.php:318
 msgid "A vision-capable model appears in connector metadata. WordPress may still pick another model at runtime — confirm by analyzing an image on an item."
 msgstr ""
 
-#: includes/admin/admin-page.php:327
+#: includes/Admin/settings-page.php:327
 msgid "System Capabilities"
 msgstr ""
 
-#: includes/admin/admin-page.php:330
+#: includes/Admin/settings-page.php:330
 msgid "Status of local modules and runtime support used during analysis."
 msgstr ""
 
-#: includes/admin/admin-page.php:333
+#: includes/Admin/settings-page.php:333
 msgid "Text extraction"
 msgstr ""
 
-#: includes/admin/admin-page.php:334
-#: includes/admin/admin-page.php:339
-#: includes/admin/admin-page.php:345
+#: includes/Admin/settings-page.php:334
+#: includes/Admin/settings-page.php:339
+#: includes/Admin/settings-page.php:345
 msgid "Available"
 msgstr ""
 
-#: includes/admin/admin-page.php:337
+#: includes/Admin/settings-page.php:337
 msgid "EXIF extraction"
 msgstr ""
 
-#: includes/admin/admin-page.php:339
+#: includes/Admin/settings-page.php:339
 msgid "Missing"
 msgstr ""
 
-#: includes/admin/admin-page.php:343
+#: includes/Admin/settings-page.php:343
 msgid "Visual PDF analysis"
 msgstr ""
 
-#: includes/admin/admin-page.php:345
+#: includes/Admin/settings-page.php:345
 #: includes/CoreAI.php:232
 msgid "Unavailable"
 msgstr ""
 
-#: includes/admin/admin-page.php:349
+#: includes/Admin/settings-page.php:349
 #: includes/PromptTemplates.php:34
 msgid "Image analysis"
 msgstr ""
 
-#: includes/admin/admin-page.php:356
+#: includes/Admin/settings-page.php:356
 msgid "Backends:"
 msgstr ""
 
-#: includes/admin/admin-page.php:370
+#: includes/Admin/settings-page.php:370
 msgid "Missing modules:"
 msgstr ""
 
-#: includes/admin/admin-page.php:374
+#: includes/Admin/settings-page.php:374
 msgid "EXIF extension"
 msgstr ""
 
-#: includes/admin/admin-page.php:396
+#: includes/Admin/settings-page.php:396
 msgid "Clear Cache"
 msgstr ""
 
-#: includes/admin/admin-page.php:399
+#: includes/Admin/settings-page.php:399
 msgid "Save Settings"
 msgstr ""
 
@@ -263,25 +263,25 @@ msgstr ""
 msgid "Cache cleared successfully."
 msgstr ""
 
-#: includes/CollectionFormHook.php:86
-msgid "Tainacan AI prompt"
+#: includes/Hooks/CollectionFormHook.php:132
+msgid "Tainacan AI preamble"
 msgstr ""
 
 #. translators: %s: link to Tainacan AI settings page
-#: includes/CollectionFormHook.php:95
-msgid "Override the site-wide prompt for this collection. Leave blank to use <a href=\"%s\">Tainacan AI settings</a>. Enable extraction per metadata on each metadata edition form."
+#: includes/Hooks/CollectionFormHook.php:141
+msgid "Override the site-wide preamble for this collection. Leave blank to use <a href=\"%s\">Tainacan AI settings</a>. Enable extraction per metadata on each metadata edition form."
 msgstr ""
 
-#: includes/CollectionFormHook.php:103
-msgid "Write the introduction and analysis goals here (role, domain, what to look for). The plugin appends the list of metadata marked for extraction in this collection. Evidence and output format rules are added automatically at analysis time."
+#: includes/Hooks/CollectionFormHook.php:149
+msgid "Write role, domain context, and extraction priorities here. The plugin appends task rules, global rules, metadata field blocks, evidence rules, and output keys automatically at analysis time."
 msgstr ""
 
-#: includes/CollectionFormHook.php:111
-msgid "Analysis prompt"
+#: includes/Hooks/CollectionFormHook.php:157
+msgid "Prompt preamble"
 msgstr ""
 
-#: includes/CollectionFormHook.php:119
-msgid "Leave empty to use the default prompt…"
+#: includes/Hooks/CollectionFormHook.php:165
+msgid "Leave empty to use the site default preamble…"
 msgstr ""
 
 #: includes/CoreAI.php:227
@@ -355,9 +355,8 @@ msgstr ""
 msgid "Error encoding image to base64."
 msgstr ""
 
-#: includes/DocumentAnalyzer.php:510
-#: includes/DocumentAnalyzer.php:562
-msgid "No analysis prompt configured."
+#: includes/Extraction/DocumentAnalyzer.php:810
+msgid "No prompt preamble configured."
 msgstr ""
 
 #: includes/DocumentAnalyzer.php:547

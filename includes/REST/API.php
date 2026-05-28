@@ -1,5 +1,9 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\REST;
+
+use Tainacan\AI\Plugin;
+use Tainacan\AI\Extraction\DocumentAnalyzer;
+use Tainacan\AI\Support\CoreAI;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -122,7 +126,7 @@ class API {
         }
 
         // Save cache
-        $options = \Tainacan_AI::get_options();
+        $options = Plugin::get_options();
         $cache_duration = $options['cache_duration'] ?? 3600;
         if ($cache_duration > 0) {
             set_transient($cache_key, $result, $cache_duration);

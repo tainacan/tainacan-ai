@@ -3,11 +3,9 @@
 .gitignore
 .github/
 node_modules/
-vendor/
 tests/
 phpcs.xml.dist
 phpunit.xml.dist
-composer.json
 composer.lock
 package.json
 package-lock.json
@@ -18,6 +16,7 @@ webpack.config.js
 
 # Documentation (keep readme.txt for WordPress.org)
 README.md
+AGENTS.md
 CHANGELOG.md
 CONTRIBUTING.md
 SECURITY.md
@@ -27,7 +26,7 @@ src/js/
 src/css/
 
 # Note: includes/, lib/, languages/ MUST be included in the ZIP
-# templates/ was moved to includes/admin/ for WordPress conventions
+# Admin settings template lives in includes/Admin/settings-page.php
 
 # IDE
 .idea/

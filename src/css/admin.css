@@ -271,7 +271,7 @@
 }
 
 /* Spinner */
-@keyframes tcgpt-spin {
+@keyframes tainacan-ai-spin {
     to { transform: rotate(360deg); }
 }
 
@@ -281,7 +281,7 @@
     border: 1px solid var(--tainacan-ai-border);
     border-top-color: var(--tainacan-ai-primary);
     border-radius: 50%;
-    animation: tcgpt-spin 0.8s linear infinite;
+    animation: tainacan-ai-spin 0.8s linear infinite;
 }
 
 /* Menu Icon */

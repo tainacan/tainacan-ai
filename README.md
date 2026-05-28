@@ -10,8 +10,8 @@ AI routing and credentials are managed by WordPress; this plugin focuses on prom
 - **WordPress AI & Connectors**: Uses the site’s configured AI connectors
 - **Compatible with Tainacan 1.0+**: Uses the Pages and Admin Form Hooks APIs
 - **Smart cache**: Caching with manual clear from settings
-- **Custom prompts**: One default analysis prompt plus per-collection overrides
-- **Prompt templates**: Suggested prompt templates in AI Tools that can be copied into the default prompt
+- **Prompt preambles**: One site-wide default preamble plus per-collection overrides (the plugin composes the full analysis prompt)
+- **Prompt templates**: Suggested preamble templates in AI Tools that can be copied into the default preamble
 - **Per-metadata extraction opt-out**: All collection metadata is included by default; check **Exclude from AI extraction** on the metadatum form to omit a field
 - **Evidence per field**: Every analysis appends standardized instructions so each metadata key returns `{ "value", "evidence" }`
 - **EXIF extraction**: Optional EXIF extraction from images (when enabled and supported by the server)
@@ -41,11 +41,10 @@ With `WP_DEBUG` enabled, non-HTTP failures (PDF extraction, conversion, etc.) an
 
 ### Setup
 
-```bash
-# Install PHP dependencies
-composer install
+From the plugin root directory:
 
-# Install Node.js dependencies
+```bash
+composer install
 npm install
 ```
 
@@ -72,6 +71,12 @@ npm run format
 # Lint CSS/Styles
 npm run lint:css
 
+# Run PHP CodeSniffer with WPCS
+composer phpcs
+
+# Auto-fix PHP style issues when possible
+composer phpcbf
+
 # Update WordPress package dependencies
 npm run packages-update
 
@@ -87,8 +92,9 @@ Built assets are output to `build/` (for example `build/admin.js`, `build/item-f
 
 When preparing a release for WordPress.org:
 
-1. Run `npm run build` to generate production assets
-2. Run `npm run plugin-zip` to create a distribution-ready ZIP
+1. Run `composer install --no-dev` to ensure runtime PHP dependencies are present in `vendor/`
+2. Run `npm run build` to generate production assets
+3. Run `npm run plugin-zip` to create a distribution-ready ZIP
 3. The `.distignore` file controls which files are included
 
 **Important:** The ZIP typically includes:
@@ -110,7 +116,7 @@ When preparing a release for WordPress.org:
 ## Usage
 
 1. Ensure AI connectors are set up in **Settings → Connectors**
-2. Optionally adjust the default prompt (and templates) under **Tainacan → AI Tools** and per-collection prompts on each collection's edition form
+2. Optionally adjust the default preamble (and templates) under **Tainacan → AI Tools** and per-collection preambles on each collection's edition form
 3. Edit a Tainacan item with an attached document
 4. In the **AI Metadata Extractor** section, click **Analyze Document**
 5. Review results and fill metadata (manually or using the provided actions)
@@ -120,7 +126,7 @@ When preparing a release for WordPress.org:
 At analysis time, the plugin composes the final prompt in a fixed order (single request, no multi-step orchestration):
 
 1. **User preamble**  
-   From collection prompt (`tainacan_ai_prompt_text`) or the site default prompt.
+   From collection meta (`tainacan_ai_prompt_preamble`) or the site option `default_preamble`.
 2. **Task**  
    A short instruction with **analysis mode** (`image`, `text`, `pdf_text`, `pdf_visual`).
 3. **Global rules**  
@@ -146,8 +152,8 @@ Available prompt customization filters:
 - `tainacan_ai_analysis_site_locale_for_prompt` (locale string embedded in global output-language rules)
 - `tainacan_ai_evidence_instructions` (evidence rules block)
 - `tainacan_ai_extraction_field` (per-metadatum field block data before serialization)
-- `tainacan_ai_taxonomy_allowed_values_limit` (max ranked taxonomy terms sent in `allowed_values`)
-- `tainacan_ai_taxonomy_allowed_values` (final ranked taxonomy term list before prompt serialization)
+- `tainacan_ai_allowed_value_options_limit` (max ranked taxonomy terms or relationship items in `allowed_value_options`)
+- `tainacan_ai_allowed_value_options` (final ranked `{ value, label }` rows before prompt serialization)
 
 ### AI response shape
 
@@ -182,9 +188,9 @@ Evidence instructions are appended automatically at analysis time (image vs. tex
 
 Multivalued fields use **parallel arrays** inside one object (`value` and `evidence` with the same length), not an array of per-item `{ value, evidence }` objects.
 
-The plugin appends field blocks for metadata marked for extraction (slug as JSON key). These blocks include optional guidance from description/placeholder and optional constraints derived from metadata settings, such as `required`, multivalue limits (`max_items`), type limits (`min/max/step`, `max_length`, `mask`), `allowed_values` for selectboxes, and taxonomy/relationship structure hints. It does not replace your introduction (see [issue #7](https://github.com/tainacan/tainacan-ai/issues/7)). Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
+The plugin appends field blocks for metadata marked for extraction (slug as JSON key). These blocks include optional guidance from description/placeholder and optional constraints derived from metadata settings, such as `required`, multivalue limits (`max_items`), type limits (`min/max/step`, `max_length`, `mask`), `allowed_values` for selectboxes, and taxonomy/relationship structure hints. Configure extraction on each metadata edition form under **Tainacan AI → Exclude from AI extraction** (unchecked by default).
 
-You can customize this per metadatum via `tainacan_ai_extraction_field`. The plugin itself now uses this same hook to inject built-in type hints, so custom metadata types or site-specific rules can reuse one API. Catalog-style hints (for example `taxonomy_allowed_values` on the item form) use rows `{ "value", "label" }`: `value` is the machine-readable payload for REST (term ID today), and `label` is the string shown in prompts and in the UI.
+You can customize this per metadatum via `tainacan_ai_extraction_field`. The plugin itself now uses this same hook to inject built-in type hints, so custom metadata types or site-specific rules can reuse one API. Vocabulary-controlled fields expose `allowed_value_options` as rows `{ "value", "label" }`: `value` is the machine-readable payload for REST (term ID, item ID, or selectbox string), and `label` is the string sent to the model and shown in the UI. The prompt uses a derived `allowed_values` list (labels only).
 
 Taxonomy insertion/creation is not automatic during analysis: taxonomy values remain suggestion-oriented in extraction output. New terms can be created explicitly from the item form when `allow_new_terms` is enabled.
 
@@ -221,21 +227,26 @@ DELETE /wp-json/tainacan-ai/v1/cache/{attachment_id}
 tainacan-ai/
 ├── tainacan-ai.php         # Main plugin file
 ├── includes/
-│   ├── AdminPage.php       # Admin page (Tainacan Pages API)
-│   ├── ItemFormHook.php    # Form integration (Admin Form Hooks)
-│   ├── DocumentAnalyzer.php
-│   ├── API.php             # REST API endpoints
-│   ├── CollectionPrompts.php   # Per-collection prompt post meta
-│   ├── CollectionFormHook.php  # Per-collection prompts on edition form
-│   ├── PromptTemplates.php     # Suggested prompt templates for admin UI
-│   ├── EvidenceInstructions.php # Runtime file-type evidence guidance (by analysis mode)
-│   ├── ExtractionMetadata.php   # Per-metadatum flag + dynamic field list for prompts/fill
-│   ├── MetadatumFormHook.php    # Toggle extraction on metadata edition form
-│   ├── ExifExtractor.php
-│   ├── CoreAI.php              # WordPress AI client integration
-│   ├── CoreAIRequestLogging.php
-│   └── admin/
-│       └── admin-page.php  # Settings page template
+│   ├── Plugin.php               # Main runtime plugin class
+│   ├── Admin/
+│   │   ├── AdminPage.php          # Settings page controller
+│   │   └── settings-page.php      # Settings page template
+│   ├── REST/
+│   │   └── API.php
+│   ├── Hooks/
+│   │   ├── ItemFormHook.php
+│   │   ├── CollectionFormHook.php   # Per-collection preambles (meta + form)
+│   │   └── MetadatumFormHook.php
+│   ├── Extraction/
+│   │   ├── DocumentAnalyzer.php
+│   │   ├── ExtractionMetadata.php
+│   │   ├── PromptTemplates.php
+│   │   ├── AnalysisPromptComposer.php
+│   │   ├── EvidenceInstructions.php
+│   │   └── ExifExtractor.php
+│   ├── Support/
+│   │   ├── CoreAI.php
+│   │   └── CoreAIRequestLogging.php
 ├── lib/                    # Embedded third-party libraries
 │   └── PdfParser/
 ├── src/                    # Source assets

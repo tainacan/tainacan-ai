@@ -1,5 +1,7 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Extraction;
+
+use Tainacan\AI\Support\DebugLog;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -88,6 +90,7 @@ class ExtractionMetadata {
      *     taxonomy_id: int|null,
      *     allow_new_terms: bool|null,
      *     allowed_values_truncated: bool,
+     *     allowed_value_options: array<int, array{value: int|float|string, label: string}>,
      *     target_collection: int|null,
      *     relationship_search_field: int|null,
      *     allowed_values: string[]
@@ -103,9 +106,7 @@ class ExtractionMetadata {
             $collection = new \Tainacan\Entities\Collection($collection_id);
             $metadata_list = $metadata_repo->fetch_by_collection($collection, [], 'OBJECT');
         } catch (\Throwable $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[TainacanAI] Extraction fields lookup failed: ' . $e->getMessage());
-            }
+            DebugLog::log('Extraction fields lookup failed: ' . $e->getMessage());
             return [];
         }
 
@@ -276,7 +277,7 @@ class ExtractionMetadata {
      *     taxonomy_id: int|null,
      *     allow_new_terms: bool|null,
      *     allowed_values_truncated: bool,
-     *     taxonomy_allowed_values: array<int, array{value: int, label: string}>,
+     *     allowed_value_options: array<int, array{value: int|float|string, label: string}>,
      *     target_collection: int|null,
      *     relationship_search_field: int|null,
      *     allowed_values: string[]
@@ -332,7 +333,7 @@ class ExtractionMetadata {
             $lines[] = '- mode: ' . $this->get_field_extraction_mode($field);
 
             $field_prompt_hints = $this->build_field_prompt_hints($field);
-            unset($field_prompt_hints['taxonomy_allowed_values']);
+            unset($field_prompt_hints['allowed_value_options']);
 
             foreach ($field_prompt_hints as $key => $value) {
                 $lines[] = '- ' . $key . ': ' . $this->format_prompt_value($value);
@@ -361,8 +362,13 @@ class ExtractionMetadata {
             $field_hints['field_guidance'] = trim($field['description']);
         }
 
-        if (isset($field['placeholder']) && is_string($field['placeholder']) && trim($field['placeholder']) !== '') {
-            $field_hints['expected_format_hint'] = trim($field['placeholder']);
+        $placeholder = isset($field['placeholder']) && is_string($field['placeholder'])
+            ? trim($field['placeholder'])
+            : '';
+
+        // Placeholder is admin UI copy; for closed allowed_values lists it must not be mistaken for a valid value.
+        if ($placeholder !== '' && !$this->field_has_allowed_value_options($field)) {
+            $field_hints['expected_format_hint'] = $placeholder;
         }
 
         $core_field_keys = [
@@ -375,8 +381,8 @@ class ExtractionMetadata {
             'max_items' => true,
             'description' => true,
             'placeholder' => true,
-            // Internal runtime taxonomy catalog, not a prompt instruction.
-            'taxonomy_allowed_values' => true,
+            // Runtime { value, label } rows; prompt uses derived allowed_values (labels only).
+            'allowed_value_options' => true,
         ];
 
         foreach ($field as $key => $value) {
@@ -399,9 +405,9 @@ class ExtractionMetadata {
             $field_hints[$key] = $value;
         }
 
-        if (isset($field['taxonomy_allowed_values']) && is_array($field['taxonomy_allowed_values'])) {
+        if (isset($field['allowed_value_options']) && is_array($field['allowed_value_options'])) {
             $labels = [];
-            foreach ($field['taxonomy_allowed_values'] as $entry) {
+            foreach ($field['allowed_value_options'] as $entry) {
                 if (!is_array($entry)) {
                     continue;
                 }
@@ -500,11 +506,11 @@ class ExtractionMetadata {
             if ($taxonomy_id !== null) {
                 $field_hints['taxonomy_id'] = $taxonomy_id;
 
-                $taxonomy_allowed_values = $this->get_ranked_taxonomy_allowed_values($taxonomy_id);
-                if ($taxonomy_allowed_values['taxonomy_allowed_values'] !== []) {
-                    $field_hints['taxonomy_allowed_values'] = $taxonomy_allowed_values['taxonomy_allowed_values'];
+                $ranked_options = $this->get_ranked_taxonomy_allowed_value_options($taxonomy_id);
+                if ($ranked_options['allowed_value_options'] !== []) {
+                    $field_hints['allowed_value_options'] = $ranked_options['allowed_value_options'];
                 }
-                if ($taxonomy_allowed_values['allowed_values_truncated']) {
+                if ($ranked_options['allowed_values_truncated']) {
                     $field_hints['allowed_values_truncated'] = true;
                 }
             }
@@ -522,67 +528,157 @@ class ExtractionMetadata {
         }
 
         if ($type === 'selectbox') {
-            $field_hints['allowed_values'] = $this->parse_selectbox_allowed_values($metadata_type_options['options'] ?? '');
+            $allowed_values = $this->parse_selectbox_allowed_values($metadata_type_options['options'] ?? '');
+            if ($allowed_values !== []) {
+                $field_hints['allowed_values'] = $allowed_values;
+                $field_hints['allowed_value_options'] = array_map(
+                    static fn (string $label): array => [
+                        'value' => $label,
+                        'label' => $label,
+                    ],
+                    $allowed_values
+                );
+            }
         }
 
         return $field_hints;
     }
 
     /**
+     * Whether the field has vocabulary-controlled choices (prompt labels or stored value options).
+     *
+     * @param array<string, mixed> $field
+     */
+    public function field_has_allowed_value_options(array $field): bool {
+        return $this->get_allowed_value_options($field) !== [];
+    }
+
+    /**
+     * Rows `{ value, label }` for whitelist normalization (taxonomy, selectbox, relationship).
+     *
+     * @param array<string, mixed> $field
+     * @return array<int, array{value: int|float|string, label: string}>
+     */
+    public function get_allowed_value_options(array $field): array {
+        if (isset($field['allowed_value_options']) && is_array($field['allowed_value_options'])) {
+            $options = $this->normalize_allowed_value_option_rows($field['allowed_value_options']);
+            if ($options !== []) {
+                return $options;
+            }
+        }
+
+        $allowed_values = $field['allowed_values'] ?? [];
+        if (!is_array($allowed_values) || $allowed_values === []) {
+            return [];
+        }
+
+        $options = [];
+        foreach ($allowed_values as $option) {
+            if (!is_scalar($option)) {
+                continue;
+            }
+            $label = trim((string) $option);
+            if ($label === '') {
+                continue;
+            }
+            $options[] = [
+                'value' => $label,
+                'label' => $label,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param array<int, mixed> $rows
+     * @return array<int, array{value: int|float|string, label: string}>
+     */
+    private function normalize_allowed_value_option_rows(array $rows): array {
+        $options = [];
+
+        foreach ($rows as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $label = trim((string) ($entry['label'] ?? ''));
+            $value = $entry['value'] ?? null;
+
+            if ($label === '' || !is_scalar($value) || is_bool($value)) {
+                continue;
+            }
+
+            if (is_string($value)) {
+                $value = trim($value);
+                if ($value === '') {
+                    continue;
+                }
+            } elseif (is_int($value) || is_float($value)) {
+                if ($value <= 0) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+
+            $options[] = [
+                'value' => $value,
+                'label' => $label,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
      * @return array{
-     *     taxonomy_allowed_values: array<int, array{value: int, label: string}>,
+     *     allowed_value_options: array<int, array{value: int, label: string}>,
      *     allowed_values_truncated: bool,
      * }
      */
-    private function get_ranked_taxonomy_allowed_values(int $taxonomy_id): array {
+    private function get_ranked_taxonomy_allowed_value_options(int $taxonomy_id): array {
         $limit = (int) apply_filters(
-            'tainacan_ai_taxonomy_allowed_values_limit',
+            'tainacan_ai_allowed_value_options_limit',
             self::TAXONOMY_ALLOWED_VALUES_LIMIT,
             $taxonomy_id
         );
         $limit = max(1, $limit);
 
         $terms = $this->fetch_ranked_taxonomy_terms($taxonomy_id, $limit + 1);
-        $term_names = array_values(array_unique(array_filter(
-            array_map(static fn (array $term): string => trim((string) ($term['label'] ?? '')), $terms),
-            static fn (string $name): bool => $name !== ''
-        )));
 
-        $is_truncated = count($term_names) > $limit;
-        if ($is_truncated) {
-            $term_names = array_slice($term_names, 0, $limit);
-        }
-
-        /** @var string[] $term_names */
-        $term_names = (array) apply_filters(
-            'tainacan_ai_taxonomy_allowed_values',
-            $term_names,
-            $taxonomy_id,
-            $is_truncated
-        );
-
-        $allowed_labels = array_values(array_unique(array_filter(
-            array_map(static fn ($name): string => is_string($name) ? trim($name) : '', $term_names),
-            static fn (string $name): bool => $name !== ''
-        )));
-
-        $taxonomy_allowed_values = [];
+        $allowed_value_options = [];
         foreach ($terms as $term) {
             $label = trim((string) ($term['label'] ?? ''));
             $id = isset($term['value']) ? (int) $term['value'] : 0;
-            if ($label === '' || $id <= 0 || !in_array($label, $allowed_labels, true)) {
+            if ($label === '' || $id <= 0) {
                 continue;
             }
-            $taxonomy_allowed_values[] = [
+            $allowed_value_options[] = [
                 'value' => $id,
                 'label' => $label,
             ];
         }
 
-        $taxonomy_allowed_values = array_values(array_unique($taxonomy_allowed_values, SORT_REGULAR));
+        $allowed_value_options = array_values(array_unique($allowed_value_options, SORT_REGULAR));
+
+        $is_truncated = count($allowed_value_options) > $limit;
+        if ($is_truncated) {
+            $allowed_value_options = array_slice($allowed_value_options, 0, $limit);
+        }
+
+        /** @var array<int, array{value: int, label: string}> $allowed_value_options */
+        $allowed_value_options = (array) apply_filters(
+            'tainacan_ai_allowed_value_options',
+            $allowed_value_options,
+            $taxonomy_id,
+            $is_truncated
+        );
+
+        $allowed_value_options = $this->normalize_allowed_value_option_rows($allowed_value_options);
 
         return [
-            'taxonomy_allowed_values' => $taxonomy_allowed_values,
+            'allowed_value_options' => $allowed_value_options,
             'allowed_values_truncated' => $is_truncated,
         ];
     }

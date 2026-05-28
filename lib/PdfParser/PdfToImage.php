@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
  * PDF to Image Converter
  *
  * Supports multiple backends: Imagick, GD with Ghostscript, or external API.
- * Allows visual analysis of scanned PDFs via GPT-4 Vision.
+ * Supports visual analysis workflows for scanned PDFs.
  *
  * @package Tainacan_AI
  * @since 1.0.0
@@ -319,7 +319,7 @@ class PdfToImage {
 
         foreach ($files as $file) {
             if (filemtime($file) < time() - $maxAge) {
-                if (unlink($file)) {
+                if (wp_delete_file($file)) {
                     $count++;
                 }
             }

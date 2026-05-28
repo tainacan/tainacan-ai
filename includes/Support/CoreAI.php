@@ -1,5 +1,5 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Support;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -81,13 +81,23 @@ class CoreAI {
     }
 
     /**
-     * Best-effort: detect if at least one Core connector has an API key.
+     * Whether any active AI connector has credentials configured.
      *
-     * WordPress stores connector credentials in options. For the migration
-     * we don't want to depend exclusively on Core prompt-builder "support"
-     * method names (they can differ by WP version).
+     * Prefers WordPress\AI\has_ai_credentials() when the AI plugin helpers are loaded;
+     * falls back to option-name heuristics for Core-only Connectors setups.
      */
-    private static function has_connectors_api_key(): bool {
+    private static function has_connector_credentials(): bool {
+        if (function_exists('\WordPress\AI\has_ai_credentials')) {
+            return (bool) \WordPress\AI\has_ai_credentials();
+        }
+
+        return self::has_connectors_api_key_fallback();
+    }
+
+    /**
+     * Best-effort credential detection when WordPress\AI\has_ai_credentials() is unavailable.
+     */
+    private static function has_connectors_api_key_fallback(): bool {
         // Most common keys (as observed in the migration environment).
         $known_keys = [
             'connectors_ai_openai_api_key',
@@ -130,45 +140,71 @@ class CoreAI {
     /**
      * Check if text generation is supported for the current site configuration.
      *
-     * Deterministic and does not make network calls.
+     * Does not perform analysis HTTP requests. When available, uses the same
+     * builder probe as WordPress\AI\has_valid_ai_credentials().
      */
     public static function is_supported_text_generation(): bool {
         if (!function_exists('\wp_ai_client_prompt')) {
             return false;
         }
 
-        $connectors_configured = self::has_connectors_api_key();
+        if (function_exists('\WordPress\AI\has_valid_ai_credentials')) {
+            try {
+                if (\WordPress\AI\has_valid_ai_credentials()) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                // Fall through to heuristics (metadata can false-negative at runtime).
+            }
+        }
 
+        $has_credentials = self::has_connector_credentials();
+        $has_connectors = self::get_active_ai_connector_ids() !== [];
+
+        if ($has_connectors && $has_credentials) {
+            return true;
+        }
+
+        if (self::probe_builder_supports_text_generation()) {
+            return true;
+        }
+
+        return $has_credentials;
+    }
+
+    /**
+     * Probe wp_ai_client_prompt() builder support flags (no outbound AI request).
+     */
+    private static function probe_builder_supports_text_generation(): bool {
         try {
             $builder = wp_ai_client_prompt('test');
             $support_methods = [
                 'is_supported_for_text_generation',
                 'isSupportedForTextGeneration',
-                // Some implementations may expose alternative names:
                 'is_supported_for_text',
                 'isSupportedForText',
             ];
 
-            $hasMagicCall = method_exists($builder, '__call');
+            $has_magic_call = method_exists($builder, '__call');
 
             foreach ($support_methods as $method) {
-                if (!self::builderHas($builder, $method) && !$hasMagicCall) {
+                if (!self::builderHas($builder, $method) && !$has_magic_call) {
                     continue;
                 }
 
                 try {
-                    $supported = (bool) $builder->$method();
-                    return $supported || $connectors_configured;
+                    if ((bool) $builder->$method()) {
+                        return true;
+                    }
                 } catch (\Throwable $e) {
                     continue;
                 }
             }
         } catch (\Throwable $e) {
-            return $connectors_configured;
+            return false;
         }
 
-        // If we can't detect support via the builder, use connectors presence.
-        return $connectors_configured;
+        return false;
     }
 
     /**
@@ -272,11 +308,20 @@ class CoreAI {
     }
 
     /**
-     * Active AI provider connector IDs (wp_get_connectors; no WordPress AI plugin required).
+     * Active AI provider connector IDs.
+     *
+     * Prefers WordPress\AI\get_ai_connectors() when loaded (same rules as core Tainacan
+     * and the AI plugin REST models API); falls back to wp_get_connectors().
      *
      * @return list<string>
      */
     private static function get_active_ai_connector_ids(): array {
+        if (function_exists('\WordPress\AI\get_ai_connectors')) {
+            $connectors = \WordPress\AI\get_ai_connectors();
+
+            return is_array($connectors) ? array_keys($connectors) : [];
+        }
+
         if (!function_exists('wp_get_connectors')) {
             return [];
         }
@@ -422,6 +467,10 @@ class CoreAI {
                 }
             }
 
+            if (!$has_image_input) {
+                self::bind_verified_text_generation_model($builder);
+            }
+
             if ($has_image_input) {
                 self::apply_vision_model_preferences($builder);
             }
@@ -565,13 +614,97 @@ class CoreAI {
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
             $methods = get_class_methods($builder);
-            error_log('[TainacanAI][CoreAI] No generate text method found. Methods: ' . wp_json_encode(array_slice($methods, 0, 50)));
+            DebugLog::log('[CoreAI] No generate text method found. Methods: ' . wp_json_encode(array_slice($methods, 0, 50)));
         }
 
         return new \WP_Error(
             'core_ai_no_generate_text_result',
             __('Core builder does not expose a supported text-generation method.', 'tainacan-ai')
         );
+    }
+
+    /**
+     * Bind a verified text-capable model to avoid false positives from provider metadata.
+     *
+     * Some providers may report text-generation support in metadata but return a runtime
+     * model object that is not a TextGenerationModelInterface instance.
+     */
+    private static function bind_verified_text_generation_model(object $builder): void {
+        $methods = ['using_model', 'usingModel'];
+        $has_magic_call = method_exists($builder, '__call');
+        $has_supported_method = false;
+
+        foreach ($methods as $method) {
+            if (self::builderHas($builder, $method) || $has_magic_call) {
+                $has_supported_method = true;
+                break;
+            }
+        }
+
+        if (!$has_supported_method) {
+            return;
+        }
+
+        $model = self::resolve_verified_text_generation_model();
+        if ($model === null) {
+            return;
+        }
+
+        foreach ($methods as $method) {
+            if (!self::builderHas($builder, $method) && !$has_magic_call) {
+                continue;
+            }
+
+            try {
+                $builder->$method($model);
+                return;
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+    }
+
+    /**
+     * Resolve a model that is verifiably text-capable at runtime.
+     */
+    private static function resolve_verified_text_generation_model(): ?object {
+        if (
+            !class_exists(\WordPress\AiClient\AiClient::class)
+            || !class_exists(\WordPress\AiClient\Providers\Models\DTO\ModelRequirements::class)
+            || !class_exists(\WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::class)
+            || !interface_exists(\WordPress\AiClient\Providers\Models\Contracts\TextGenerationModelInterface::class)
+        ) {
+            return null;
+        }
+
+        try {
+            $registry = \WordPress\AiClient\AiClient::defaultRegistry();
+            $requirements = new \WordPress\AiClient\Providers\Models\DTO\ModelRequirements(
+                [
+                    \WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::textGeneration(),
+                ],
+                []
+            );
+
+            $connector_ids = self::get_active_ai_connector_ids();
+            foreach ($connector_ids as $connector_id) {
+                $models = $registry->findProviderModelsMetadataForSupport($connector_id, $requirements);
+                foreach ($models as $model_meta) {
+                    try {
+                        $model = $registry->getProviderModel($connector_id, $model_meta->getId());
+                        if ($model instanceof \WordPress\AiClient\Providers\Models\Contracts\TextGenerationModelInterface) {
+                            return $model;
+                        }
+                    } catch (\Throwable $e) {
+                        continue;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return null;
     }
 
     /**
@@ -712,8 +845,8 @@ class CoreAI {
         }
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(
-                '[TainacanAI][CoreAI] File attach failed. ' .
+            DebugLog::log(
+                '[CoreAI] File attach failed. ' .
                 'Tried methods: ' . wp_json_encode($method_candidates) . '. ' .
                 'Builder methods (sample): ' . wp_json_encode(array_slice($available_methods, 0, 50))
             );

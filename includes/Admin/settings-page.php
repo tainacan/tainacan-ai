@@ -1,27 +1,19 @@
 <?php
 /**
- * Admin page template
- * @var array $options
+ * Settings page markup (included by AdminPage).
+ *
+ * @var array<string, mixed> $options Plugin options from the database.
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Stub for static analysis when imagick extension isn't available.
-if (!class_exists('\Imagick')) {
-    class Imagick {
-        public function queryFormats(string $format): array {
-            return [];
-        }
-    }
-}
-
 // WP 7.0+ path: rely on WordPress Connectors + Core AI support checks.
-$tainacan_ai_is_configured = \Tainacan\AI\CoreAI::is_supported_text_generation();
-$tainacan_ai_image_support = \Tainacan\AI\CoreAI::get_image_analysis_support_display();
-$tainacan_ai_image_support_status = \Tainacan\AI\CoreAI::get_image_analysis_support_status();
-$tainacan_ai_request_timeout_bounds = \Tainacan\AI\CoreAI::get_request_timeout_bounds();
+$tainacan_ai_is_configured = \Tainacan\AI\Support\CoreAI::is_supported_text_generation();
+$tainacan_ai_image_support = \Tainacan\AI\Support\CoreAI::get_image_analysis_support_display();
+$tainacan_ai_image_support_status = \Tainacan\AI\Support\CoreAI::get_image_analysis_support_status();
+$tainacan_ai_request_timeout_bounds = \Tainacan\AI\Support\CoreAI::get_request_timeout_bounds();
 $tainacan_ai_request_timeout_value = max(
     $tainacan_ai_request_timeout_bounds['min'],
     min(
@@ -29,7 +21,7 @@ $tainacan_ai_request_timeout_value = max(
         (int) ($options['request_timeout'] ?? 120)
     )
 );
-$tainacan_ai_temperature_bounds = \Tainacan\AI\CoreAI::get_temperature_bounds();
+$tainacan_ai_temperature_bounds = \Tainacan\AI\Support\CoreAI::get_temperature_bounds();
 $tainacan_ai_temperature_value = max(
     $tainacan_ai_temperature_bounds['min'],
     min(
@@ -70,7 +62,7 @@ if (function_exists('shell_exec')) {
 }
 
 $tainacan_ai_has_visual = $tainacan_ai_has_imagick_pdf || $tainacan_ai_has_ghostscript;
-$tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
+$tainacan_ai_prompt_templates = \Tainacan\AI\Extraction\PromptTemplates::get_templates();
 ?>
 
 <div class="wrap tainacan-page-container-content tainacan-ai-admin">
@@ -93,12 +85,12 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
 
             <div class="tainacan-ai-form-fields">
 
-                <!-- Seção: Prompt padrão -->
+                <!-- Default preamble -->
                 <div class="tainacan-ai-card">
                     <div class="tainacan-ai-card-header">
                         <div class="tainacan-ai-card-title">
                             <span class="dashicons dashicons-edit-page"></span>
-                            <h2><?php esc_html_e('Default analysis prompt', 'tainacan-ai'); ?></h2>
+                            <h2><?php esc_html_e('Default prompt preamble', 'tainacan-ai'); ?></h2>
                         </div>
                         <button type="button" class="tainacan-ai-toggle-card">
                             <span class="dashicons dashicons-arrow-down-alt2"></span>
@@ -108,22 +100,22 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
                         <p class="tainacan-ai-card-description">
                             <?php
                             esc_html_e(
-                                'Write extraction behavior here (role, domain context, priorities). This prompt is the default for every file type; use collection-level overrides when needed. The plugin appends global rules, evidence rules, metadata field blocks, and output keys automatically.',
+                                'Write extraction behavior here (role, domain context, priorities). This preamble is the default for every file type; use collection-level overrides when needed. The plugin appends task rules, global rules, metadata field blocks, evidence rules, and output keys automatically.',
                                 'tainacan-ai'
                             );
                             ?>
                         </p>
 
                         <div class="tainacan-ai-field">
-                            <label for="default_prompt">
-                                <?php esc_html_e('Default prompt', 'tainacan-ai'); ?>
+                            <label for="default_preamble">
+                                <?php esc_html_e('Preamble', 'tainacan-ai'); ?>
                             </label>
                             <textarea
-                                id="default_prompt"
-                                name="tainacan_ai_options[default_prompt]"
+                                id="default_preamble"
+                                name="tainacan_ai_options[default_preamble]"
                                 rows="10"
                                 class="large-text code"
-                            ><?php echo esc_textarea($options['default_prompt'] ?? ''); ?></textarea>
+                            ><?php echo esc_textarea($options['default_preamble'] ?? ''); ?></textarea>
                         </div>
 
                         <details class="tainacan-ai-prompt-templates">
@@ -312,7 +304,7 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\PromptTemplates::get_templates();
                         );
                         ?>
                     </p>
-                    <?php if ($tainacan_ai_image_support_status !== \Tainacan\AI\CoreAI::IMAGE_SUPPORT_CATALOG): ?>
+                    <?php if ($tainacan_ai_image_support_status !== \Tainacan\AI\Support\CoreAI::IMAGE_SUPPORT_CATALOG): ?>
                         <p><?php esc_html_e('Image analysis depends on a connector model that accepts image input. The status below is based on connector metadata only; run analysis on an item to confirm.', 'tainacan-ai'); ?></p>
                     <?php else: ?>
                         <p><?php esc_html_e('A vision-capable model appears in connector metadata. WordPress may still pick another model at runtime — confirm by analyzing an image on an item.', 'tainacan-ai'); ?></p>

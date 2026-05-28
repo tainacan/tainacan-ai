@@ -1,5 +1,5 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Extraction;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -43,9 +43,22 @@ class AnalysisPromptComposer {
             'fields' => $extraction->build_fields_section($fields),
             'schema' => $extraction->build_field_format_section(),
             'language' => self::build_output_language_section(),
-            'evidence' => EvidenceInstructions::get_mode_guidance($analysis_mode),
-            'output' => $extraction->build_output_keys_section($expected_slugs),
         ];
+
+        $prompt_before_evidence = trim(implode("\n\n", array_values(array_filter(
+            [
+                $sections['user'],
+                $sections['task'],
+                $sections['rules'],
+                $sections['fields'],
+                $sections['schema'],
+                $sections['language'],
+            ],
+            static fn (string $value): bool => $value !== ''
+        ))));
+
+        $sections['evidence'] = EvidenceInstructions::get_mode_guidance($analysis_mode, $prompt_before_evidence);
+        $sections['output'] = $extraction->build_output_keys_section($expected_slugs);
 
         /** @var array<string, string> $sections */
         $sections = (array) apply_filters(
@@ -86,7 +99,7 @@ class AnalysisPromptComposer {
             sprintf('Extract structured metadata from the attached %s. Return ONLY valid JSON.', $label);
     }
 
-    public function build_output_language_section(): string {
+    private static function build_output_language_section(): string {
         $site_locale = function_exists('get_locale') ? (string) get_locale() : 'en_US';
         /**
          * WordPress locale string shown in GLOBAL RULES as the default for ambiguous free-text language.
@@ -106,9 +119,9 @@ class AnalysisPromptComposer {
         return 'GLOBAL RULES' . "\n" .
             '- For strict factual fields, never fabricate dates, personal names, authors, locations, identifiers, or coordinates.' . "\n" .
             '- For taxonomy and relationship fields, suggest values only when evidence in the document supports them.' . "\n" .
-            '- If a taxonomy field provides allowed_values, first try to match a supported term from that list.' . "\n" .
-            '- If one or more allowed_values terms are supported, return only those matched terms for that taxonomy field.' . "\n" .
-            '- Only when no allowed_values term is supported: if allow_new_terms=true, you may suggest one new term label not present in allowed_values; if false, return value null.' . "\n" .
+            '- For any field with allowed_values, return only exact strings from that list or null.' . "\n" .
+            '- Never use metadatum placeholder text, form control labels, or instructional sentences as field values unless that exact string appears in allowed_values.' . "\n" .
+            '- For taxonomy fields only: when allow_new_terms=true and no allowed_values term matches, you may suggest one new term label; when allow_new_terms=false, return null.' . "\n" .
             '- Never mix allowed_values matches and a new taxonomy term in the same field response.' . "\n" .
             '- Never invent relationship values; every non-null suggestion must include direct evidence support.' . "\n" .
             '- Use value: null when there is no support in the document.' . "\n" .

@@ -56,7 +56,7 @@ Connectors and credentials are managed in **Settings → Connectors**. The plugi
 
 = Customization =
 
-Configure a default analysis prompt, per-collection overrides on the collection edition form, suggested prompt templates, features such as EXIF extraction, and clear cache from **Tainacan → Others → AI Tools**.
+Configure a default prompt preamble, per-collection overrides on the collection edition form, suggested preamble templates, features such as EXIF extraction, and clear cache from **Tainacan → Others → AI Tools**.
 
 Each field uses the metadata slug as JSON key with shape `{ "value": "...", "evidence": "..." }`. The plugin appends the field list, response format, and file-type evidence rules at analysis time. Field blocks include optional guidance from metadata description/placeholder and optional constraints from metadata settings (for example required, max_items, min/max/step, max_length, allowed_values, and taxonomy/relationship hints). For taxonomy fields, allowed_values can include a ranked list of existing terms. Developers can customize each field block with the `tainacan_ai_extraction_field` filter; the plugin uses this same filter internally for built-in type hints.
 

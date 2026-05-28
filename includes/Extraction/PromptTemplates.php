@@ -1,5 +1,5 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Extraction;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -14,15 +14,15 @@ if (!defined('ABSPATH')) {
  */
 class PromptTemplates {
 
-    public static function get_default_prompt(): string {
-        $default_prompt = self::get_image_template();
+    public static function get_default_preamble(): string {
+        $default_preamble = self::get_image_template();
 
         /**
-         * Filters the default analysis prompt used by Tainacan AI.
+         * Filters the default prompt preamble used by Tainacan AI.
          *
-         * @param string $default_prompt The default prompt text.
+         * @param string $default_preamble The default preamble text.
          */
-        return (string) apply_filters('tainacan_ai_default_prompt', $default_prompt);
+        return (string) apply_filters('tainacan_ai_default_preamble', $default_preamble);
     }
 
     /**

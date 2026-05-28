@@ -118,7 +118,7 @@
 				return;
 			}
 
-			const $textarea = $( '#default_prompt' );
+			const $textarea = $( '#default_preamble' );
 			if ( ! $textarea.length ) {
 				return;
 			}
@@ -129,8 +129,8 @@
 				currentValue &&
 				currentValue !== nextValue.trim() &&
 				! confirm(
-					TainacanAIAdmin.texts.confirmReplacePromptTemplate ||
-						'Replace the current prompt with this template?'
+					TainacanAIAdmin.texts.confirmReplacePreambleTemplate ||
+						'Replace the current preamble with this template?'
 				)
 			) {
 				return;

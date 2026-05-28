@@ -273,7 +273,7 @@
 }
 
 /* Spinner */
-@keyframes tcgpt-spin {
+@keyframes tainacan-ai-spin {
     to { transform: rotate(360deg); }
 }
 
@@ -283,7 +283,7 @@
     border: 3px solid var(--tainacan-ai-accent);
     border-top-color: var(--tainacan-ai-primary);
     border-radius: 50%;
-    animation: tcgpt-spin 0.8s linear infinite;
+    animation: tainacan-ai-spin 0.8s linear infinite;
     flex-shrink: 0;
 }
 
@@ -572,7 +572,7 @@
 }
 
 /* Animations */
-@keyframes tcgpt-fadeIn {
+@keyframes tainacan-ai-fadeIn {
     from {
         opacity: 0;
         transform: translateY(10px);
@@ -736,7 +736,7 @@
     border: 1px solid var(--tainacan-ai-border);
     overflow: hidden;
     transition: all 0.2s ease;
-    animation: tcgpt-fadeIn 0.3s ease forwards;
+    animation: tainacan-ai-fadeIn 0.3s ease forwards;
     opacity: 0;
 }
 
@@ -991,12 +991,12 @@
 
 /* Field Filled Highlight */
 .tainacan-ai-field-filled {
-    animation: tcgpt-field-highlight 0.5s ease;
+    animation: tainacan-ai-field-highlight 0.5s ease;
     box-shadow: 0 0 0 3px var(--tainacan-ai-primary) !important;
     border-color: var(--tainacan-ai-primary) !important;
 }
 
-@keyframes tcgpt-field-highlight {
+@keyframes tainacan-ai-field-highlight {
     0% {
         box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
     }

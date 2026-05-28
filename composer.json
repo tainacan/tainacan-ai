@@ -1,18 +1,36 @@
 {
 	"name": "tainacan/tainacan-ai",
 	"description": "Automated metadata extraction in Tainacan using WordPress AI and Connectors",
-    "type": "wordpress-plugin",
-    "license": "GPL-2.0-or-later",
-    "require": {
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"require": {
 		"php": ">=8.0",
-        "smalot/pdfparser": "^2.5"
-    },
-    "autoload": {
-        "psr-4": {
-			"Tainacan\\AI\\": "includes/"
-        }
-    },
-    "config": {
-        "optimize-autoloader": true
-    }
+		"smalot/pdfparser": "^2.5"
+	},
+	"require-dev": {
+		"squizlabs/php_codesniffer": "^3.13",
+		"wp-coding-standards/wpcs": "^3.3",
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.2"
+	},
+	"autoload": {
+		"psr-4": {
+			"Tainacan\\AI\\": "includes/",
+			"Tainacan\\AI\\Admin\\": "includes/Admin/",
+			"Tainacan\\AI\\REST\\": "includes/REST/",
+			"Tainacan\\AI\\Hooks\\": "includes/Hooks/",
+			"Tainacan\\AI\\Extraction\\": "includes/Extraction/",
+			"Tainacan\\AI\\Support\\": "includes/Support/",
+			"Tainacan\\AI\\PdfParser\\": "lib/PdfParser/"
+		}
+	},
+	"scripts": {
+		"phpcs": "phpcs",
+		"phpcbf": "phpcbf"
+	},
+	"config": {
+		"optimize-autoloader": true,
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	}
 }

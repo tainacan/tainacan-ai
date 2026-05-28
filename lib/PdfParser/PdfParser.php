@@ -36,16 +36,6 @@ class PdfParser {
     }
 
     /**
-     * Parses PDF content directly
-     */
-    public function parseContent(string $content): self {
-        $this->content = $content;
-        $this->parseObjects();
-
-        return $this;
-    }
-
-    /**
      * Extracts all text from the PDF
      */
     public function getText(): string {

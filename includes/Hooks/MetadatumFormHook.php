@@ -1,5 +1,7 @@
 <?php
-namespace Tainacan\AI;
+namespace Tainacan\AI\Hooks;
+
+use Tainacan\AI\Extraction\ExtractionMetadata;
 
 if (!defined('ABSPATH')) {
     exit;
