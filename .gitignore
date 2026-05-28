@@ -26,8 +26,10 @@ Thumbs.db
 *.swo
 *~
 
-# WordPress
+# WordPress i18n (translations via wordpress.org; generate .pot locally only)
+languages/
 *.pot
+*.po
 *.po~
 *.mo
 

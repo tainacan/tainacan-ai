@@ -95,13 +95,13 @@ When preparing a release for WordPress.org:
 1. Run `composer install --no-dev` to ensure runtime PHP dependencies are present in `vendor/`
 2. Run `npm run build` to generate production assets
 3. Run `npm run plugin-zip` to create a distribution-ready ZIP
-3. The `.distignore` file controls which files are included
+
+The `.distignore` file controls which files are included in the ZIP.
 
 **Important:** The ZIP typically includes:
 
 - `includes/` — PHP classes and admin templates
 - `lib/` — embedded third-party libraries (e.g. PDF parsing)
-- `languages/` — translations
 - `build/` — compiled JS/CSS
 - `tainacan-ai.php` — main plugin file
 - `readme.txt` — WordPress.org readme
@@ -252,8 +252,17 @@ tainacan-ai/
 ├── src/                    # Source assets
 │   ├── css/
 │   └── js/
-├── build/                  # Compiled assets
-└── languages/
+└── build/                  # Compiled assets
+```
+
+### Translations
+
+User-facing strings use the `tainacan-ai` text domain. For plugins distributed on [WordPress.org](https://wordpress.org/plugins/), translations are managed on [translate.wordpress.org](https://translate.wordpress.org) and loaded automatically by WordPress — do not bundle `languages/` in the release ZIP or call `load_plugin_textdomain()`.
+
+To extract strings while developing:
+
+```bash
+wp i18n make-pot . languages/tainacan-ai.pot --domain=tainacan-ai --exclude=node_modules,vendor,build
 ```
 
 ## License

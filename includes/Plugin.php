@@ -35,7 +35,7 @@ final class Plugin {
 		register_activation_hook( TAINACAN_AI_PLUGIN_FILE, array( $this, 'activate' ) );
 		register_deactivation_hook( TAINACAN_AI_PLUGIN_FILE, array( $this, 'deactivate' ) );
 
-		add_action( 'plugins_loaded', array( $this, 'init' ), 20 );
+		add_action( 'init', array( $this, 'init' ), 10 );
 		add_filter( 'plugin_action_links_' . plugin_basename( TAINACAN_AI_PLUGIN_FILE ), array( $this, 'add_settings_link' ) );
 
 		$this->init_consent_api();

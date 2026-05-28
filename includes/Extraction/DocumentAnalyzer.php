@@ -273,6 +273,8 @@ class DocumentAnalyzer {
         $result['document_type'] = $document_type;
         $result['extraction_method'] = $extraction_method;
         $result['tokens_used'] = $ai_result['usage']['total_tokens'] ?? 0;
+        $result['model_used'] = (string) ($ai_result['model'] ?? '');
+        $result['provider_used'] = (string) ($ai_result['provider'] ?? '');
         $result['analyzed_at'] = current_time('mysql');
 
         $this->debug_log_analysis_outcome(

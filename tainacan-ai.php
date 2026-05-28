@@ -33,10 +33,6 @@ if ( ! defined( 'TAINACAN_AI_PLUGIN_DIR' ) ) {
 if ( ! defined( 'TAINACAN_AI_PLUGIN_URL' ) ) {
 	define( 'TAINACAN_AI_PLUGIN_URL', plugin_dir_url( TAINACAN_AI_PLUGIN_FILE ) );
 }
-if ( ! defined( 'TAINACAN_AI_DOMAIN' ) ) {
-	define( 'TAINACAN_AI_DOMAIN', 'tainacan-ai' );
-}
-
 $tainacan_ai_autoload_file = TAINACAN_AI_PLUGIN_DIR . 'vendor/autoload.php';
 
 if ( ! file_exists( $tainacan_ai_autoload_file ) ) {

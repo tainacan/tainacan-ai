@@ -25,8 +25,11 @@ SECURITY.md
 src/js/
 src/css/
 
-# Note: includes/, lib/, languages/ MUST be included in the ZIP
+# Note: includes/, lib/ MUST be included in the ZIP
 # Admin settings template lives in includes/Admin/settings-page.php
+# Translations are delivered via WordPress.org (translate.wordpress.org), not bundled in languages/
+
+languages/
 
 # IDE
 .idea/

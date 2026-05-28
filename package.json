@@ -21,7 +21,6 @@
 	"files": [
 		"build/**",
 		"includes/**",
-		"languages/**",
 		"lib/**",
 		"vendor/**",
 		"composer.json",

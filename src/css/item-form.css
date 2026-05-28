@@ -403,12 +403,10 @@
 .tainacan-ai-tag {
     display: inline-block;
     padding: 3px 10px;
-    background: var(--tainacan-ai-accent);
-    color: var(--tainacan-ai-primary);
     border-radius: 14px;
     font-size: 12px;
-    font-weight: 500;
     margin: 2px 4px 2px 0;
+    border: 1px solid var(--tainacan-ai-border);
 }
 
 /* JSON */
@@ -618,12 +616,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
     padding: 16px 20px;
     flex-shrink: 0;
 }
 
 .tainacan-ai-sidebar-header h3 {
     margin: 0;
+    min-width: 0;
     font-size: 16px;
     font-weight: 600;
     display: flex;
@@ -631,10 +631,17 @@
     gap: 8px;
 }
 
-.tainacan-ai-sidebar-header h3 .dashicons {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+.tainacan-ai-sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tainacan-ai-sidebar-header-actions .button {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    white-space: nowrap;
 }
 
 .tainacan-ai-sidebar-close {
@@ -664,10 +671,24 @@
 .tainacan-ai-sidebar-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 11px 20px;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 20px;
     border-bottom: 1px solid var(--tainacan-ai-border);
     flex-shrink: 0;
+}
+
+.tainacan-ai-sidebar-meta-summary {
+    color: var(--tainacan-ai-text-light);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.tainacan-ai-sidebar-actions-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .tainacan-ai-sidebar-actions .button {
@@ -675,6 +696,7 @@
     align-items: center !important;
     gap: 6px !important;
     font-size: 12px !important;
+    white-space: nowrap;
 }
 
 .tainacan-ai-sidebar-body {
@@ -744,26 +766,16 @@
     margin-bottom: 0;
 }
 
-.tainacan-ai-metadata-item-with-evidence:hover {
-    border-color: var(--tainacan-ai-accent-dark);
-    box-shadow: 0 2px 8px var(--tainacan-ai-shadow);
-}
-
 /* No value extracted — compact, low-emphasis row */
 .tainacan-ai-metadata-item-with-evidence.is-not-found {
     background: transparent;
     border: none;
     border-radius: 6px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     box-shadow: none;
     opacity: 0.72;
 }
 
-.tainacan-ai-metadata-item-with-evidence.is-not-found:hover {
-    border: none;
-    box-shadow: none;
-    opacity: 0.85;
-}
 .tainacan-ai-metadata-main {
     padding: 12px 14px;
 }
@@ -936,6 +948,7 @@
 
 .tainacan-ai-copy-mini:hover {
     background: var(--tainacan-ai-accent-dark) !important;
+    color: var(--tainacan-ai-primary) !important;
 }
 
 .tainacan-ai-copy-mini.copied {
@@ -949,14 +962,14 @@
     width: 14px;
 }
 
-/* Fill Field Button */
+/* Fill metadatum Button */
 .tainacan-ai-fill-field {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     padding: 4px !important;
-    background: var(--tainacan-ai-primary) !important;
-    color: var(--tainacan-ai-white) !important;
+    background: var(--tainacan-ai-accent) !important;
+    color: var(--tainacan-ai-primary) !important;
     border: none !important;
     border-radius: var(--tainacan-button-border-radius, 4px) !important;
     cursor: pointer !important;
@@ -968,12 +981,14 @@
 }
 
 .tainacan-ai-fill-field:hover {
-    background: var(--tainacan-ai-primary) !important;
+    background: var(--tainacan-ai-accent-dark) !important;
+    color: var(--tainacan-ai-primary) !important;
     transform: scale(1.1);
 }
 
 .tainacan-ai-fill-field.filled {
     background: var(--tainacan-ai-primary) !important;
+    color: var(--tainacan-ai-white) !important;
 }
 
 .tainacan-ai-fill-field .dashicons {
@@ -987,6 +1002,10 @@
     display: flex;
     gap: 4px;
     align-items: center;
+}
+
+.tainacan-ai-metadata-actions-mini .button {
+    min-height: 24px !important;
 }
 
 /* Field Filled Highlight */
@@ -1006,17 +1025,6 @@
     100% {
         box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.5);
     }
-}
-
-/* Fill All Button Primary Style */
-#tainacan-ai-fill-all {
-    background: var(--tainacan-ai-primary) !important;
-    border-color: var(--tainacan-ai-primary) !important;
-    color: var(--tainacan-ai-white) !important;
-}
-
-#tainacan-ai-fill-all:hover {
-    background: var(--tainacan-ai-primary) !important;
 }
 
 #tainacan-ai-fill-all .dashicons {

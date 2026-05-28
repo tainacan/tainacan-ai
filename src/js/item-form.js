@@ -125,26 +125,31 @@ let hasTainacanAiNonceMiddleware = false;
 								'Analysis Results'
 							}
                         </h3>
-                        <button type="button" class="tainacan-ai-sidebar-close" title="${ TainacanAI.texts?.close || 'Close' }">
-                            <span class="dashicons dashicons-no-alt"></span>
-                        </button>
+                        <div class="tainacan-ai-sidebar-header-actions">
+                            <button type="button" class="button button-primary" id="tainacan-ai-panel-refresh">
+                                <span class="dashicons dashicons-update"></span>
+                                ${ TainacanAI.texts?.newAnalysis || 'New Analysis' }
+                            </button>
+                            <button type="button" class="tainacan-ai-sidebar-close" title="${ TainacanAI.texts?.close || 'Close' }">
+                                <span class="dashicons dashicons-no-alt"></span>
+                            </button>
+                        </div>
                     </div>
                     <div class="tainacan-ai-sidebar-actions">
-                        <button type="button" class="button button-primary" id="tainacan-ai-fill-all" title="${
-							TainacanAI.texts?.fillAllTooltip ||
-							'Automatically fills Tainacan fields with extracted values'
-						}">
-                            <span class="dashicons dashicons-download"></span>
-                            ${ TainacanAI.texts?.fillAll || 'Fill Fields' }
-                        </button>
-                        <button type="button" class="button button-secondary" id="tainacan-ai-panel-copy-all">
-                            <span class="dashicons dashicons-admin-page"></span>
-                            ${ TainacanAI.texts?.copyAll || 'Copy All' }
-                        </button>
-                        <button type="button" class="button button-secondary" id="tainacan-ai-panel-refresh">
-                            <span class="dashicons dashicons-update"></span>
-                            ${ TainacanAI.texts?.newAnalysis || 'New Analysis' }
-                        </button>
+                        <div class="tainacan-ai-sidebar-meta-summary" id="tainacan-ai-panel-meta-summary">0 metadata extracted</div>
+                        <div class="tainacan-ai-sidebar-actions-right">
+                            <button type="button" class="button button-secondary" id="tainacan-ai-fill-all" title="${
+								TainacanAI.texts?.fillAllTooltip ||
+								'Automatically fills Tainacan fields with extracted values'
+							}">
+                                <span class="dashicons dashicons-download"></span>
+                                ${ TainacanAI.texts?.fillAll || 'Fill all' }
+                            </button>
+                            <button type="button" class="button button-secondary" id="tainacan-ai-panel-copy-all">
+                                <span class="dashicons dashicons-admin-page"></span>
+                                ${ TainacanAI.texts?.copyAll || 'Copy all' }
+                            </button>
+                        </div>
                     </div>
                     <div class="tainacan-ai-sidebar-body" id="tainacan-ai-sidebar-content">
                         <!-- Content will be inserted here -->
@@ -153,6 +158,10 @@ let hasTainacanAiNonceMiddleware = false;
                         <span id="tainacan-ai-panel-tokens">
                             <span class="dashicons dashicons-performance"></span>
                             <span class="tokens-count">-</span>
+                        </span>
+                        <span id="tainacan-ai-panel-model">
+                            <span class="dashicons dashicons-admin-generic"></span>
+                            <span class="model-name">-</span>
                         </span>
                     </div>
                 </div>
@@ -663,6 +672,31 @@ let hasTainacanAiNonceMiddleware = false;
 				$( '#tainacan-ai-panel-tokens .tokens-count' ).text(
 					`${ result.tokens_used } ${ TainacanAI.texts?.tokens || 'tokens' }`
 				);
+			} else {
+				$( '#tainacan-ai-panel-tokens .tokens-count' ).text( '-' );
+			}
+
+			const modelParts = [
+				typeof result.provider_used === 'string'
+					? result.provider_used.trim()
+					: '',
+				typeof result.model_used === 'string'
+					? result.model_used.trim()
+					: '',
+			].filter( Boolean );
+
+			$( '#tainacan-ai-panel-model .model-name' ).text(
+				modelParts.length > 0
+					? modelParts.join( ' / ' )
+					: TainacanAI.texts?.modelUnknown || '-'
+			);
+
+			if ( TainacanAI.debug ) {
+				console.log(
+					'[TainacanAI] Model used:',
+					result.provider_used || '',
+					result.model_used || ''
+				);
 			}
 
 			// Open sidebar panel automatically
@@ -898,6 +932,7 @@ let hasTainacanAiNonceMiddleware = false;
 			}
 
 			$container.empty();
+			this.updatePanelMetadataSummary( metadata );
 
 			Object.entries( metadata ).forEach( ( [ key, data ], index ) => {
 				const formattedLabel = this.formatLabel( key );
@@ -967,20 +1002,20 @@ let hasTainacanAiNonceMiddleware = false;
                                     ${
 										canFill
 											? `
-                                    <button type="button" class="tainacan-ai-fill-field"
+                                    <button type="button" class="button button-secondary is-small tainacan-ai-fill-field"
                                             data-metadata-key="${ this.escapeHtml(
 												key
 											) }"
                                             title="${
 												TainacanAI.texts?.fillField ||
-												'Fill field'
+												'Fill metadatum'
 											}">
                                         <span class="dashicons dashicons-download"></span>
                                     </button>
                                     `
 											: ''
 									}
-                                    <button type="button" class="tainacan-ai-copy-mini"
+                                    <button type="button" class="button button-secondary is-small tainacan-ai-copy-mini"
                                             data-metadata-key="${ this.escapeHtml(
 												key
 											) }"
@@ -1020,6 +1055,26 @@ let hasTainacanAiNonceMiddleware = false;
 
 				$container.append( $item );
 			} );
+		},
+
+		updatePanelMetadataSummary( metadata ) {
+			const $summary = $( '#tainacan-ai-panel-meta-summary' );
+			if ( ! $summary.length ) {
+				return;
+			}
+
+			const extractedCount = Object.values( metadata || {} ).reduce(
+				( count, fieldData ) => {
+					const { value, pendingNewTerms } = this.parseFieldEntry( fieldData );
+					const hasValue = ! this.isEmptyMetadataValue( value );
+					const hasPendingTerms =
+						Array.isArray( pendingNewTerms ) && pendingNewTerms.length > 0;
+					return hasValue || hasPendingTerms ? count + 1 : count;
+				},
+				0
+			);
+
+			$summary.text( `${ extractedCount } metadata extracted` );
 		},
 
 		/**
