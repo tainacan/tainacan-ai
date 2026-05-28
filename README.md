@@ -216,9 +216,9 @@ Use **Analyze Document** on a real item to confirm your connector and server con
 ## REST API
 
 ```
-POST /wp-json/tainacan-ai/v1/analyze/{attachment_id}
-GET  /wp-json/tainacan-ai/v1/status
-DELETE /wp-json/tainacan-ai/v1/cache/{attachment_id}
+POST /wp-json/tainacan-ai/v1/analyze
+GET  /wp-json/tainacan-ai/v1/item-document/{item_id}
+GET  /wp-json/tainacan-ai/v1/extraction-fields/{collection_id}
 ```
 
 ## Structure

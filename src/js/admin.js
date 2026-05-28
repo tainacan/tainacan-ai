@@ -1,13 +1,32 @@
 /**
  * Tainacan AI - Admin JavaScript
  */
+import apiFetch from '@wordpress/api-fetch';
+
+let hasTainacanAiAdminNonceMiddleware = false;
+
 ( function ( $ ) {
 	'use strict';
 
 	const Admin = {
 		init() {
+			this.setupApiFetchNonceMiddleware();
 			this.bindEvents();
 			this.syncCollapsedCardStates();
+		},
+
+		setupApiFetchNonceMiddleware() {
+			if ( hasTainacanAiAdminNonceMiddleware ) {
+				return;
+			}
+
+			const nonce = TainacanAIAdmin?.restNonce;
+			if ( ! nonce ) {
+				return;
+			}
+
+			apiFetch.use( apiFetch.createNonceMiddleware( nonce ) );
+			hasTainacanAiAdminNonceMiddleware = true;
 		},
 
 		bindEvents() {
@@ -41,34 +60,27 @@
 					( TainacanAIAdmin.texts.clearing || 'Clearing cache...' )
 			);
 
-			$.ajax( {
-				url: TainacanAIAdmin.ajaxUrl,
-				type: 'POST',
-				data: {
-					action: 'tainacan_ai_clear_cache',
-					nonce: TainacanAIAdmin.nonce,
-				},
-				success: ( response ) => {
-					if ( response.success ) {
-						const message =
-							typeof response.data === 'string'
-								? response.data
-								: TainacanAIAdmin.texts.cacheCleared;
-						Admin.showNotice( message, 'success' );
-					} else {
-						Admin.showNotice(
-							TainacanAIAdmin.texts.error,
-							'error'
-						);
-					}
-				},
-				error: () => {
-					Admin.showNotice( TainacanAIAdmin.texts.error, 'error' );
-				},
-				complete: () => {
+			apiFetch( {
+				url: `${ TainacanAIAdmin.restUrl }clear-cache`,
+				method: 'POST',
+			} )
+				.then( ( response ) => {
+					const message =
+						typeof response?.message === 'string' && response.message
+							? response.message
+							: TainacanAIAdmin.texts.cacheCleared;
+					Admin.showNotice( message, 'success' );
+				} )
+				.catch( ( errorLike ) => {
+					const message =
+						errorLike?.message ||
+						errorLike?.data?.message ||
+						TainacanAIAdmin.texts.error;
+					Admin.showNotice( message, 'error' );
+				} )
+				.finally( () => {
 					$btn.prop( 'disabled', false ).html( originalHtml );
-				},
-			} );
+				} );
 		},
 
 		syncCollapsedCardStates() {
