@@ -3,6 +3,9 @@
  * @version 1.0.0
  */
 import { addAction } from '@wordpress/hooks';
+import apiFetch from '@wordpress/api-fetch';
+
+let hasTainacanAiNonceMiddleware = false;
 
 ( function ( $ ) {
 	'use strict';
@@ -33,6 +36,7 @@ import { addAction } from '@wordpress/hooks';
 		 * Initialize the application
 		 */
 		init() {
+			this.setupApiFetchNonceMiddleware();
 			this.bindEvents();
 			this.createSidebarPanel();
 			this.registerHooks();
@@ -40,6 +44,20 @@ import { addAction } from '@wordpress/hooks';
 			if ( TainacanAI.debug ) {
 				console.log( '[TainacanAI] Initialized', this.state );
 			}
+		},
+
+		setupApiFetchNonceMiddleware() {
+			if ( hasTainacanAiNonceMiddleware ) {
+				return;
+			}
+
+			const nonce = TainacanAI?.restNonce;
+			if ( ! nonce ) {
+				return;
+			}
+
+			apiFetch.use( apiFetch.createNonceMiddleware( nonce ) );
+			hasTainacanAiNonceMiddleware = true;
 		},
 
 		/**
@@ -449,24 +467,17 @@ import { addAction } from '@wordpress/hooks';
 			if ( ! this.state.collectionId ) return;
 
 			try {
-				const response = await $.ajax( {
-					url: TainacanAI.ajaxUrl,
-					type: 'POST',
-					data: {
-						action: 'tainacan_ai_get_extraction_fields',
-						nonce: TainacanAI.nonce,
-						collection_id: this.state.collectionId,
-					},
+				const response = await apiFetch( {
+					url: `${ TainacanAI.restUrl }extraction-fields/${ this.state.collectionId }`,
+					method: 'GET',
 				} );
 
-				if ( response.success && response.data ) {
-					TainacanAI.extractionFields = response.data;
-					if ( TainacanAI.debug ) {
-						console.log(
-							'[TainacanAI] Extraction fields updated via AJAX:',
-							response.data
-						);
-					}
+				TainacanAI.extractionFields = response;
+				if ( TainacanAI.debug ) {
+					console.log(
+						'[TainacanAI] Extraction fields updated via REST:',
+						response
+					);
 				}
 			} catch ( error ) {
 				console.error(
@@ -483,28 +494,17 @@ import { addAction } from '@wordpress/hooks';
 			if ( ! this.state.itemId ) return;
 
 			try {
-				const response = await $.ajax( {
-					url: TainacanAI.ajaxUrl,
-					type: 'POST',
-					data: {
-						action: 'tainacan_ai_get_item_document',
-						nonce: TainacanAI.nonce,
-						item_id: this.state.itemId,
-					},
+				const response = await apiFetch( {
+					url: `${ TainacanAI.restUrl }item-document/${ this.state.itemId }`,
+					method: 'GET',
 				} );
 
-				if ( response.success && response.data ) {
-					this.state.documentInfo = response.data;
-					this.state.attachmentId = response.data.id;
-					this.showDocumentInfo( response.data );
+				this.state.documentInfo = response;
+				this.state.attachmentId = response.id;
+				this.showDocumentInfo( response );
 
-					if ( TainacanAI.debug ) {
-						console.log( '[TainacanAI] Document detected:', response.data );
-					}
-				} else {
-					this.state.documentInfo = null;
-					this.state.attachmentId = null;
-					this.showNoDocumentInfo();
+				if ( TainacanAI.debug ) {
+					console.log( '[TainacanAI] Document detected:', response );
 				}
 			} catch ( error ) {
 				if ( TainacanAI.debug ) {
@@ -581,12 +581,10 @@ import { addAction } from '@wordpress/hooks';
 			let hasError = false;
 
 			try {
-				const response = await $.ajax( {
-					url: TainacanAI.ajaxUrl,
-					type: 'POST',
+				const response = await apiFetch( {
+					url: `${ TainacanAI.restUrl }analyze`,
+					method: 'POST',
 					data: {
-						action: 'tainacan_ai_analyze',
-						nonce: TainacanAI.nonce,
 						item_id: this.state.itemId,
 						attachment_id: this.state.attachmentId,
 						collection_id: this.state.collectionId,
@@ -594,43 +592,38 @@ import { addAction } from '@wordpress/hooks';
 					},
 				} );
 
-				if ( response.success ) {
-					this.state.lastResult = response.data.result;
-					if ( TainacanAI.debug && response.data.prompt_debug ) {
+				this.state.lastResult = response.result;
+				if ( TainacanAI.debug && response.prompt_debug ) {
 						console.group( '[TainacanAI] Resolved analysis prompt' );
-						if ( response.data.prompt_debug.parts ) {
-							console.log( 'User intro:', response.data.prompt_debug.parts.user );
-							console.log( 'Fields section:', response.data.prompt_debug.parts.fields );
-							console.log( 'Evidence / format:', response.data.prompt_debug.parts.evidence );
+						if ( response.prompt_debug.parts ) {
+							console.log( 'User intro:', response.prompt_debug.parts.user );
+							console.log( 'Fields section:', response.prompt_debug.parts.fields );
+							console.log( 'Evidence / format:', response.prompt_debug.parts.evidence );
 						}
-						if ( response.data.prompt_debug.analysis_mode ) {
+						if ( response.prompt_debug.analysis_mode ) {
 							console.log(
 								'Analysis mode:',
-								response.data.prompt_debug.analysis_mode
+								response.prompt_debug.analysis_mode
 							);
 						}
-						if ( response.data.prompt_debug.attachment_note ) {
+						if ( response.prompt_debug.attachment_note ) {
 							console.log(
 								'Attachment:',
-								response.data.prompt_debug.attachment_note
+								response.prompt_debug.attachment_note
 							);
 						}
-						console.log( 'Full prompt:', response.data.prompt_debug.prompt );
+						console.log( 'Full prompt:', response.prompt_debug.prompt );
 						console.groupEnd();
-					}
-					this.displayResults(
-						response.data.result,
-						response.data.from_cache
-					);
-				} else {
-					hasError = true;
-					this.showError( response.data || TainacanAI.texts.error );
 				}
+				this.displayResults( response.result, response.from_cache );
 			} catch ( error ) {
 				hasError = true;
 				console.error( '[TainacanAI] Analysis error:', error );
 				this.showError(
-					error.responseJSON?.data || TainacanAI.texts.error
+					error.responseJSON?.message ||
+						error.responseJSON?.data?.message ||
+						error.message ||
+						TainacanAI.texts.error
 				);
 			} finally {
 				this.state.isAnalyzing = false;
@@ -1453,15 +1446,10 @@ import { addAction } from '@wordpress/hooks';
 			const baseUrl = this.getTainacanApiBaseUrl();
 			const url = `${ baseUrl }/taxonomy/${ taxonomyId }/terms`;
 
-			return $.ajax( {
+			return apiFetch( {
 				url,
 				method: 'POST',
-				contentType: 'application/json',
-				data: JSON.stringify( payload ),
-				processData: false,
-				headers: {
-					'X-WP-Nonce': TainacanAI.restNonce,
-				},
+				data: payload,
 			} );
 		},
 
@@ -1756,15 +1744,10 @@ import { addAction } from '@wordpress/hooks';
 			const baseUrl = this.getTainacanApiBaseUrl();
 			const url = `${ baseUrl }/item/${ itemId }/metadata/${ metadatumId }`;
 
-			return $.ajax( {
+			return apiFetch( {
 				url,
 				method: 'PUT',
-				contentType: 'application/json',
-				data: JSON.stringify( payload ),
-				processData: false,
-				headers: {
-					'X-WP-Nonce': TainacanAI.restNonce,
-				},
+				data: payload,
 			} );
 		},
 

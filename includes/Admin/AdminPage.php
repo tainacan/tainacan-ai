@@ -28,7 +28,6 @@ class AdminPage extends \Tainacan\Pages {
         parent::init();
 
         add_action('admin_init', [$this, 'register_settings']);
-        add_action('wp_ajax_tainacan_ai_clear_cache', [$this, 'ajax_clear_cache']);
     }
 
     /**
@@ -89,8 +88,8 @@ class AdminPage extends \Tainacan\Pages {
         );
 
         wp_localize_script('tainacan-ai-admin', 'TainacanAIAdmin', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('tainacan_ai_admin_nonce'),
+            'restUrl' => rest_url('tainacan-ai/v1/'),
+            'restNonce' => wp_create_nonce('wp_rest'),
             'promptTemplates' => PromptTemplates::get_templates(),
             'texts' => [
                 'error' => __('Something went wrong. Please try again.', 'tainacan-ai'),
@@ -168,23 +167,4 @@ class AdminPage extends \Tainacan\Pages {
         include __DIR__ . '/settings-page.php';
     }
 
-    /**
-     * Clear cache
-     */
-    public function ajax_clear_cache() {
-        check_ajax_referer('tainacan_ai_admin_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied.', 'tainacan-ai'));
-        }
-
-        global $wpdb;
-        $deleted = $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_tainacan_ai_%'");
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_tainacan_ai_%'");
-
-        wp_send_json_success(
-            /* translators: %d: number of cache entries removed */
-            sprintf(__('Cache cleared! %d entries removed.', 'tainacan-ai'), $deleted)
-        );
-    }
 }
