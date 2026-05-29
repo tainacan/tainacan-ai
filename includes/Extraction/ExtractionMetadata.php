@@ -70,6 +70,63 @@ class ExtractionMetadata {
     }
 
     /**
+     * Metadata types excluded from AI prompt field lists (no mapping strategy yet).
+     *
+     * @return string[] Normalized type names (see format_metadata_type()).
+     */
+    public function get_unsupported_extraction_types(): array {
+        $types = ['compound', 'relationship'];
+
+        /**
+         * @param string[] $types Normalized metadata type names excluded from extraction prompts.
+         */
+        return (array) apply_filters('tainacan_ai_unsupported_extraction_types', $types);
+    }
+
+    /**
+     * Whether this metadatum may appear in extraction prompts and expected output keys.
+     */
+    public function supports_extraction_type(\Tainacan\Entities\Metadatum $metadatum): bool {
+        $type = $this->format_metadata_type((string) $metadatum->get_metadata_type());
+
+        if (in_array($type, $this->get_unsupported_extraction_types(), true)) {
+            return false;
+        }
+
+        if ($this->is_compound_child_metadatum($metadatum)) {
+            return false;
+        }
+
+        /**
+         * @param bool $supported Default true when type is supported and not a compound child.
+         * @param \Tainacan\Entities\Metadatum $metadatum
+         */
+        return (bool) apply_filters('tainacan_ai_supports_extraction_for_prompt', true, $metadatum);
+    }
+
+    private function is_compound_child_metadatum(\Tainacan\Entities\Metadatum $metadatum): bool {
+        if (!method_exists($metadatum, 'get_parent')) {
+            return false;
+        }
+
+        $parent_id = (int) $metadatum->get_parent();
+        if ($parent_id <= 0) {
+            return false;
+        }
+
+        try {
+            $parent = new \Tainacan\Entities\Metadatum($parent_id);
+            if ($parent->get_id() <= 0) {
+                return false;
+            }
+
+            return $this->format_metadata_type((string) $parent->get_metadata_type()) === 'compound';
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
      * Fields to extract for a collection (keyed by metadata slug).
      *
      * @return array<string, array{
@@ -118,6 +175,10 @@ class ExtractionMetadata {
             }
 
             if (!$this->is_enabled($metadatum)) {
+                continue;
+            }
+
+            if (!$this->supports_extraction_type($metadatum)) {
                 continue;
             }
 
