@@ -4,6 +4,7 @@ namespace Tainacan\AI\REST;
 use Tainacan\AI\Plugin;
 use Tainacan\AI\Extraction\DocumentAnalyzer;
 use Tainacan\AI\Extraction\ExtractionMetadata;
+use Tainacan\AI\Support\AnalysisErrorDebug;
 use Tainacan\AI\Support\DebugLog;
 
 if (!defined('ABSPATH')) {
@@ -52,6 +53,12 @@ class API {
                     'required' => false,
                     'type' => 'integer',
                     'sanitize_callback' => 'absint',
+                ],
+                'override_prompt' => [
+                    'required' => false,
+                    'type' => 'string',
+                    'default' => '',
+                    'sanitize_callback' => 'wp_kses_post',
                 ],
             ],
         ]);
@@ -113,6 +120,11 @@ class API {
             $attachment_id = (int) ($request->get_param('attachment_id') ?? 0);
             $collection_id = (int) ($request->get_param('collection_id') ?? 0);
             $force_refresh = (bool) ($request->get_param('force_refresh') ?? false);
+            $override_prompt = trim((string) ($request->get_param('override_prompt') ?? ''));
+            $use_prompt_override = (
+                $override_prompt !== ''
+                && DocumentAnalyzer::should_include_prompt_in_response()
+            );
 
             if ($item_id <= 0 && $attachment_id <= 0) {
                 return new \WP_Error(
@@ -146,6 +158,11 @@ class API {
             $analyzer = new DocumentAnalyzer();
             $analyzer->set_context($collection_id, $item_id);
 
+            if ($use_prompt_override) {
+                $analyzer->set_prompt_override($override_prompt);
+                $force_refresh = true;
+            }
+
             $is_remote_url_document = (
                 is_array($document_data)
                 && ($document_data['source'] ?? '') === 'url'
@@ -157,7 +174,7 @@ class API {
                 ? 'tainacan_ai_url_' . md5($document_url)
                 : 'tainacan_ai_' . $attachment_id;
 
-            if (!$force_refresh) {
+            if (!$force_refresh && !$use_prompt_override) {
                 $cached = get_transient($cache_key);
                 if ($cached !== false) {
                     return new \WP_REST_Response(
@@ -177,18 +194,12 @@ class API {
                 : $analyzer->analyze($attachment_id);
 
             if (is_wp_error($result)) {
-                $status = $result->get_error_data('status');
-                $status = is_int($status) && $status > 0 ? $status : 400;
-                return new \WP_Error(
-                    (string) $result->get_error_code(),
-                    $result->get_error_message(),
-                    ['status' => $status]
-                );
+                return $this->rest_error_from_wp_error($result);
             }
 
             $options = Plugin::get_options();
             $cache_duration = (int) ($options['cache_duration'] ?? 3600);
-            if ($cache_duration > 0) {
+            if ($cache_duration > 0 && !$use_prompt_override) {
                 set_transient($cache_key, $result, $cache_duration);
             }
 
@@ -207,16 +218,42 @@ class API {
                 DebugLog::log('Stack trace: ' . $e->getTraceAsString());
             }
 
-            return new \WP_Error(
+            return AnalysisErrorDebug::from_throwable(
+                $e,
                 'analyze_exception',
                 sprintf(
                     /* translators: %s: error message */
                     __('Error analyzing document: %s', 'tainacan-ai'),
                     $e->getMessage()
                 ),
-                ['status' => 500]
+                500
             );
         }
+    }
+
+    private function rest_error_from_wp_error(\WP_Error $error): \WP_Error {
+        $error_data = $error->get_error_data();
+        if (!is_array($error_data)) {
+            $error_data = [];
+        }
+
+        $status = $error_data['status'] ?? null;
+        $status = is_int($status) && $status > 0 ? $status : 400;
+        $error_data['status'] = $status;
+
+        if (!AnalysisErrorDebug::should_include_in_response()) {
+            unset($error_data['debug_details']);
+        }
+
+        if (!DocumentAnalyzer::should_include_prompt_in_response()) {
+            unset($error_data['prompt_debug']);
+        }
+
+        return new \WP_Error(
+            (string) $error->get_error_code(),
+            $error->get_error_message(),
+            $error_data
+        );
     }
 
     /**
