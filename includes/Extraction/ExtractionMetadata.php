@@ -431,7 +431,11 @@ class ExtractionMetadata {
             : '';
 
         // Placeholder is admin UI copy; for closed allowed_values lists it must not be mistaken for a valid value.
-        if ($placeholder !== '' && !$this->field_has_allowed_value_options($field)) {
+        if (
+            $placeholder !== ''
+            && !$this->field_has_allowed_value_options($field)
+            && $this->format_metadata_type((string) ($field['type'] ?? '')) !== 'date'
+        ) {
             $field_hints['expected_format_hint'] = $placeholder;
         }
 
@@ -550,7 +554,7 @@ class ExtractionMetadata {
         }
 
         if ($type === 'date') {
-            $field_hints['expected_format_hint'] = 'YYYY-MM-DD';
+            $field_hints['expected_format_hint'] = 'YYYY-MM-DD date only (e.g. 2012-07-12). Never include time, timezone, or datetime strings.';
         }
 
         if ($type === 'numeric') {
