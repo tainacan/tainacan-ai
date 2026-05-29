@@ -200,7 +200,9 @@ class API {
             $options = Plugin::get_options();
             $cache_duration = (int) ($options['cache_duration'] ?? 3600);
             if ($cache_duration > 0 && !$use_prompt_override) {
-                set_transient($cache_key, $result, $cache_duration);
+                $result_to_cache = $result;
+                unset($result_to_cache['prompt_debug']);
+                set_transient($cache_key, $result_to_cache, $cache_duration);
             }
 
             return new \WP_REST_Response(
@@ -266,16 +268,24 @@ class API {
         array $metadata,
         bool $from_cache
     ): array {
-        $data = [
-            'result' => $metadata,
-            'from_cache' => $from_cache,
-        ];
-
-        if (!$attachment_id || $attachment_id <= 0) {
-            return $data;
+        $prompt_debug = null;
+        if (
+            isset($metadata['prompt_debug'])
+            && is_array($metadata['prompt_debug'])
+            && $metadata['prompt_debug'] !== []
+        ) {
+            $prompt_debug = $metadata['prompt_debug'];
+        } elseif ($attachment_id && $attachment_id > 0) {
+            $prompt_debug = $analyzer->build_prompt_debug_payload($attachment_id);
         }
 
-        $prompt_debug = $analyzer->build_prompt_debug_payload($attachment_id);
+        $result_for_client = $metadata;
+        unset($result_for_client['prompt_debug']);
+
+        $data = [
+            'result' => $result_for_client,
+            'from_cache' => $from_cache,
+        ];
 
         if ($prompt_debug !== null) {
             if (is_wp_error($prompt_debug)) {

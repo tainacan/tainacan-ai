@@ -357,6 +357,8 @@ class DocumentAnalyzer {
             null
         );
 
+        $this->attach_prompt_debug_to_result($result, $file_path, $mime_type, $attachment_id);
+
         return $result;
     }
 
@@ -1352,11 +1354,7 @@ class DocumentAnalyzer {
         string $mime_type,
         int $attachment_id = 0
     ): \WP_Error {
-        if (!self::should_include_prompt_in_response()) {
-            return $error;
-        }
-
-        if (!is_readable($file_path)) {
+        if (!self::should_include_prompt_in_response() || !is_readable($file_path)) {
             return $error;
         }
 
@@ -1388,6 +1386,30 @@ class DocumentAnalyzer {
             $error->get_error_message(),
             $error_data
         );
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     */
+    private function attach_prompt_debug_to_result(
+        array &$result,
+        string $file_path,
+        string $mime_type,
+        int $attachment_id = 0
+    ): void {
+        if (!self::should_include_prompt_in_response() || !is_readable($file_path)) {
+            return;
+        }
+
+        $payload = $this->build_prompt_debug_payload_for_file(
+            $this->normalize_file_path($file_path),
+            $mime_type,
+            $attachment_id
+        );
+
+        if (is_array($payload)) {
+            $result['prompt_debug'] = $payload;
+        }
     }
 
     /**

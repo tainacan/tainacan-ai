@@ -78,16 +78,138 @@ class EvidenceInstructions {
             $value = $coalesced['value'];
         }
 
+        $value = self::sanitize_metadata_value($value);
+        $evidence = self::sanitize_metadata_evidence($evidence);
+        $label = self::sanitize_metadata_label($label);
+
+        if ($value === null) {
+            return [
+                'value' => null,
+                'evidence' => null,
+            ];
+        }
+
         $normalized = [
             'value' => $value,
             'evidence' => $evidence,
         ];
 
-        if ($label !== null && $label !== '' && (!is_array($label) || $label !== [])) {
+        if ($label !== null) {
             $normalized['label'] = $label;
         }
 
         return $normalized;
+    }
+
+    private static function sanitize_metadata_value(mixed $value): mixed {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            return $trimmed === '' ? null : $value;
+        }
+
+        if (!is_array($value) || $value === []) {
+            return null;
+        }
+
+        if (!array_is_list($value)) {
+            return $value;
+        }
+
+        $filtered = [];
+        foreach ($value as $item) {
+            if ($item === null) {
+                continue;
+            }
+
+            if (is_string($item) && trim($item) === '') {
+                continue;
+            }
+
+            $filtered[] = $item;
+        }
+
+        return $filtered === [] ? null : array_values($filtered);
+    }
+
+    /**
+     * @return mixed|null
+     */
+    private static function sanitize_metadata_evidence(mixed $evidence): mixed {
+        if ($evidence === null || $evidence === '') {
+            return null;
+        }
+
+        if (!is_array($evidence)) {
+            return is_string($evidence) && trim($evidence) === '' ? null : $evidence;
+        }
+
+        if ($evidence === []) {
+            return null;
+        }
+
+        if (!array_is_list($evidence)) {
+            return $evidence;
+        }
+
+        $filtered = [];
+        foreach ($evidence as $item) {
+            if ($item === null) {
+                continue;
+            }
+
+            $text = is_scalar($item) ? trim((string) $item) : '';
+            if ($text === '') {
+                continue;
+            }
+
+            $filtered[] = $text;
+        }
+
+        return $filtered === [] ? null : array_values($filtered);
+    }
+
+    /**
+     * @return mixed|null
+     */
+    private static function sanitize_metadata_label(mixed $label): mixed {
+        if ($label === null || $label === '') {
+            return null;
+        }
+
+        if (is_string($label)) {
+            $trimmed = trim($label);
+
+            return $trimmed === '' ? null : $trimmed;
+        }
+
+        if (!is_array($label) || $label === []) {
+            return null;
+        }
+
+        if (!array_is_list($label)) {
+            return $label;
+        }
+
+        $filtered = [];
+        foreach ($label as $item) {
+            if (!is_scalar($item)) {
+                continue;
+            }
+
+            $trimmed = trim((string) $item);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $filtered[] = $trimmed;
+        }
+
+        return $filtered === [] ? null : array_values($filtered);
     }
 
     /**
@@ -120,7 +242,7 @@ class EvidenceInstructions {
             $values[] = $item['value'] ?? null;
             $evidences[] = isset($item['evidence']) ? (string) $item['evidence'] : '';
             if (array_key_exists('label', $item) && $item['label'] !== null) {
-                $labels[] = (string) $item['label'];
+                $labels[] = trim((string) $item['label']);
             } else {
                 $labels[] = '';
             }

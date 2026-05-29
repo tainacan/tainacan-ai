@@ -1500,7 +1500,12 @@ let hasTainacanAiNonceMiddleware = false;
 					}
 				}
 
-				return { value, evidence, label, pendingNewTerms };
+				return {
+					value,
+					evidence,
+					label: this.sanitizeMetadataLabel( label ),
+					pendingNewTerms,
+				};
 			}
 
 			return {
@@ -1509,6 +1514,29 @@ let hasTainacanAiNonceMiddleware = false;
 				label: null,
 				pendingNewTerms: [],
 			};
+		},
+
+		sanitizeMetadataLabel( label ) {
+			if ( label === null || label === undefined || label === '' ) {
+				return null;
+			}
+
+			if ( typeof label === 'string' ) {
+				const trimmed = label.trim();
+				return trimmed === '' ? null : trimmed;
+			}
+
+			if ( ! Array.isArray( label ) || label.length === 0 ) {
+				return null;
+			}
+
+			const filtered = label
+				.map( ( item ) =>
+					item === null || item === undefined ? '' : String( item ).trim()
+				)
+				.filter( ( item ) => item !== '' );
+
+			return filtered.length > 0 ? filtered : null;
 		},
 
 		normalizePendingNewTerms( pendingTerms ) {
@@ -1547,19 +1575,38 @@ let hasTainacanAiNonceMiddleware = false;
 				evidence: items.map( ( item ) =>
 					item.evidence != null ? String( item.evidence ) : ''
 				),
-				label: items.map( ( item ) =>
-					item.label != null ? String( item.label ) : ''
+				label: this.sanitizeMetadataLabel(
+					items.map( ( item ) =>
+						item.label != null ? String( item.label ) : ''
+					)
 				),
 			};
 		},
 
 		isEmptyMetadataValue( value ) {
-			return (
-				value === null ||
-				value === undefined ||
-				value === '' ||
-				( Array.isArray( value ) && value.length === 0 )
-			);
+			if ( value === null || value === undefined || value === '' ) {
+				return true;
+			}
+
+			if ( Array.isArray( value ) ) {
+				if ( value.length === 0 ) {
+					return true;
+				}
+
+				return value.every( ( entry ) => {
+					if ( entry === null || entry === undefined ) {
+						return true;
+					}
+
+					if ( typeof entry === 'string' ) {
+						return entry.trim() === '';
+					}
+
+					return false;
+				} );
+			}
+
+			return false;
 		},
 
 		formatEvidence( evidence ) {
@@ -2320,14 +2367,24 @@ let hasTainacanAiNonceMiddleware = false;
 				if ( value.length === 0 ) {
 					return '<span class="tainacan-ai-empty-value">-</span>';
 				}
-				return value
+
+				const tags = value
+					.map( ( v ) =>
+						v === null || v === undefined ? '' : String( v ).trim()
+					)
+					.filter( ( v ) => v !== '' )
 					.map(
 						( v ) =>
 							`<span class="tainacan-ai-tag">${ this.escapeHtml(
-								String( v )
+								v
 							) }</span>`
-					)
-					.join( ' ' );
+					);
+
+				if ( tags.length === 0 ) {
+					return '<span class="tainacan-ai-empty-value">-</span>';
+				}
+
+				return tags.join( ' ' );
 			}
 
 			if ( typeof value === 'object' ) {
@@ -3027,11 +3084,7 @@ let hasTainacanAiNonceMiddleware = false;
 			this.state.lastDocumentBody = promptDebug.document_body || null;
 			this.updatePromptDocumentPreviewDisplay( this.state.lastDocumentBody );
 
-			if (
-				this.elements.promptTextarea?.length &&
-				! this.elements.promptTextarea.val() &&
-				this.state.lastPrompt
-			) {
+			if ( this.elements.promptTextarea?.length && this.state.lastPrompt ) {
 				this.elements.promptTextarea.val( this.state.lastPrompt );
 			}
 
