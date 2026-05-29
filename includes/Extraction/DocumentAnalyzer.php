@@ -761,6 +761,12 @@ class DocumentAnalyzer {
                 return $prompt;
             }
 
+            $context = $this->resolve_analysis_prompt_context(EvidenceInstructions::MODE_PDF_VISUAL);
+            $expected_slugs = !is_wp_error($context) && is_array($context['expected_slugs'] ?? null)
+                ? $context['expected_slugs']
+                : [];
+            $system_instruction = $prompt;
+
             $pageCount = count($images);
             if ($pageCount >= $max_pages) {
                 $this->processing_warnings->add(
@@ -778,9 +784,12 @@ class DocumentAnalyzer {
                 );
             }
 
-            $promptWithContext = $prompt . "\n\n" . sprintf(
-                'The document has %d page(s). Analyze the visual content of all provided pages.',
-                $pageCount
+            $user_prompt = $this->build_visual_analysis_user_prompt(
+                sprintf(
+                    'The document has %d page(s). Analyze the visual content of all provided pages.',
+                    $pageCount
+                ),
+                $expected_slugs
             );
 
             // Prepare images for the AI client
@@ -792,15 +801,20 @@ class DocumentAnalyzer {
                 ];
             }
 
-            $this->record_request_characters( $promptWithContext );
+            $this->record_request_characters_from_parts($system_instruction, $user_prompt);
 
             $ai_result = CoreAI::generate_json_from_text_and_files(
-                $promptWithContext,
+                $user_prompt,
                 $image_data,
-                $this->generation_options([
-                    'document_type' => 'pdf',
-                    'extraction_method' => 'visual_analysis',
-                ])
+                array_merge(
+                    $this->generation_options([
+                        'document_type' => 'pdf',
+                        'extraction_method' => 'visual_analysis',
+                    ]),
+                    [
+                        CoreAI::OPTIONS_SYSTEM_INSTRUCTION_KEY => $system_instruction,
+                    ]
+                )
             );
 
             if (is_wp_error($ai_result)) {
@@ -900,26 +914,40 @@ class DocumentAnalyzer {
             $image_data = "data:{$mime_type};base64,{$base64}";
         }
 
-        $prompt = $this->resolve_analysis_prompt(EvidenceInstructions::MODE_IMAGE);
+        $context = $this->resolve_analysis_prompt_context(EvidenceInstructions::MODE_IMAGE);
 
-        if (is_wp_error($prompt)) {
-            return $prompt;
+        if (is_wp_error($context)) {
+            return $context;
         }
 
-        $this->record_request_characters( $prompt );
+        $system_instruction = $context['prompt'];
+        $expected_slugs = is_array($context['expected_slugs'] ?? null)
+            ? $context['expected_slugs']
+            : [];
+        $user_prompt = $this->build_visual_analysis_user_prompt(
+            __('Analyze the attached image and extract the requested metadata.', 'tainacan-ai'),
+            $expected_slugs
+        );
+
+        $this->record_request_characters_from_parts($system_instruction, $user_prompt);
 
         return CoreAI::generate_json_from_text_and_files(
-            $prompt,
+            $user_prompt,
             [
                 [
                     'data' => $image_data,
                     'mime' => $mime_type,
                 ],
             ],
-            $this->generation_options([
-                'document_type' => 'image',
-                'extraction_method' => 'vision',
-            ])
+            array_merge(
+                $this->generation_options([
+                    'document_type' => 'image',
+                    'extraction_method' => 'vision',
+                ]),
+                [
+                    CoreAI::OPTIONS_SYSTEM_INSTRUCTION_KEY => $system_instruction,
+                ]
+            )
         );
     }
 
@@ -940,38 +968,58 @@ class DocumentAnalyzer {
             return $context;
         }
 
-        $prompt = $context['prompt'];
+        $system_instruction = $context['prompt'];
         $expected_slugs = is_array($context['expected_slugs'] ?? null)
             ? $context['expected_slugs']
             : [];
 
-        $full_prompt = $this->build_text_analysis_prompt(
-            $prompt,
+        $user_prompt = $this->build_text_analysis_user_prompt(
             $text,
             $document_format,
             $expected_slugs
         );
 
-        $this->record_request_characters( $full_prompt );
+        $this->record_request_characters_from_parts($system_instruction, $user_prompt);
 
-        return CoreAI::generate_json_from_text( $full_prompt, $this->generation_options( $log_extra ) );
+        return CoreAI::generate_json_from_text(
+            $user_prompt,
+            array_merge(
+                $this->generation_options($log_extra),
+                [
+                    CoreAI::OPTIONS_SYSTEM_INSTRUCTION_KEY => $system_instruction,
+                ]
+            )
+        );
     }
 
     /**
      * @param string[] $expected_slugs
      */
-    private function build_text_analysis_prompt(
-        string $instruction_prompt,
+    private function build_text_analysis_user_prompt(
         string $document_body,
         string $document_format,
         array $expected_slugs
     ): string {
         $parts = array(
-            $instruction_prompt,
-            '---',
             '**Document:**',
             EvidenceInstructions::get_document_format_guidance($document_format),
             $document_body,
+            '---',
+            ExtractionMetadata::get_instance()->build_response_closing_reminder($expected_slugs),
+        );
+
+        return trim(implode("\n\n", array_filter(
+            $parts,
+            static fn (string $part): bool => trim($part) !== ''
+        )));
+    }
+
+    /**
+     * @param string[] $expected_slugs
+     */
+    private function build_visual_analysis_user_prompt(string $task_text, array $expected_slugs): string {
+        $parts = array(
+            trim($task_text),
             '---',
             ExtractionMetadata::get_instance()->build_response_closing_reminder($expected_slugs),
         );
@@ -1284,11 +1332,18 @@ class DocumentAnalyzer {
         }
 
         $normalized_value = trim($value);
-        if ($normalized_value === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $normalized_value)) {
+        if ($normalized_value === '') {
             return $entry;
         }
 
-        $timestamp = strtotime($normalized_value . ' 00:00:00');
+        $date_only = $this->extract_iso_date_value($normalized_value);
+        if ($date_only === null) {
+            return $entry;
+        }
+
+        $entry['value'] = $date_only;
+
+        $timestamp = strtotime($date_only . ' 00:00:00');
         if ($timestamp === false) {
             return $entry;
         }
@@ -1296,6 +1351,23 @@ class DocumentAnalyzer {
         $date_format = (string) get_option('date_format', 'Y-m-d');
         $entry['label'] = wp_date($date_format, $timestamp);
         return $entry;
+    }
+
+    /**
+     * Reduce model output to YYYY-MM-DD when it copied a datetime or timestamp string.
+     */
+    private function extract_iso_date_value(string $value): ?string {
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})$/', $value, $matches)) {
+            $candidate = $matches[1];
+        } elseif (preg_match('/^(\d{4}-\d{2}-\d{2})[T\s]/', $value, $matches)) {
+            $candidate = $matches[1];
+        } else {
+            return null;
+        }
+
+        [$year, $month, $day] = array_map('intval', explode('-', $candidate));
+
+        return checkdate($month, $day, $year) ? $candidate : null;
     }
 
     /**
@@ -1320,6 +1392,8 @@ class DocumentAnalyzer {
      * @return array{
      *     prompt: string,
      *     instruction_prompt: string,
+     *     system_instruction: string,
+     *     user_prompt: string,
      *     parts: array{user: string, task: string, rules: string, fields: string, schema: string, evidence: string, output: string},
      *     analysis_mode: string,
      *     attachment_note: string,
@@ -1416,6 +1490,8 @@ class DocumentAnalyzer {
      * @return array{
      *     prompt: string,
      *     instruction_prompt: string,
+     *     system_instruction: string,
+     *     user_prompt: string,
      *     parts: array{user: string, task: string, rules: string, fields: string, schema: string, evidence: string, output: string},
      *     analysis_mode: string,
      *     attachment_note: string,
@@ -1444,6 +1520,10 @@ class DocumentAnalyzer {
 
         $attachment_note = $this->get_prompt_attachment_note($file_path, $mime_type, $analysis_mode);
         $instruction_prompt = $context['prompt'];
+        $system_instruction = $instruction_prompt;
+        $expected_slugs = is_array($context['expected_slugs'] ?? null)
+            ? $context['expected_slugs']
+            : [];
         $sections = $context['sections'];
         $prompt = $instruction_prompt;
 
@@ -1458,9 +1538,18 @@ class DocumentAnalyzer {
             $attachment_id
         );
 
+        $user_prompt = $this->resolve_prompt_debug_user_prompt(
+            $analysis_mode,
+            $mime_type,
+            $document_body,
+            $expected_slugs
+        );
+
         return [
             'prompt' => $prompt,
             'instruction_prompt' => $instruction_prompt,
+            'system_instruction' => $system_instruction,
+            'user_prompt' => $user_prompt,
             'parts' => [
                 'user' => $sections['user'],
                 'task' => $sections['task'],
@@ -2053,6 +2142,50 @@ class DocumentAnalyzer {
     private function record_request_characters( string $text ): void {
         $length = mb_strlen( $text, 'UTF-8' );
         $this->last_request_characters = $length > 0 ? $length : null;
+    }
+
+    private function record_request_characters_from_parts( string $system_instruction, string $user_prompt ): void {
+        $parts = array_filter(
+            [trim($system_instruction), trim($user_prompt)],
+            static fn (string $part): bool => $part !== ''
+        );
+
+        $this->record_request_characters(implode("\n\n", $parts));
+    }
+
+    /**
+     * @param array{type: string, content: string, truncated: bool} $document_body
+     * @param string[] $expected_slugs
+     */
+    private function resolve_prompt_debug_user_prompt(
+        string $analysis_mode,
+        string $mime_type,
+        array $document_body,
+        array $expected_slugs
+    ): string {
+        if ($analysis_mode === EvidenceInstructions::MODE_IMAGE) {
+            return $this->build_visual_analysis_user_prompt(
+                __('Analyze the attached image and extract the requested metadata.', 'tainacan-ai'),
+                $expected_slugs
+            );
+        }
+
+        if ($analysis_mode === EvidenceInstructions::MODE_PDF_VISUAL) {
+            return $this->build_visual_analysis_user_prompt(
+                __('Analyze the visual content of all provided PDF pages.', 'tainacan-ai'),
+                $expected_slugs
+            );
+        }
+
+        $document_format = $mime_type === 'text/html'
+            ? EvidenceInstructions::DOCUMENT_FORMAT_HTML
+            : EvidenceInstructions::DOCUMENT_FORMAT_PLAIN;
+
+        return $this->build_text_analysis_user_prompt(
+            (string) ($document_body['content'] ?? ''),
+            $document_format,
+            $expected_slugs
+        );
     }
 
     /**

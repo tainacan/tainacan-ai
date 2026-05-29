@@ -29,6 +29,7 @@ if (!function_exists('\wp_ai_client_prompt')) {
  * Note: We keep this intentionally small to avoid extra abstraction layers.
  */
 class CoreAI {
+    public const OPTIONS_SYSTEM_INSTRUCTION_KEY = 'system_instruction';
     /** No vision-capable model in connector metadata (configured active connectors). */
     public const IMAGE_SUPPORT_UNAVAILABLE = 'unavailable';
 
@@ -434,6 +435,11 @@ class CoreAI {
         }
         unset($options[CoreAIRequestLogging::OPTIONS_CONTEXT_KEY]);
 
+        $system_instruction = isset($options[self::OPTIONS_SYSTEM_INSTRUCTION_KEY])
+            ? trim((string) $options[self::OPTIONS_SYSTEM_INSTRUCTION_KEY])
+            : '';
+        unset($options[self::OPTIONS_SYSTEM_INSTRUCTION_KEY]);
+
         $temperature = isset($options['temperature']) ? (float) $options['temperature'] : null;
         $max_tokens = isset($options['max_tokens']) ? (int) $options['max_tokens'] : null;
         $request_timeout = isset($options['request_timeout']) ? (int) $options['request_timeout'] : null;
@@ -445,6 +451,10 @@ class CoreAI {
 
         try {
             $builder = wp_ai_client_prompt($prompt_text);
+
+            if ($system_instruction !== '') {
+                self::builderUsingSystemInstruction($builder, $system_instruction);
+            }
 
             if ($temperature !== null) {
                 self::builderUsingTemperature($builder, $temperature);
@@ -545,6 +555,16 @@ class CoreAI {
 
     private static function builderHas(object $builder, string $method): bool {
         return is_object($builder) && method_exists($builder, $method);
+    }
+
+    private static function builderUsingSystemInstruction(object $builder, string $system_instruction): void {
+        if (self::builderHas($builder, 'using_system_instruction')) {
+            $builder->using_system_instruction($system_instruction);
+            return;
+        }
+        if (self::builderHas($builder, 'usingSystemInstruction')) {
+            $builder->usingSystemInstruction($system_instruction);
+        }
     }
 
     private static function builderUsingTemperature(object $builder, float $temperature): void {
