@@ -122,22 +122,7 @@ class ItemFormHook {
                     </div>
                 </div>
 
-                <!-- EXIF data area (when available) -->
-                <div class="tainacan-ai-results" id="tainacan-ai-results" style="display: none;">
-                    <div class="tainacan-ai-tabs" id="tainacan-ai-tab-exif" style="display: none;">
-                        <button type="button" class="tainacan-ai-tab active" data-tab="exif">
-                            <span class="dashicons dashicons-camera"></span>
-                            <?php esc_html_e('EXIF Data', 'tainacan-ai'); ?>
-                        </button>
-                    </div>
-                    <div class="tainacan-ai-tab-content active" id="tainacan-ai-content-exif">
-                        <div class="tainacan-ai-exif-content" id="tainacan-ai-exif-content"></div>
-                    </div>
-                    <!-- Hidden elements for compatibility -->
-                    <span id="tainacan-ai-cache-badge" style="display: none;"></span>
-                    <span id="tainacan-ai-tokens" style="display: none;"></span>
-                    <div id="tainacan-ai-results-content" style="display: none;"></div>
-                </div>
+                <span id="tainacan-ai-cache-badge" style="display: none;"></span>
             <?php endif; ?>
         </div>
         <?php
@@ -196,13 +181,22 @@ class ItemFormHook {
             'features' => [
                 'supportsMetadataReloadEvent' => $supports_metadata_reload_event,
             ],
-            'debug' => defined('WP_DEBUG') && WP_DEBUG,
+            'advancedDebug' => Plugin::is_advanced_debug(),
+            'debug' => (defined('WP_DEBUG') && WP_DEBUG) || Plugin::is_advanced_debug(),
             'extractionFields' => [],
             'texts' => [
                 'analyzing' => __('Analyzing...', 'tainacan-ai'),
                 'analyzeBtn' => __('Analyze Document', 'tainacan-ai'),
                 'error' => __('Error analyzing. Please try again.', 'tainacan-ai'),
                 'errorLabel' => __('Error', 'tainacan-ai'),
+                'analysisFailedSummary' => __('Analysis failed', 'tainacan-ai'),
+                'errorHttpStatus' => __('HTTP status', 'tainacan-ai'),
+                'errorCode' => __('Error code', 'tainacan-ai'),
+                'errorDetails' => __('Details', 'tainacan-ai'),
+                'errorResponse' => __('Server response', 'tainacan-ai'),
+                'errorDebugDetails' => __('Technical details', 'tainacan-ai'),
+                'errorContentTruncated' => __('truncated', 'tainacan-ai'),
+                'loadingSubtitle' => __('This may take a few seconds', 'tainacan-ai'),
                 'noDocument' => __('No document found in this item.', 'tainacan-ai'),
                 'copy' => __('Copy', 'tainacan-ai'),
                 'copied' => __('Copied!', 'tainacan-ai'),
@@ -219,7 +213,14 @@ class ItemFormHook {
                 'text' => __('Text', 'tainacan-ai'),
                 'url' => __('URL', 'tainacan-ai'),
                 'detecting' => __('Detecting document...', 'tainacan-ai'),
+                'panelTitle' => __('Tainacan AI', 'tainacan-ai'),
                 'analysisResults' => __('Analysis Results', 'tainacan-ai'),
+                'tabImageData' => __('Image data', 'tainacan-ai'),
+                'tabRequest' => __('Request', 'tainacan-ai'),
+                'requestTokens' => __('Tokens used', 'tainacan-ai'),
+                'requestConnector' => __('Connector', 'tainacan-ai'),
+                'requestModel' => __('Model', 'tainacan-ai'),
+                'connectorUnknown' => __('Connector unavailable', 'tainacan-ai'),
                 'newAnalysis' => __('New Analysis', 'tainacan-ai'),
                 'evidence' => __('Evidence', 'tainacan-ai'),
                 'fillAll' => __('Fill all', 'tainacan-ai'),
@@ -257,6 +258,16 @@ class ItemFormHook {
                 'capture' => __('Capture', 'tainacan-ai'),
                 'location' => __('Location', 'tainacan-ai'),
                 'authorship' => __('Authorship', 'tainacan-ai'),
+                'editPrompt' => __('Edit prompt', 'tainacan-ai'),
+                'promptEditorTitle' => __('Analysis prompt', 'tainacan-ai'),
+                'runWithPrompt' => __('Run with this prompt', 'tainacan-ai'),
+                'resetPrompt' => __('Reset to last resolved prompt', 'tainacan-ai'),
+                'promptEditorHint' => __('Edits apply only to this run and are not saved. Changing schema or output keys may break field filling.', 'tainacan-ai'),
+                'promptDocumentPreview' => __('Document sent to the model (read-only)', 'tainacan-ai'),
+                'promptDocumentImage' => __('Image bytes are attached to the API request; pixel data is not shown here.', 'tainacan-ai'),
+                'promptDocumentPdfVisual' => __('PDF pages are sent as images; page raster data is not shown here.', 'tainacan-ai'),
+                'promptDocumentTruncated' => __('Truncated to the same limit used during analysis.', 'tainacan-ai'),
+                'promptDocumentEmpty' => __('No extractable text was found in this document.', 'tainacan-ai'),
             ]
         ]);
     }

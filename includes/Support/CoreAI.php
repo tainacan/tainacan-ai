@@ -482,40 +482,53 @@ class CoreAI {
                 return $result;
             }
 
+            $request_meta = self::extract_request_meta_from_result($result);
+
             $raw_text = self::extract_result_text($result);
             if ($raw_text === '') {
-                return new \WP_Error('empty_response', __('Empty response from AI.', 'tainacan-ai'));
+                return new \WP_Error(
+                    'empty_response',
+                    __('Empty response from AI.', 'tainacan-ai'),
+                    AnalysisErrorDebug::data(
+                        array(
+                            'response_length' => '0',
+                        ),
+                        502,
+                        $request_meta
+                    )
+                );
             }
 
             $metadata = self::parse_json_response($raw_text);
             if ($metadata === null) {
-                return new \WP_Error('json_parse_error', __('AI returned invalid JSON.', 'tainacan-ai'));
-            }
-
-            $usage_obj = method_exists($result, 'getTokenUsage') ? $result->getTokenUsage() : null;
-            $usage = self::extract_usage_array($usage_obj);
-
-            $provider = '';
-            $model = '';
-
-            $provider_meta = method_exists($result, 'getProviderMetadata') ? $result->getProviderMetadata() : null;
-            if ($provider_meta) {
-                $provider = self::maybe_get_meta_id($provider_meta);
-            }
-
-            $model_meta = method_exists($result, 'getModelMetadata') ? $result->getModelMetadata() : null;
-            if ($model_meta) {
-                $model = self::maybe_get_meta_id($model_meta);
+                return new \WP_Error(
+                    'json_parse_error',
+                    __('AI returned invalid JSON.', 'tainacan-ai'),
+                    AnalysisErrorDebug::data(
+                        self::collect_json_parse_debug($raw_text),
+                        502,
+                        $request_meta
+                    )
+                );
             }
 
             return [
                 'metadata' => $metadata,
-                'usage' => $usage,
-                'model' => $model,
-                'provider' => $provider,
+                'usage' => array(
+                    'prompt_tokens' => (int) ( $request_meta['prompt_tokens'] ?? 0 ),
+                    'completion_tokens' => (int) ( $request_meta['completion_tokens'] ?? 0 ),
+                    'total_tokens' => (int) ( $request_meta['tokens_used'] ?? 0 ),
+                ),
+                'model' => (string) ( $request_meta['model_used'] ?? '' ),
+                'provider' => (string) ( $request_meta['provider_used'] ?? '' ),
             ];
         } catch (\Throwable $e) {
-            return new \WP_Error('ai_generation_error', $e->getMessage());
+            return AnalysisErrorDebug::from_throwable(
+                $e,
+                'ai_generation_error',
+                null,
+                500
+            );
         } finally {
             if ($log_scope !== null) {
                 $log_scope->release();
@@ -749,6 +762,43 @@ class CoreAI {
     }
 
     /**
+     * Tokens, model, and provider from a Core AI text result (for errors and success).
+     *
+     * @return array{
+     *     tokens_used: int,
+     *     prompt_tokens: int,
+     *     completion_tokens: int,
+     *     model_used: string,
+     *     provider_used: string
+     * }
+     */
+    private static function extract_request_meta_from_result(object $result): array {
+        $usage_obj = method_exists($result, 'getTokenUsage') ? $result->getTokenUsage() : null;
+        $usage = self::extract_usage_array($usage_obj);
+
+        $provider = '';
+        $model = '';
+
+        $provider_meta = method_exists($result, 'getProviderMetadata') ? $result->getProviderMetadata() : null;
+        if ($provider_meta) {
+            $provider = self::maybe_get_meta_id($provider_meta);
+        }
+
+        $model_meta = method_exists($result, 'getModelMetadata') ? $result->getModelMetadata() : null;
+        if ($model_meta) {
+            $model = self::maybe_get_meta_id($model_meta);
+        }
+
+        return [
+            'tokens_used' => (int) ($usage['total_tokens'] ?? 0),
+            'prompt_tokens' => (int) ($usage['prompt_tokens'] ?? 0),
+            'completion_tokens' => (int) ($usage['completion_tokens'] ?? 0),
+            'model_used' => $model,
+            'provider_used' => $provider,
+        ];
+    }
+
+    /**
      * @return array{prompt_tokens:int,completion_tokens:int,total_tokens:int}
      */
     private static function extract_usage_array(mixed $usage_obj): array {
@@ -884,6 +934,43 @@ class CoreAI {
         }
 
         return null;
+    }
+
+    /**
+     * Debug context when parse_json_response() fails (advanced debug only in REST).
+     *
+     * @return array<string, string|array{label: string, content: string, truncated: bool}>
+     */
+    private static function collect_json_parse_debug(string $content): array {
+        $last_json_error = '';
+
+        $record_attempt = static function (string $text) use (&$last_json_error): void {
+            json_decode($text, true);
+            $last_json_error = json_last_error_msg();
+        };
+
+        $record_attempt($content);
+
+        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+            $record_attempt($matches[0]);
+        }
+
+        $stripped = preg_replace('/```json?\s*/', '', $content);
+        $stripped = preg_replace('/```\s*/', '', (string) $stripped);
+        $stripped = trim((string) $stripped);
+        $record_attempt($stripped);
+
+        $truncated = AnalysisErrorDebug::truncate($content);
+
+        return array(
+            'raw_response'    => array(
+                'label'     => AnalysisErrorDebug::label_for('raw_response'),
+                'content'   => $truncated['content'],
+                'truncated' => $truncated['truncated'],
+            ),
+            'json_error'      => $last_json_error !== '' ? $last_json_error : __('Unknown JSON error.', 'tainacan-ai'),
+            'response_length' => (string) $truncated['length'],
+        );
     }
 }
 

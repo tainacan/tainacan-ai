@@ -84,6 +84,7 @@ final class Plugin {
 			'cache_duration'   => 3600,
 			'extract_exif'     => true,
 			'consent_required' => true,
+			'advanced_debug'   => false,
 		);
 
 		$existing = get_option( 'tainacan_ai_options', array() );
@@ -179,5 +180,14 @@ final class Plugin {
 	public static function get_options(): array {
 		$options = get_option( 'tainacan_ai_options', array() );
 		return is_array( $options ) ? $options : array();
+	}
+
+	/**
+	 * Whether advanced debugging (prompt visibility and per-run override) is enabled.
+	 */
+	public static function is_advanced_debug(): bool {
+		$options = self::get_options();
+
+		return ! empty( $options['advanced_debug'] );
 	}
 }

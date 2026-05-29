@@ -274,6 +274,26 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\Extraction\PromptTemplates::get_tem
                                 <p class="description"><?php esc_html_e('0 to disable.', 'tainacan-ai'); ?></p>
                             </div>
                         </div>
+
+                        <div class="tainacan-ai-checkbox-grid" style="margin-top: 1em;">
+                            <label class="tainacan-ai-checkbox">
+                                <input
+                                    type="checkbox"
+                                    name="tainacan_ai_options[advanced_debug]"
+                                    value="1"
+                                    <?php checked(!empty($options['advanced_debug'])); ?>
+                                />
+                                <span class="tainacan-ai-checkbox-content">
+                                    <span class="tainacan-ai-checkbox-title">
+                                        <span class="dashicons dashicons-code-standards"></span>
+                                        <?php esc_html_e('Advanced debugging', 'tainacan-ai'); ?>
+                                    </span>
+                                    <span class="tainacan-ai-checkbox-desc">
+                                        <?php esc_html_e('Shows the resolved analysis prompt in the item sidepanel and allows editing it for one-off test runs. Editing the full prompt can break JSON output and field filling.', 'tainacan-ai'); ?>
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 

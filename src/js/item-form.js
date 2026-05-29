@@ -19,6 +19,9 @@ let hasTainacanAiNonceMiddleware = false;
 			documentInfo: null,
 			isAnalyzing: false,
 			lastResult: null,
+			lastPrompt: null,
+			lastDocumentBody: null,
+			activeSidebarTab: 'results',
 			panelOpen: false,
 			isItemEditContext: false,
 		},
@@ -69,15 +72,10 @@ let hasTainacanAiNonceMiddleware = false;
 				analyzeBtn: $( '#tainacan-ai-analyze' ),
 				refreshBtn: $( '#tainacan-ai-refresh' ),
 				status: $( '#tainacan-ai-status' ),
-				results: $( '#tainacan-ai-results' ),
-				resultsContent: $( '#tainacan-ai-results-content' ),
-				exifContent: $( '#tainacan-ai-exif-content' ),
 				cacheBadge: $( '#tainacan-ai-cache-badge' ),
 				documentInfo: $( '#tainacan-ai-document-info' ),
 				docType: $( '#tainacan-ai-doc-type' ),
 				docName: $( '#tainacan-ai-doc-name' ),
-				tabExif: $( '#tainacan-ai-tab-exif' ),
-				tokensInfo: $( '#tainacan-ai-tokens' ),
 				copyAllBtn: $( '#tainacan-ai-copy-all' ),
 			};
 		},
@@ -107,23 +105,53 @@ let hasTainacanAiNonceMiddleware = false;
 
 			// Side indicator (appears when panel is closed and there are results)
 			$( 'body' ).append( `
-                <div class="tainacan-ai-panel-indicator" title="${ TainacanAI.texts?.openResults || 'Open analysis results' }">
+                <div class="tainacan-ai-panel-indicator" title="${ TainacanAI.texts?.panelTitle || TainacanAI.texts?.openResults || 'Open Tainacan AI' }">
                     <span class="dashicons dashicons-arrow-left-alt2"></span>
                 </div>
             ` );
 
-			// Sidebar panel
+			const aiIconSvg = `<svg class="tainacan-ai-icon" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" id="svg5" width="32" height="32" version="1.1" viewBox="0 0 8.467 8.467">
+                        <g id="layer1" transform="translate(-51.439 -147.782)"><path id="path11554" d="m58.994 153.057-.247.062-.349.082c.124.134.217.267.282.396.158.318.161.607.012.927v.002l-.005.007c-.172.37-.412.548-.824.616-.002 0-.004 0-.005.002-.074.012-.16.018-.257.018-.383 0-.864-.118-1.415-.372l-.009-.005a.534.534 0 0 0-.078-.033 4.111 4.111 0 0 1-.427-.191h-.004c-.016.064-.03.131-.05.21a3.34 3.34 0 0 1-.083.302l-.01.029c.144.07.273.124.38.164l.037.019c.608.282 1.165.426 1.658.426.122 0 .24-.007.352-.026a1.588 1.588 0 0 0 1.235-.927l.003-.007c.215-.46.212-.95-.014-1.405-.051-.102-.111-.2-.182-.297z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><path id="path11552" d="M57.188 148.868c-.079 0-.16.006-.241.017-.359.047-.732.2-1.112.455.028.116.055.228.077.311.095.025.226.055.36.087.266-.158.536-.28.748-.307.366-.05.646.046.91.31h.003v.002c.27.272.363.549.314.915a1.85 1.85 0 0 1-.213.62l.055.216c.01.04.017.061.026.091.03.01.053.016.094.027l.238.058c.19-.32.306-.634.346-.94a1.592 1.592 0 0 0-.467-1.375l-.004-.003a1.583 1.583 0 0 0-1.134-.484z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><path id="path1" d="M53.574 148.312a1.671 1.671 0 0 0-.67.161l-.006.003c-1.05.493-1.246 1.706-.527 3.248l.015.034c.122.323.356.82.783 1.372a5.33 5.33 0 0 0-.208 1.435v.148h.148c.285 0 .731-.031 1.282-.17-.036-.007-.067-.016-.108-.025a3.406 3.406 0 0 1-.301-.083.791.791 0 0 1-.16-.071.441.441 0 0 1-.222-.295h-.002c-.028-.15 0-.435.101-.79a.55.55 0 0 0-.096-.486 4.834 4.834 0 0 1-.717-1.266l-.016-.034c-.328-.704-.421-1.293-.356-1.697.066-.404.238-.642.618-.82l.004-.002c.168-.078.323-.117.476-.115v-.001c.153 0 .305.042.465.122.15.075.33.237.496.415l.03-.121c.033-.14.067-.281.11-.409l.036-.092v-.001a2.172 2.172 0 0 0-.424-.284 1.605 1.605 0 0 0-.75-.176z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><g id="path6974" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(1.07603 0 0 1.0728 -16.96 -11.535)"><path id="path10029" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g><g id="path6968" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(1.51152 0 0 1.50697 -44.11 -74.969)"><path id="path10038" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g><g id="path6976" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(.77239 0 0 .77006 3.277 37.782)"><path id="path10046" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g></g>
+                    </svg>`;
+
+			const promptEditorBlock = TainacanAI.advancedDebug
+				? `
+                        <div class="tainacan-ai-request-prompt-section">
+                            <div class="tainacan-ai-prompt-editor" id="tainacan-ai-prompt-editor">
+                                <div class="tainacan-ai-prompt-editor-header">
+                                    <strong>${ TainacanAI.texts?.promptEditorTitle || 'Analysis prompt' }</strong>
+                                </div>
+                                <p class="tainacan-ai-prompt-editor-hint">${ TainacanAI.texts?.promptEditorHint || '' }</p>
+                                <textarea
+                                    id="tainacan-ai-prompt-textarea"
+                                    class="tainacan-ai-prompt-textarea"
+                                    rows="12"
+                                    spellcheck="false"
+                                ></textarea>
+                                <div class="tainacan-ai-prompt-editor-actions">
+                                    <button type="button" class="button button-primary" id="tainacan-ai-run-with-prompt">
+                                        ${ TainacanAI.texts?.runWithPrompt || 'Run with this prompt' }
+                                    </button>
+                                    <button type="button" class="button button-secondary" id="tainacan-ai-reset-prompt">
+                                        ${ TainacanAI.texts?.resetPrompt || 'Reset to last resolved prompt' }
+                                    </button>
+                                </div>
+                                <div class="tainacan-ai-prompt-document-block" id="tainacan-ai-prompt-document-preview" hidden>
+                                    <div class="tainacan-ai-prompt-document-label" id="tainacan-ai-prompt-document-preview-summary">${ TainacanAI.texts?.promptDocumentPreview || 'Document sent to the model (read-only)' }</div>
+                                    <p class="tainacan-ai-prompt-document-preview-truncated" id="tainacan-ai-prompt-document-preview-truncated" hidden>${ TainacanAI.texts?.promptDocumentTruncated || 'Truncated to the same limit used during analysis.' }</p>
+                                    <pre class="tainacan-ai-prompt-document-preview-content" id="tainacan-ai-prompt-document-preview-content"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    `
+				: '';
+
 			const panelHtml = `
                 <div class="tainacan-ai-sidebar-panel">
                     <div class="tainacan-ai-sidebar-header">
                         <h3>
-                            <svg class="tainacan-ai-icon" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" id="svg5" width="32" height="32" version="1.1" viewBox="0 0 8.467 8.467">
-								<g id="layer1" transform="translate(-51.439 -147.782)"><path id="path11554" d="m58.994 153.057-.247.062-.349.082c.124.134.217.267.282.396.158.318.161.607.012.927v.002l-.005.007c-.172.37-.412.548-.824.616-.002 0-.004 0-.005.002-.074.012-.16.018-.257.018-.383 0-.864-.118-1.415-.372l-.009-.005a.534.534 0 0 0-.078-.033 4.111 4.111 0 0 1-.427-.191h-.004c-.016.064-.03.131-.05.21a3.34 3.34 0 0 1-.083.302l-.01.029c.144.07.273.124.38.164l.037.019c.608.282 1.165.426 1.658.426.122 0 .24-.007.352-.026a1.588 1.588 0 0 0 1.235-.927l.003-.007c.215-.46.212-.95-.014-1.405-.051-.102-.111-.2-.182-.297z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><path id="path11552" d="M57.188 148.868c-.079 0-.16.006-.241.017-.359.047-.732.2-1.112.455.028.116.055.228.077.311.095.025.226.055.36.087.266-.158.536-.28.748-.307.366-.05.646.046.91.31h.003v.002c.27.272.363.549.314.915a1.85 1.85 0 0 1-.213.62l.055.216c.01.04.017.061.026.091.03.01.053.016.094.027l.238.058c.19-.32.306-.634.346-.94a1.592 1.592 0 0 0-.467-1.375l-.004-.003a1.583 1.583 0 0 0-1.134-.484z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><path id="path1" d="M53.574 148.312a1.671 1.671 0 0 0-.67.161l-.006.003c-1.05.493-1.246 1.706-.527 3.248l.015.034c.122.323.356.82.783 1.372a5.33 5.33 0 0 0-.208 1.435v.148h.148c.285 0 .731-.031 1.282-.17-.036-.007-.067-.016-.108-.025a3.406 3.406 0 0 1-.301-.083.791.791 0 0 1-.16-.071.441.441 0 0 1-.222-.295h-.002c-.028-.15 0-.435.101-.79a.55.55 0 0 0-.096-.486 4.834 4.834 0 0 1-.717-1.266l-.016-.034c-.328-.704-.421-1.293-.356-1.697.066-.404.238-.642.618-.82l.004-.002c.168-.078.323-.117.476-.115v-.001c.153 0 .305.042.465.122.15.075.33.237.496.415l.03-.121c.033-.14.067-.281.11-.409l.036-.092v-.001a2.172 2.172 0 0 0-.424-.284 1.605 1.605 0 0 0-.75-.176z" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none"/><g id="path6974" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(1.07603 0 0 1.0728 -16.96 -11.535)"><path id="path10029" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g><g id="path6968" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(1.51152 0 0 1.50697 -44.11 -74.969)"><path id="path10038" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g><g id="path6976" style="fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-dasharray:none" transform="matrix(.77239 0 0 .77006 3.277 37.782)"><path id="path10046" d="M68.481 150.899c0 .123-.974.262-1.06.349-.088.087-.227 1.06-.35 1.06-.123 0-.262-.973-.349-1.06-.087-.087-1.06-.226-1.06-.35 0-.122.973-.261 1.06-.348.087-.087.226-1.061.35-1.061.122 0 .261.974.348 1.06.087.088 1.061.227 1.061.35z" style="color:currentColor;fill:currentColor;fill-opacity:1;stroke:none;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;paint-order:stroke markers fill"/></g></g>
-							</svg>
-                            ${
-								TainacanAI.texts?.analysisResults ||
-								'Analysis Results'
-							}
+                            ${ aiIconSvg }
+                            ${ TainacanAI.texts?.panelTitle || 'Tainacan AI' }
                         </h3>
                         <div class="tainacan-ai-sidebar-header-actions">
                             <button type="button" class="button button-primary" id="tainacan-ai-panel-refresh">
@@ -135,45 +163,84 @@ let hasTainacanAiNonceMiddleware = false;
                             </button>
                         </div>
                     </div>
-                    <div class="tainacan-ai-sidebar-actions">
-                        <div class="tainacan-ai-sidebar-meta-summary" id="tainacan-ai-panel-meta-summary">0 metadata extracted</div>
-                        <div class="tainacan-ai-sidebar-actions-right">
-                            <button type="button" class="button button-secondary" id="tainacan-ai-fill-all" title="${
-								TainacanAI.texts?.fillAllTooltip ||
-								'Automatically fills Tainacan fields with extracted values'
-							}">
-                                <span class="dashicons dashicons-download"></span>
-                                ${ TainacanAI.texts?.fillAll || 'Fill all' }
-                            </button>
-                            <button type="button" class="button button-secondary" id="tainacan-ai-panel-copy-all">
-                                <span class="dashicons dashicons-admin-page"></span>
-                                ${ TainacanAI.texts?.copyAll || 'Copy all' }
-                            </button>
+                    <nav class="tainacan-ai-sidebar-tabs" role="tablist">
+                        <button type="button" class="tainacan-ai-sidebar-tab active" data-tab="results" role="tab" aria-selected="true">
+                            ${ TainacanAI.texts?.analysisResults || 'Analysis Results' }
+                        </button>
+                        <button type="button" class="tainacan-ai-sidebar-tab" data-tab="image-data" id="tainacan-ai-sidebar-tab-image-data" role="tab" aria-selected="false" hidden>
+                            ${ TainacanAI.texts?.tabImageData || 'Image data' }
+                        </button>
+                        <button type="button" class="tainacan-ai-sidebar-tab" data-tab="request" id="tainacan-ai-sidebar-tab-request" role="tab" aria-selected="false" hidden disabled>
+                            ${ TainacanAI.texts?.tabRequest || 'Request' }
+                        </button>
+                    </nav>
+                    <div class="tainacan-ai-sidebar-tab-panels">
+                        <div class="tainacan-ai-sidebar-tab-panel active" id="tainacan-ai-tab-panel-results" data-tab-panel="results" role="tabpanel">
+                            <div class="tainacan-ai-sidebar-actions">
+                                <div class="tainacan-ai-sidebar-meta-summary" id="tainacan-ai-panel-meta-summary">0 metadata extracted</div>
+                                <div class="tainacan-ai-sidebar-actions-right">
+                                    <button type="button" class="button button-secondary" id="tainacan-ai-fill-all" title="${
+										TainacanAI.texts?.fillAllTooltip ||
+										'Automatically fills Tainacan fields with extracted values'
+									}">
+                                        <span class="dashicons dashicons-download"></span>
+                                        ${ TainacanAI.texts?.fillAll || 'Fill all' }
+                                    </button>
+                                    <button type="button" class="button button-secondary" id="tainacan-ai-panel-copy-all">
+                                        <span class="dashicons dashicons-admin-page"></span>
+                                        ${ TainacanAI.texts?.copyAll || 'Copy all' }
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="tainacan-ai-sidebar-body" id="tainacan-ai-sidebar-content"></div>
                         </div>
-                    </div>
-                    <div class="tainacan-ai-sidebar-body" id="tainacan-ai-sidebar-content">
-                        <!-- Content will be inserted here -->
-                    </div>
-                    <div class="tainacan-ai-sidebar-footer">
-                        <span id="tainacan-ai-panel-tokens">
-                            <span class="dashicons dashicons-performance"></span>
-                            <span class="tokens-count">-</span>
-                        </span>
-                        <span id="tainacan-ai-panel-model">
-                            <span class="dashicons dashicons-admin-generic"></span>
-                            <span class="model-name">-</span>
-                        </span>
+                        <div class="tainacan-ai-sidebar-tab-panel" id="tainacan-ai-tab-panel-image-data" data-tab-panel="image-data" role="tabpanel" hidden>
+                            <div class="tainacan-ai-sidebar-tab-panel-scroll">
+                                <div class="tainacan-ai-exif-content" id="tainacan-ai-sidebar-exif-content"></div>
+                            </div>
+                        </div>
+                        <div class="tainacan-ai-sidebar-tab-panel" id="tainacan-ai-tab-panel-request" data-tab-panel="request" role="tabpanel" hidden>
+                            <div class="tainacan-ai-sidebar-tab-panel-scroll">
+                                <dl class="tainacan-ai-detail-list tainacan-ai-request-details">
+                                    <div class="tainacan-ai-detail-row">
+                                        <dt>${ TainacanAI.texts?.requestTokens || 'Tokens used' }</dt>
+                                        <dd id="tainacan-ai-request-tokens">-</dd>
+                                    </div>
+                                    <div class="tainacan-ai-detail-row">
+                                        <dt>${ TainacanAI.texts?.requestConnector || 'Connector' }</dt>
+                                        <dd id="tainacan-ai-request-connector">-</dd>
+                                    </div>
+                                    <div class="tainacan-ai-detail-row">
+                                        <dt>${ TainacanAI.texts?.requestModel || 'Model' }</dt>
+                                        <dd id="tainacan-ai-request-model">-</dd>
+                                    </div>
+                                </dl>
+                                ${ promptEditorBlock }
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
 
 			$( 'body' ).append( panelHtml );
+			this.reconcileSidebarElements();
+			this.switchSidebarTab( this.state.activeSidebarTab || 'results' );
+		},
 
-			// Cache new elements
+		reconcileSidebarElements() {
 			this.elements.sidebarPanel = $( '.tainacan-ai-sidebar-panel' );
 			this.elements.sidebarOverlay = $( '.tainacan-ai-sidebar-overlay' );
 			this.elements.sidebarContent = $( '#tainacan-ai-sidebar-content' );
 			this.elements.panelIndicator = $( '.tainacan-ai-panel-indicator' );
+			this.elements.exifContent = $( '#tainacan-ai-sidebar-exif-content' );
+			this.elements.sidebarTabImageData = $( '#tainacan-ai-sidebar-tab-image-data' );
+			this.elements.sidebarTabRequest = $( '#tainacan-ai-sidebar-tab-request' );
+			this.elements.promptEditor = $( '#tainacan-ai-prompt-editor' );
+			this.elements.promptTextarea = $( '#tainacan-ai-prompt-textarea' );
+			this.elements.promptDocumentPreview = $( '#tainacan-ai-prompt-document-preview' );
+			this.elements.promptDocumentPreviewSummary = $( '#tainacan-ai-prompt-document-preview-summary' );
+			this.elements.promptDocumentPreviewTruncated = $( '#tainacan-ai-prompt-document-preview-truncated' );
+			this.elements.promptDocumentPreviewContent = $( '#tainacan-ai-prompt-document-preview-content' );
 		},
 
 		/**
@@ -192,9 +259,9 @@ let hasTainacanAiNonceMiddleware = false;
 				this.analyze( true );
 			} );
 
-			// Tabs
-			$( document ).on( 'click', '.tainacan-ai-tab', ( e ) => {
-				this.switchTab( $( e.currentTarget ).data( 'tab' ) );
+			$( document ).on( 'click', '.tainacan-ai-sidebar-tab', ( e ) => {
+				e.preventDefault();
+				this.switchSidebarTab( $( e.currentTarget ).data( 'tab' ) );
 			} );
 
 			// Copy individual value
@@ -261,6 +328,17 @@ let hasTainacanAiNonceMiddleware = false;
 				this.analyze( true );
 			} );
 
+			$( document ).on( 'click', '#tainacan-ai-run-with-prompt', ( e ) => {
+				e.preventDefault();
+				const overridePrompt = $( '#tainacan-ai-prompt-textarea' ).val();
+				this.analyze( true, overridePrompt );
+			} );
+
+			$( document ).on( 'click', '#tainacan-ai-reset-prompt', ( e ) => {
+				e.preventDefault();
+				this.resetPromptEditor();
+			} );
+
 			// ESC key to close
 			$( document ).on( 'keydown', ( e ) => {
 				if ( e.key === 'Escape' && this.state.panelOpen ) {
@@ -290,6 +368,10 @@ let hasTainacanAiNonceMiddleware = false;
 				this.createSidebarPanel();
 			}
 
+			if ( ! this.elements.sidebarContent?.length ) {
+				this.reconcileSidebarElements();
+			}
+
 			if ( this.elements.sidebarPanel ) {
 				this.elements.sidebarPanel.addClass( 'open' );
 			}
@@ -314,8 +396,11 @@ let hasTainacanAiNonceMiddleware = false;
 			}
 			this.state.panelOpen = false;
 
-			// Show indicator if there are results
-			if ( this.state.lastResult && this.elements.panelIndicator ) {
+			// Show indicator if there are results or a stored analysis error
+			if (
+				( this.state.lastResult || this.state.lastAnalysisError ) &&
+				this.elements.panelIndicator
+			) {
 				this.elements.panelIndicator.addClass( 'visible' );
 			}
 		},
@@ -325,8 +410,19 @@ let hasTainacanAiNonceMiddleware = false;
 		 */
 		resetAnalysisState() {
 			this.state.lastResult = null;
+			this.state.lastAnalysisError = null;
+			this.state.lastPrompt = null;
+			this.state.lastDocumentBody = null;
+			this.state.activeSidebarTab = 'results';
 			this.state.attachmentId = null;
 			this.state.documentInfo = null;
+			if ( this.elements.promptTextarea?.length ) {
+				this.elements.promptTextarea.val( '' );
+			}
+			this.updatePromptDocumentPreviewDisplay( null );
+			this.updateRequestTabDetails( null );
+			this.updateRequestTabAvailability( false );
+			this.updateImageDataTab( null );
 
 			// Hide indicator
 			if ( this.elements.panelIndicator ) {
@@ -573,35 +669,47 @@ let hasTainacanAiNonceMiddleware = false;
 		/**
 		 * Execute analysis
 		 */
-		async analyze( forceRefresh = false ) {
+		async analyze( forceRefresh = false, overridePrompt = null ) {
 			if ( this.state.isAnalyzing ) return;
 
 			this.ensureElementsCached();
 
 			// Check if we have item or attachment
 			if ( ! this.state.itemId && ! this.state.attachmentId ) {
-				this.showError( TainacanAI.texts.noDocument );
+				this.displayAnalysisError( TainacanAI.texts.noDocument );
 				return;
 			}
+
+			const hasOverride =
+				overridePrompt !== null &&
+				overridePrompt !== undefined &&
+				String( overridePrompt ).trim() !== '';
 
 			this.state.isAnalyzing = true;
 			this.showLoading();
 
-			let hasError = false;
-
 			try {
+				const requestData = {
+					item_id: this.state.itemId,
+					attachment_id: this.state.attachmentId,
+					collection_id: this.state.collectionId,
+					force_refresh: forceRefresh || hasOverride,
+				};
+
+				if ( hasOverride && TainacanAI.advancedDebug ) {
+					requestData.override_prompt = String( overridePrompt );
+				}
+
 				const response = await apiFetch( {
 					url: `${ TainacanAI.restUrl }analyze`,
 					method: 'POST',
-					data: {
-						item_id: this.state.itemId,
-						attachment_id: this.state.attachmentId,
-						collection_id: this.state.collectionId,
-						force_refresh: forceRefresh,
-					},
+					data: requestData,
 				} );
 
 				this.state.lastResult = response.result;
+				if ( response.prompt_debug && ! hasOverride ) {
+					this.applyPromptDebugFromPayload( response.prompt_debug );
+				}
 				if ( TainacanAI.debug && response.prompt_debug ) {
 						console.group( '[TainacanAI] Resolved analysis prompt' );
 						if ( response.prompt_debug.parts ) {
@@ -626,19 +734,11 @@ let hasTainacanAiNonceMiddleware = false;
 				}
 				this.displayResults( response.result, response.from_cache );
 			} catch ( error ) {
-				hasError = true;
 				console.error( '[TainacanAI] Analysis error:', error );
-				this.showError(
-					error.responseJSON?.message ||
-						error.responseJSON?.data?.message ||
-						error.message ||
-						TainacanAI.texts.error
-				);
+				this.displayAnalysisError( error );
 			} finally {
 				this.state.isAnalyzing = false;
-				if ( ! hasError ) {
-					this.hideLoading();
-				}
+				this.hideLoading();
 			}
 		},
 
@@ -646,6 +746,9 @@ let hasTainacanAiNonceMiddleware = false;
 		 * Display results
 		 */
 		displayResults( result, fromCache ) {
+			this.state.lastAnalysisError = null;
+			this.setSidebarResultsActionsVisible( true );
+
 			// Cache badge
 			if ( fromCache ) {
 				this.elements.cacheBadge.show();
@@ -658,38 +761,8 @@ let hasTainacanAiNonceMiddleware = false;
 				this.renderMetadataInPanel( result.ai_metadata );
 			}
 
-			// EXIF (show in area below button if available)
-			if ( result.exif && Object.keys( result.exif ).length > 0 ) {
-				this.elements.tabExif.show();
-				this.elements.results.show();
-				this.renderExif( result.exif );
-			} else {
-				this.elements.tabExif.hide();
-				this.elements.results.hide();
-			}
-
-			if ( result.tokens_used ) {
-				$( '#tainacan-ai-panel-tokens .tokens-count' ).text(
-					`${ result.tokens_used } ${ TainacanAI.texts?.tokens || 'tokens' }`
-				);
-			} else {
-				$( '#tainacan-ai-panel-tokens .tokens-count' ).text( '-' );
-			}
-
-			const modelParts = [
-				typeof result.provider_used === 'string'
-					? result.provider_used.trim()
-					: '',
-				typeof result.model_used === 'string'
-					? result.model_used.trim()
-					: '',
-			].filter( Boolean );
-
-			$( '#tainacan-ai-panel-model .model-name' ).text(
-				modelParts.length > 0
-					? modelParts.join( ' / ' )
-					: TainacanAI.texts?.modelUnknown || '-'
-			);
+			this.updateImageDataTab( result.exif );
+			this.updateRequestTabDetails( result );
 
 			if ( TainacanAI.debug ) {
 				console.log(
@@ -700,6 +773,412 @@ let hasTainacanAiNonceMiddleware = false;
 			}
 
 			// Open sidebar panel automatically
+			this.openSidebarPanel();
+		},
+
+		/**
+		 * Resolve REST error payload from apiFetch / legacy response shapes.
+		 *
+		 * @return {{ response: object|null, data: object }}
+		 */
+		resolveRestErrorPayload( error ) {
+			if ( ! error || typeof error !== 'object' ) {
+				return { response: null, data: {} };
+			}
+
+			// api-fetch rejects with { code, message, data } on the error itself.
+			const response =
+				error.responseJSON && typeof error.responseJSON === 'object'
+					? error.responseJSON
+					: error;
+
+			const data =
+				( error.data && typeof error.data === 'object' ? error.data : null ) ||
+				( response?.data && typeof response.data === 'object'
+					? response.data
+					: {} );
+
+			return { response, data };
+		},
+
+		/**
+		 * Normalize analysis failures (REST error object or plain message).
+		 */
+		parseAnalysisError( error ) {
+			if ( typeof error === 'string' ) {
+				return {
+					message: error,
+					status: null,
+					code: null,
+					detailRows: [],
+					debugDetails: null,
+					requestMeta: null,
+					raw: null,
+				};
+			}
+
+			const { response, data } = this.resolveRestErrorPayload( error );
+			const message =
+				( typeof data.message === 'string' && data.message ) ||
+				( typeof response?.message === 'string' && response.message ) ||
+				( typeof error?.message === 'string' && error.message ) ||
+				TainacanAI.texts.error;
+			const status =
+				error?.status ||
+				error?.statusCode ||
+				data.status ||
+				null;
+			const code =
+				( typeof response?.code === 'string' && response.code ) ||
+				( typeof error?.code === 'string' && error.code ) ||
+				( typeof data.code === 'string' && data.code ) ||
+				null;
+
+			// Server only includes debug_details when advanced debug is allowed.
+			const debugDetails = this.normalizeErrorDebugDetails(
+				data.debug_details
+			);
+
+			const detailRows = [];
+			const requestMeta = this.normalizeRequestMetaFromErrorData( data );
+
+			const skipKeys = new Set( [
+				'message',
+				'status',
+				'code',
+				'data',
+				'debug_details',
+				'request_meta',
+				'prompt_debug',
+			] );
+
+			const appendDetail = ( label, value ) => {
+				if ( value === null || value === undefined || value === '' ) {
+					return;
+				}
+				const text =
+					typeof value === 'string'
+						? value
+						: JSON.stringify( value, null, 2 );
+				detailRows.push( { label, value: text } );
+			};
+
+			if ( data.params && typeof data.params === 'object' ) {
+				appendDetail(
+					TainacanAI.texts?.errorDetails || 'Details',
+					data.params
+				);
+			}
+
+			Object.entries( data ).forEach( ( [ key, value ] ) => {
+				if ( skipKeys.has( key ) || key === 'params' ) {
+					return;
+				}
+				appendDetail( this.formatLabel( key ), value );
+			} );
+
+			return {
+				message,
+				status,
+				code,
+				detailRows,
+				debugDetails,
+				requestMeta,
+				raw: response || error || null,
+			};
+		},
+
+		normalizeRequestMetaFromErrorData( data ) {
+			if ( ! data || typeof data !== 'object' ) {
+				return null;
+			}
+
+			const meta = data.request_meta;
+			if ( ! meta || typeof meta !== 'object' ) {
+				return null;
+			}
+
+			const tokensUsed = Number(
+				meta.tokens_used ?? meta.total_tokens ?? 0
+			);
+			const provider =
+				typeof meta.provider_used === 'string'
+					? meta.provider_used.trim()
+					: typeof meta.provider === 'string'
+						? meta.provider.trim()
+						: '';
+			const model =
+				typeof meta.model_used === 'string'
+					? meta.model_used.trim()
+					: typeof meta.model === 'string'
+						? meta.model.trim()
+						: '';
+
+			if ( ! tokensUsed && ! provider && ! model ) {
+				return null;
+			}
+
+			return {
+				tokens_used: tokensUsed,
+				provider_used: provider,
+				model_used: model,
+			};
+		},
+
+		normalizeErrorDebugDetails( debugDetails ) {
+			if ( ! debugDetails || typeof debugDetails !== 'object' ) {
+				return null;
+			}
+
+			if ( Array.isArray( debugDetails.sections ) ) {
+				return debugDetails.sections.length ? debugDetails : null;
+			}
+
+			// Defensive: accept a bare list of sections.
+			if ( Array.isArray( debugDetails ) && debugDetails.length ) {
+				return { sections: debugDetails };
+			}
+
+			return null;
+		},
+
+		debugDetailInlineMaxLength() {
+			return 240;
+		},
+
+		shouldUseCollapsibleDebugDetail( section ) {
+			const content = String( section?.content ?? '' );
+			if ( section?.truncated ) {
+				return true;
+			}
+			if ( content.includes( '\n' ) ) {
+				return true;
+			}
+
+			return content.length > this.debugDetailInlineMaxLength();
+		},
+
+		renderDebugDetailSection( section ) {
+			const label = section.label || section.id || '';
+			const content = section.content || '';
+			const truncatedLabel =
+				TainacanAI.texts?.errorContentTruncated || 'truncated';
+			const summarySuffix = section.truncated
+				? ` (${ truncatedLabel })`
+				: '';
+
+			if ( ! this.shouldUseCollapsibleDebugDetail( section ) ) {
+				return `
+                <div class="tainacan-ai-detail-row">
+                    <dt>${ this.escapeHtml( label ) }${ summarySuffix }</dt>
+                    <dd>${ this.escapeHtml( content ) }</dd>
+                </div>
+            `;
+			}
+
+			return `
+                <details class="tainacan-ai-error-debug-section">
+                    <summary>${ this.escapeHtml( label ) }${ summarySuffix }</summary>
+                    <pre class="tainacan-ai-error-debug-content">${ this.escapeHtml(
+						content
+					) }</pre>
+                </details>
+            `;
+		},
+
+		renderAnalysisErrorDebugSections( debugDetails ) {
+			const normalized = this.normalizeErrorDebugDetails( debugDetails );
+			if ( ! normalized?.sections?.length ) {
+				return '';
+			}
+
+			const inlineRows = [];
+			const collapsibleBlocks = [];
+
+			normalized.sections.forEach( ( section ) => {
+				const html = this.renderDebugDetailSection( section );
+				if ( this.shouldUseCollapsibleDebugDetail( section ) ) {
+					collapsibleBlocks.push( html );
+				} else {
+					inlineRows.push( html );
+				}
+			} );
+
+			const inlineHtml = inlineRows.length
+				? `<dl class="tainacan-ai-detail-list tainacan-ai-error-details">${ inlineRows.join(
+						''
+				  ) }</dl>`
+				: '';
+
+			return `
+                <div class="tainacan-ai-error-debug-group">
+                    <p class="tainacan-ai-error-debug-heading">${ this.escapeHtml(
+						TainacanAI.texts?.errorDebugDetails || 'Technical details'
+					) }</p>
+                    ${ inlineHtml }
+                    ${ collapsibleBlocks.join( '' ) }
+                </div>
+            `;
+		},
+
+		/**
+		 * Show analysis failure in the sidebar Analysis Results tab.
+		 */
+		displayAnalysisError( error ) {
+			this.ensureElementsCached();
+			this.state.lastResult = null;
+			this.state.lastAnalysisError = this.parseAnalysisError( error );
+
+			if (
+				! this.elements.sidebarContent ||
+				! this.elements.sidebarContent.length
+			) {
+				this.createSidebarPanel();
+			}
+
+			const parsed = this.state.lastAnalysisError;
+			const $summary = $( '#tainacan-ai-panel-meta-summary' );
+			if ( $summary.length ) {
+				$summary.text(
+					TainacanAI.texts?.analysisFailedSummary || 'Analysis failed'
+				);
+			}
+
+			this.setSidebarResultsActionsVisible( false );
+			this.updateImageDataTab( null );
+			this.updateRequestTabDetails( parsed.requestMeta );
+
+			const { data: errorData } = this.resolveRestErrorPayload( error );
+			if ( errorData?.prompt_debug ) {
+				this.applyPromptDebugFromPayload( errorData.prompt_debug );
+			}
+
+			this.updateRequestTabAvailability(
+				this.computeRequestTabHasData( parsed.requestMeta )
+			);
+
+			const detailHtml = parsed.detailRows
+				.map(
+					( row ) => `
+                <div class="tainacan-ai-detail-row">
+                    <dt>${ this.escapeHtml( row.label ) }</dt>
+                    <dd>${ this.escapeHtml( row.value ) }</dd>
+                </div>
+            `
+				)
+				.join( '' );
+
+			const metaRows = [];
+			if ( parsed.status ) {
+				metaRows.push( {
+					label: TainacanAI.texts?.errorHttpStatus || 'HTTP status',
+					value: String( parsed.status ),
+				} );
+			}
+			if ( parsed.code ) {
+				metaRows.push( {
+					label: TainacanAI.texts?.errorCode || 'Error code',
+					value: parsed.code,
+				} );
+			}
+
+			const metaHtml = metaRows
+				.map(
+					( row ) => `
+                <div class="tainacan-ai-detail-row">
+                    <dt>${ this.escapeHtml( row.label ) }</dt>
+                    <dd><code>${ this.escapeHtml( row.value ) }</code></dd>
+                </div>
+            `
+				)
+				.join( '' );
+
+			const debugSectionsHtml = this.renderAnalysisErrorDebugSections(
+				parsed.debugDetails
+			);
+
+			const showRawResponse =
+				TainacanAI.advancedDebug &&
+				parsed.raw &&
+				! parsed.debugDetails?.sections?.length;
+
+			const debugBlock = showRawResponse
+				? `
+                <details class="tainacan-ai-error-response-details">
+                    <summary>${ this.escapeHtml(
+						TainacanAI.texts?.errorResponse || 'Server response'
+					) }</summary>
+                    <pre class="tainacan-ai-error-response-json">${ this.escapeHtml(
+						JSON.stringify( parsed.raw, null, 2 )
+					) }</pre>
+                </details>
+            `
+				: '';
+
+			this.elements.sidebarContent.html( `
+                <div class="tainacan-ai-sidebar-error">
+                    <div class="tainacan-ai-error">
+                        <span class="dashicons dashicons-warning"></span>
+                        <div class="tainacan-ai-error-text">
+                            <strong>${ this.escapeHtml(
+								TainacanAI.texts?.errorLabel || 'Error'
+							) }</strong>
+                            <span>${ this.escapeHtml( parsed.message ) }</span>
+                        </div>
+                    </div>
+                    ${
+						metaHtml || detailHtml
+							? `<dl class="tainacan-ai-detail-list tainacan-ai-error-details">${ metaHtml }${ detailHtml }</dl>`
+							: ''
+					}
+                    ${ debugSectionsHtml }
+                    ${ debugBlock }
+                </div>
+            ` );
+
+			this.switchSidebarTab( 'results' );
+			this.openSidebarPanel();
+		},
+
+		setSidebarResultsActionsVisible( visible ) {
+			const $actions = $( '.tainacan-ai-sidebar-actions' );
+			if ( ! $actions.length ) {
+				return;
+			}
+			$actions.toggle( visible );
+		},
+
+		showSidebarAnalysisLoading() {
+			if (
+				! this.elements.sidebarContent ||
+				! this.elements.sidebarContent.length
+			) {
+				this.createSidebarPanel();
+			}
+
+			const $summary = $( '#tainacan-ai-panel-meta-summary' );
+			if ( $summary.length ) {
+				$summary.text( TainacanAI.texts?.analyzing || 'Analyzing...' );
+			}
+
+			this.setSidebarResultsActionsVisible( false );
+			this.updateRequestTabDetails( null );
+			this.elements.sidebarContent.html( `
+                <div class="tainacan-ai-sidebar-loading tainacan-ai-loading">
+                    <div class="tainacan-ai-spinner"></div>
+                    <div class="tainacan-ai-loading-text">
+                        <span class="tainacan-ai-loading-title">${ this.escapeHtml(
+							TainacanAI.texts?.analyzing || 'Analyzing...'
+						) }</span>
+                        <span class="tainacan-ai-loading-subtitle">${ this.escapeHtml(
+							TainacanAI.texts?.loadingSubtitle ||
+								'This may take a few seconds'
+						) }</span>
+                    </div>
+                </div>
+            ` );
+
+			this.switchSidebarTab( 'results' );
 			this.openSidebarPanel();
 		},
 
@@ -1138,15 +1617,171 @@ let hasTainacanAiNonceMiddleware = false;
 			}
 		},
 
-		/**
-		 * Switch between tabs
-		 */
-		switchTab( tabId ) {
-			$( '.tainacan-ai-tab' ).removeClass( 'active' );
-			$( `.tainacan-ai-tab[data-tab="${ tabId }"]` ).addClass( 'active' );
+		hasExifData( exif ) {
+			return Boolean(
+				exif && typeof exif === 'object' && Object.keys( exif ).length > 0
+			);
+		},
 
-			$( '.tainacan-ai-tab-content' ).removeClass( 'active' );
-			$( `#tainacan-ai-content-${ tabId }` ).addClass( 'active' );
+		switchSidebarTab( tabId ) {
+			if ( ! tabId ) {
+				return;
+			}
+
+			if (
+				tabId === 'image-data' &&
+				this.elements.sidebarTabImageData?.prop( 'hidden' )
+			) {
+				return;
+			}
+
+			if (
+				tabId === 'request' &&
+				( this.elements.sidebarTabRequest?.prop( 'hidden' ) ||
+					this.elements.sidebarTabRequest?.prop( 'disabled' ) )
+			) {
+				return;
+			}
+
+			this.state.activeSidebarTab = tabId;
+
+			$( '.tainacan-ai-sidebar-tab' )
+				.removeClass( 'active' )
+				.attr( 'aria-selected', 'false' );
+			$( `.tainacan-ai-sidebar-tab[data-tab="${ tabId }"]` )
+				.addClass( 'active' )
+				.attr( 'aria-selected', 'true' );
+
+			$( '.tainacan-ai-sidebar-tab-panel' )
+				.removeClass( 'active' )
+				.prop( 'hidden', true );
+			$( `#tainacan-ai-tab-panel-${ tabId }` )
+				.addClass( 'active' )
+				.prop( 'hidden', false );
+		},
+
+		computeRequestTabHasData( requestMeta = null ) {
+			if ( requestMeta ) {
+				const tokens = Number( requestMeta.tokens_used ?? 0 );
+				const provider = String(
+					requestMeta.provider_used ?? ''
+				).trim();
+				const model = String( requestMeta.model_used ?? '' ).trim();
+
+				if ( tokens > 0 || provider || model ) {
+					return true;
+				}
+			}
+
+			if ( ! TainacanAI.advancedDebug ) {
+				return false;
+			}
+
+			if (
+				this.state.lastPrompt &&
+				String( this.state.lastPrompt ).trim()
+			) {
+				return true;
+			}
+
+			if ( this.state.lastDocumentBody ) {
+				return this.resolveDocumentPreviewContent(
+					this.state.lastDocumentBody
+				).showPreview;
+			}
+
+			return false;
+		},
+
+		updateRequestTabAvailability( hasData = null ) {
+			this.reconcileSidebarElements();
+
+			const $tab = this.elements.sidebarTabRequest;
+			if ( ! $tab?.length ) {
+				return;
+			}
+
+			const available =
+				hasData !== null ? Boolean( hasData ) : this.computeRequestTabHasData();
+
+			$tab.prop( 'hidden', ! available );
+			$tab.prop( 'disabled', ! available );
+			$tab.attr( 'aria-disabled', available ? 'false' : 'true' );
+
+			if ( ! available && this.state.activeSidebarTab === 'request' ) {
+				this.switchSidebarTab( 'results' );
+			}
+		},
+
+		updateRequestTabDetails( result ) {
+			this.reconcileSidebarElements();
+
+			const $tokens = $( '#tainacan-ai-request-tokens' );
+			const $connector = $( '#tainacan-ai-request-connector' );
+			const $model = $( '#tainacan-ai-request-model' );
+
+			if ( ! $tokens.length || ! $connector.length || ! $model.length ) {
+				return;
+			}
+
+			if ( ! result ) {
+				$tokens.text( '-' );
+				$connector.text( '-' );
+				$model.text( '-' );
+				this.updateRequestTabAvailability( false );
+				return;
+			}
+
+			$tokens.text(
+				result.tokens_used
+					? `${ result.tokens_used } ${ TainacanAI.texts?.tokens || 'tokens' }`
+					: '-'
+			);
+
+			const connector =
+				typeof result.provider_used === 'string'
+					? result.provider_used.trim()
+					: '';
+			$connector.text(
+				connector || TainacanAI.texts?.connectorUnknown || '-'
+			);
+
+			const model =
+				typeof result.model_used === 'string'
+					? result.model_used.trim()
+					: '';
+			$model.text( model || TainacanAI.texts?.modelUnknown || '-' );
+
+			this.updateRequestTabAvailability(
+				this.computeRequestTabHasData( {
+					tokens_used: result.tokens_used,
+					provider_used: result.provider_used,
+					model_used: result.model_used,
+				} )
+			);
+		},
+
+		updateImageDataTab( exif ) {
+			this.reconcileSidebarElements();
+
+			const hasExif = this.hasExifData( exif );
+
+			if ( this.elements.sidebarTabImageData?.length ) {
+				this.elements.sidebarTabImageData.prop( 'hidden', ! hasExif );
+			}
+
+			if ( hasExif ) {
+				this.renderExif( exif );
+				return;
+			}
+
+			if ( this.state.activeSidebarTab === 'image-data' ) {
+				this.switchSidebarTab( 'results' );
+			}
+
+			if ( this.elements.exifContent?.length ) {
+				this.elements.exifContent.empty();
+			}
 		},
 
 		/**
@@ -1263,8 +1898,8 @@ let hasTainacanAiNonceMiddleware = false;
 			this.ensureElementsCached();
 			this.elements.analyzeBtn.prop( 'disabled', true );
 			this.elements.refreshBtn.prop( 'disabled', true );
-			this.elements.status.show();
-			this.elements.results.hide();
+			this.elements.status.hide();
+			this.showSidebarAnalysisLoading();
 		},
 
 		/**
@@ -2032,6 +2667,174 @@ let hasTainacanAiNonceMiddleware = false;
 						: TainacanAI.texts?.fillFailed || 'Could not update field.'
 				);
 			}
+		},
+
+		applyPromptDebugFromPayload( promptDebug ) {
+			if ( ! promptDebug || typeof promptDebug !== 'object' ) {
+				return;
+			}
+
+			if ( promptDebug.error ) {
+				return;
+			}
+
+			const instructionPrompt =
+				this.resolveInstructionPromptFromDebug( promptDebug );
+			if ( instructionPrompt ) {
+				this.state.lastPrompt = instructionPrompt;
+			}
+
+			this.state.lastDocumentBody = promptDebug.document_body || null;
+			this.updatePromptDocumentPreviewDisplay( this.state.lastDocumentBody );
+
+			if (
+				this.elements.promptTextarea?.length &&
+				! this.elements.promptTextarea.val() &&
+				this.state.lastPrompt
+			) {
+				this.elements.promptTextarea.val( this.state.lastPrompt );
+			}
+
+			this.updateRequestTabAvailability();
+		},
+
+		resolveInstructionPromptFromDebug( promptDebug ) {
+			if ( ! promptDebug ) {
+				return null;
+			}
+
+			if ( promptDebug.instruction_prompt ) {
+				return String( promptDebug.instruction_prompt );
+			}
+
+			const fullPrompt = promptDebug.prompt;
+			const attachmentNote = promptDebug.attachment_note;
+
+			if (
+				typeof fullPrompt === 'string' &&
+				fullPrompt !== '' &&
+				typeof attachmentNote === 'string' &&
+				attachmentNote !== '' &&
+				fullPrompt.endsWith( attachmentNote )
+			) {
+				return fullPrompt
+					.slice( 0, fullPrompt.length - attachmentNote.length )
+					.replace( /\n+$/, '' );
+			}
+
+			return typeof fullPrompt === 'string' && fullPrompt !== ''
+				? fullPrompt
+				: null;
+		},
+
+		resolveDocumentPreviewContent( documentBody ) {
+			if ( ! documentBody || typeof documentBody !== 'object' ) {
+				return {
+					content: '',
+					showPreview: false,
+				};
+			}
+
+			const type = String( documentBody.type || '' );
+			const rawContent =
+				documentBody.content === null || documentBody.content === undefined
+					? ''
+					: String( documentBody.content );
+			const trimmed = rawContent.trim();
+
+			if ( type === 'image' ) {
+				const lines = [
+					TainacanAI.texts?.promptDocumentImage ||
+						'Image bytes are attached to the API request.',
+					trimmed,
+				].filter( Boolean );
+				return {
+					content: lines.join( '\n\n' ),
+					showPreview: true,
+				};
+			}
+
+			if ( type === 'pdf_visual' ) {
+				const lines = [
+					TainacanAI.texts?.promptDocumentPdfVisual ||
+						'PDF pages are sent as images.',
+					trimmed,
+				].filter( Boolean );
+				return {
+					content: lines.join( '\n\n' ),
+					showPreview: true,
+				};
+			}
+
+			if ( trimmed === '' ) {
+				return {
+					content:
+						TainacanAI.texts?.promptDocumentEmpty ||
+						'No extractable text was found in this document.',
+					showPreview: true,
+				};
+			}
+
+			return {
+				content: rawContent,
+				showPreview: true,
+			};
+		},
+
+		updatePromptDocumentPreviewDisplay( documentBody ) {
+			this.ensureElementsCached();
+			if ( ! this.elements.promptDocumentPreview?.length ) {
+				return;
+			}
+
+			const resolved = this.resolveDocumentPreviewContent( documentBody );
+
+			if ( ! resolved.showPreview ) {
+				this.elements.promptDocumentPreview.prop( 'hidden', true );
+				if ( this.elements.promptDocumentPreviewContent?.length ) {
+					this.elements.promptDocumentPreviewContent.text( '' );
+				}
+				if ( this.elements.promptDocumentPreviewTruncated?.length ) {
+					this.elements.promptDocumentPreviewTruncated.prop( 'hidden', true );
+				}
+				return;
+			}
+
+			const baseLabel =
+				TainacanAI.texts?.promptDocumentPreview ||
+				'Document sent to the model (read-only)';
+			const charCount = resolved.content.trim().length;
+			const summaryLabel =
+				charCount > 0 ? `${ baseLabel } (${ charCount } chars)` : baseLabel;
+
+			if ( this.elements.promptDocumentPreviewSummary?.length ) {
+				this.elements.promptDocumentPreviewSummary.text( summaryLabel );
+			}
+			if ( this.elements.promptDocumentPreviewContent?.length ) {
+				this.elements.promptDocumentPreviewContent.text( resolved.content );
+			}
+			if ( this.elements.promptDocumentPreviewTruncated?.length ) {
+				const isTruncated = Boolean( documentBody?.truncated );
+				this.elements.promptDocumentPreviewTruncated.prop(
+					'hidden',
+					! isTruncated
+				);
+			}
+
+			this.elements.promptDocumentPreview.prop( 'hidden', false );
+		},
+
+		resetPromptEditor() {
+			if ( ! this.elements.promptTextarea?.length ) {
+				return;
+			}
+
+			if ( this.state.lastPrompt ) {
+				this.elements.promptTextarea.val( this.state.lastPrompt );
+			} else {
+				this.elements.promptTextarea.val( '' );
+			}
+			this.updatePromptDocumentPreviewDisplay( this.state.lastDocumentBody );
 		},
 
 		/**

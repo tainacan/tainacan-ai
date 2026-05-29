@@ -3,6 +3,7 @@ namespace Tainacan\AI\Extraction;
 
 use Tainacan\AI\Plugin;
 use Tainacan\AI\Hooks\CollectionFormHook;
+use Tainacan\AI\Support\AnalysisErrorDebug;
 use Tainacan\AI\Support\CoreAI;
 use Tainacan\AI\Support\CoreAIRequestLogging;
 use Tainacan\AI\Support\DebugLog;
@@ -28,6 +29,7 @@ class DocumentAnalyzer {
     private ?int $collection_id = null;
     private ?int $item_id = null;
     private ?int $current_attachment_id = null;
+    private ?string $prompt_override = null;
     private ExifExtractor $exif_extractor;
     /** @var array<string, array{prompt: string, sections: array<string, string>, expected_slugs: string[], fields: array<string, array<string, mixed>>}> */
     private array $prompt_context_cache = [];
@@ -71,6 +73,15 @@ class DocumentAnalyzer {
     }
 
     /**
+     * Per-run prompt override for advanced debugging (not persisted).
+     */
+    public function set_prompt_override(?string $prompt): self {
+        $trimmed = $prompt !== null ? trim($prompt) : '';
+        $this->prompt_override = $trimmed !== '' ? $trimmed : null;
+        return $this;
+    }
+
+    /**
      * Analyze an attachment
      */
     public function analyze(int $attachment_id, bool $include_exif = true): array|\WP_Error {
@@ -92,7 +103,13 @@ class DocumentAnalyzer {
         if (!$file_path) {
             return new \WP_Error(
                 'file_not_found',
-                __('File path not found in WordPress. The attachment may have been removed.', 'tainacan-ai')
+                __('File path not found in WordPress. The attachment may have been removed.', 'tainacan-ai'),
+                AnalysisErrorDebug::data(
+                    array(
+                        'attachment_id' => (string) $attachment_id,
+                    ),
+                    404
+                )
             );
         }
 
@@ -106,6 +123,13 @@ class DocumentAnalyzer {
                     /* translators: %s: file path */
                     __('Physical file does not exist on server. Expected at: %s', 'tainacan-ai'),
                     $file_path
+                ),
+                AnalysisErrorDebug::data(
+                    array(
+                        'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+                        'attachment_id' => (string) $attachment_id,
+                    ),
+                    404
                 )
             );
         }
@@ -118,10 +142,21 @@ class DocumentAnalyzer {
         $this->current_attachment_id = $attachment_id;
 
         try {
-            return $this->run_analysis($attachment_id, $include_exif, $file_path, $mime_type);
+            $result = $this->run_analysis($attachment_id, $include_exif, $file_path, $mime_type);
         } finally {
             $this->current_attachment_id = null;
         }
+
+        if (is_wp_error($result)) {
+            return $this->attach_prompt_debug_to_error(
+                $result,
+                $file_path,
+                (string) $mime_type,
+                $attachment_id
+            );
+        }
+
+        return $result;
     }
 
     /**
@@ -152,12 +187,23 @@ class DocumentAnalyzer {
         $this->current_attachment_id = null;
 
         try {
-            return $this->run_analysis(
+            $result = $this->run_analysis(
                 0,
                 false,
                 $downloaded['file_path'],
                 $downloaded['mime_type']
             );
+
+            if (is_wp_error($result)) {
+                $result = $this->attach_prompt_debug_to_error(
+                    $result,
+                    $downloaded['file_path'],
+                    $downloaded['mime_type'],
+                    0
+                );
+            }
+
+            return $result;
         } finally {
             $this->current_attachment_id = null;
             if (file_exists($downloaded['file_path'])) {
@@ -222,7 +268,12 @@ class DocumentAnalyzer {
             return new \WP_Error(
                 'unsupported_type',
                 /* translators: %s: file type */
-                sprintf(__('Unsupported file type: %s', 'tainacan-ai'), $mime_type)
+                sprintf(__('Unsupported file type: %s', 'tainacan-ai'), $mime_type),
+                AnalysisErrorDebug::data(
+                    array(
+                        'mime_type' => (string) $mime_type,
+                    )
+                )
             );
         }
 
@@ -332,25 +383,39 @@ class DocumentAnalyzer {
 
         if (is_wp_error($response)) {
             wp_delete_file($tmp_file);
-            return new \WP_Error(
+
+            return AnalysisErrorDebug::wrap(
+                $response,
                 'remote_download_failed',
                 sprintf(
                     /* translators: %s: low-level remote error */
                     __('Could not download document URL: %s', 'tainacan-ai'),
                     $response->get_error_message()
-                )
+                ),
+                array(
+                    'document_url' => AnalysisErrorDebug::sanitize_url_for_debug($document_url),
+                ),
+                502
             );
         }
 
         $status_code = (int) wp_remote_retrieve_response_code($response);
         if ($status_code < 200 || $status_code >= 300) {
             wp_delete_file($tmp_file);
+
             return new \WP_Error(
                 'remote_http_error',
                 sprintf(
                     /* translators: %d: HTTP status code */
                     __('Document URL returned HTTP status %d.', 'tainacan-ai'),
                     $status_code
+                ),
+                AnalysisErrorDebug::data(
+                    array(
+                        'document_url' => AnalysisErrorDebug::sanitize_url_for_debug($document_url),
+                        'http_status' => (string) $status_code,
+                    ),
+                    502
                 )
             );
         }
@@ -375,6 +440,13 @@ class DocumentAnalyzer {
                     /* translators: %s: MIME type */
                     __('Unsupported remote document type: %s', 'tainacan-ai'),
                     $mime_type !== '' ? $mime_type : __('unknown', 'tainacan-ai')
+                ),
+                AnalysisErrorDebug::data(
+                    array(
+                        'document_url' => AnalysisErrorDebug::sanitize_url_for_debug($document_url),
+                        'mime_type' => $mime_type !== '' ? $mime_type : 'unknown',
+                    ),
+                    415
                 )
             );
         }
@@ -539,6 +611,7 @@ class DocumentAnalyzer {
         }
 
         // Method 2: Convert to image and visual analysis (if the connector supports vision)
+        $visual_result = null;
         if ($core_supports_image) {
             $visual_result = $this->analyze_pdf_visually($file_path);
 
@@ -553,28 +626,80 @@ class DocumentAnalyzer {
             $this->debug_log('PDF visual analysis failed: ' . $visual_result->get_error_message());
         }
 
-        // If both failed, return more informative error
-        $error_msg = __('Could not analyze PDF. ', 'tainacan-ai');
+        $failed_error = $this->build_pdf_analysis_failed_error(
+            $text,
+            $visual_result,
+            $core_supports_image,
+            $file_path
+        );
 
-        if (is_wp_error($text)) {
-            $error_msg .= $text->get_error_message() . ' ';
-        } else {
-            $error_msg .= __('PDF does not contain extractable text. ', 'tainacan-ai');
-        }
-
-        if (!$core_supports_image) {
-            $error_msg .= sprintf(
-                __('Core AI does not support image analysis on this site. ', 'tainacan-ai')
-            );
-        }
-
-        $this->debug_log('PDF analysis failed (all methods): ' . trim($error_msg));
+        $this->debug_log('PDF analysis failed (all methods): ' . $failed_error->get_error_message());
 
         return [
-            'result' => new \WP_Error('pdf_analysis_failed', trim($error_msg)),
+            'result' => $failed_error,
             'method' => 'failed',
             'analysis_mode' => EvidenceInstructions::MODE_TEXT,
         ];
+    }
+
+    /**
+     * Aggregate PDF text + vision failures into one WP_Error with debug context.
+     */
+    private function build_pdf_analysis_failed_error(
+        string|\WP_Error $text,
+        ?\WP_Error $visual_result,
+        bool $core_supports_image,
+        string $file_path
+    ): \WP_Error {
+        $error_msg = __('Could not analyze PDF.', 'tainacan-ai') . ' ';
+        $debug_fields = array(
+            'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+            'file_size' => is_readable($file_path) ? (string) filesize($file_path) : 'unknown',
+            'vision_supported' => $core_supports_image ? 'yes' : 'no',
+        );
+
+        if (is_wp_error($text)) {
+            $error_msg .= $text->get_error_message() . ' ';
+            $debug_fields = array_merge(
+                $debug_fields,
+                AnalysisErrorDebug::export_wp_error_context($text, 'text_extraction')
+            );
+        } else {
+            $error_msg .= __('PDF does not contain extractable text.', 'tainacan-ai') . ' ';
+            $trimmed = trim((string) $text);
+            $debug_fields['extracted_text_length'] = (string) strlen($trimmed);
+
+            if ($trimmed !== '') {
+                $sample = AnalysisErrorDebug::truncate($trimmed, 2000);
+                $debug_fields['extracted_text_sample'] = array(
+                    'label' => AnalysisErrorDebug::label_for('extracted_text_sample'),
+                    'content' => $sample['content'],
+                    'truncated' => $sample['truncated'],
+                );
+            }
+        }
+
+        if (!$core_supports_image) {
+            $error_msg .= __('Core AI does not support image analysis on this site.', 'tainacan-ai');
+            $debug_fields['visual_analysis_status'] = 'skipped (vision not supported)';
+        } elseif ($visual_result instanceof \WP_Error) {
+            $error_msg .= $visual_result->get_error_message();
+            $debug_fields = array_merge(
+                $debug_fields,
+                AnalysisErrorDebug::export_wp_error_context($visual_result, 'visual_analysis')
+            );
+            $debug_fields['visual_analysis_status'] = 'failed';
+        } else {
+            $debug_fields['visual_analysis_status'] = 'not attempted';
+        }
+
+        $request_meta = AnalysisErrorDebug::request_meta_from_wp_error($visual_result);
+
+        return new \WP_Error(
+            'pdf_analysis_failed',
+            trim($error_msg),
+            AnalysisErrorDebug::data($debug_fields, 502, $request_meta)
+        );
     }
 
     /**
@@ -594,7 +719,15 @@ class DocumentAnalyzer {
             if (empty($images)) {
                 return new \WP_Error(
                     'conversion_failed',
-                    __('Could not convert PDF to image. Install Imagick or Ghostscript.', 'tainacan-ai')
+                    __('Could not convert PDF to image. Install Imagick or Ghostscript.', 'tainacan-ai'),
+                    AnalysisErrorDebug::data(
+                        array(
+                            'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+                            'file_size' => is_readable($file_path) ? (string) filesize($file_path) : 'unknown',
+                            'imagick_available' => extension_loaded('imagick') ? 'yes' : 'no',
+                        ),
+                        500
+                    )
                 );
             }
 
@@ -619,7 +752,7 @@ class DocumentAnalyzer {
                 ];
             }
 
-            return CoreAI::generate_json_from_text_and_files(
+            $ai_result = CoreAI::generate_json_from_text_and_files(
                 $promptWithContext,
                 $image_data,
                 $this->generation_options([
@@ -627,9 +760,30 @@ class DocumentAnalyzer {
                     'extraction_method' => 'visual_analysis',
                 ])
             );
+
+            if (is_wp_error($ai_result)) {
+                return AnalysisErrorDebug::wrap(
+                    $ai_result,
+                    'visual_analysis_error',
+                    $ai_result->get_error_message(),
+                    array(
+                        'pdf_pages_converted' => (string) $pageCount,
+                        'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+                    ),
+                    502
+                );
+            }
+
+            return $ai_result;
         } catch (\Throwable $e) {
             $this->debug_log('PDF visual analysis error: ' . $e->getMessage());
-            return new \WP_Error('visual_analysis_error', $e->getMessage());
+
+            return AnalysisErrorDebug::from_throwable(
+                $e,
+                'visual_analysis_error',
+                null,
+                502
+            );
         } finally {
             foreach ($images as $image) {
                 if (!empty($image['path']) && file_exists($image['path'])) {
@@ -646,7 +800,14 @@ class DocumentAnalyzer {
         if (CoreAI::get_image_analysis_support_status() === CoreAI::IMAGE_SUPPORT_UNAVAILABLE) {
             return new \WP_Error(
                 'vision_not_supported',
-                __('No configured connector exposes a model that accepts image input in its metadata. Use text extraction or configure a vision-capable model.', 'tainacan-ai')
+                __('No configured connector exposes a model that accepts image input in its metadata. Use text extraction or configure a vision-capable model.', 'tainacan-ai'),
+                AnalysisErrorDebug::data(
+                    array(
+                        'mime_type' => $mime_type,
+                        'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+                    ),
+                    501
+                )
             );
         }
 
@@ -666,13 +827,32 @@ class DocumentAnalyzer {
             $image_content = @file_get_contents($file_path);
 
             if ($image_content === false) {
-                return new \WP_Error('file_read_error', __('Could not read image file.', 'tainacan-ai'));
+                return new \WP_Error(
+                    'file_read_error',
+                    __('Could not read image file.', 'tainacan-ai'),
+                    AnalysisErrorDebug::data(
+                        array(
+                            'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+                        ),
+                        500
+                    )
+                );
             }
 
             $base64 = base64_encode($image_content);
 
             if (empty($base64)) {
-                return new \WP_Error('base64_error', __('Error encoding image to base64.', 'tainacan-ai'));
+                return new \WP_Error(
+                    'base64_error',
+                    __('Error encoding image to base64.', 'tainacan-ai'),
+                    AnalysisErrorDebug::data(
+                        array(
+                            'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+                            'file_size' => (string) strlen($image_content),
+                        ),
+                        500
+                    )
+                );
             }
 
             $image_data = "data:{$mime_type};base64,{$base64}";
@@ -765,8 +945,25 @@ class DocumentAnalyzer {
         );
 
         $prompt = trim((string) ($context['prompt'] ?? ''));
+        if (
+            $this->prompt_override !== null
+            && self::should_include_prompt_in_response()
+        ) {
+            $prompt = $this->prompt_override;
+        }
+
         if ($prompt === '') {
-            return new \WP_Error('no_preamble', __('No prompt preamble configured.', 'tainacan-ai'));
+            return new \WP_Error(
+                'no_preamble',
+                __('No prompt preamble configured.', 'tainacan-ai'),
+                AnalysisErrorDebug::data(
+                    array(
+                        'analysis_mode' => $analysis_mode,
+                        'collection_id' => $this->collection_id ? (string) $this->collection_id : 'none',
+                    ),
+                    500
+                )
+            );
         }
 
         $resolved = [
@@ -1031,10 +1228,14 @@ class DocumentAnalyzer {
      * Whether the resolved prompt may be included in AJAX/REST responses (never cached).
      */
     public static function should_include_prompt_in_response(): bool {
-        $include = defined('WP_DEBUG') && WP_DEBUG && current_user_can('edit_posts');
+        $include = current_user_can('edit_posts')
+            && (
+                (defined('WP_DEBUG') && WP_DEBUG)
+                || Plugin::is_advanced_debug()
+            );
 
         /**
-         * @param bool $include Default: WP_DEBUG and edit_posts capability.
+         * @param bool $include Default: WP_DEBUG or advanced_debug, and edit_posts capability.
          */
         return (bool) apply_filters('tainacan_ai_include_prompt_in_response', $include);
     }
@@ -1044,9 +1245,11 @@ class DocumentAnalyzer {
      *
      * @return array{
      *     prompt: string,
+     *     instruction_prompt: string,
      *     parts: array{user: string, task: string, rules: string, fields: string, schema: string, evidence: string, output: string},
      *     analysis_mode: string,
-     *     attachment_note: string
+     *     attachment_note: string,
+     *     document_body: array{type: string, content: string, truncated: bool}
      * }|\WP_Error|null Null when prompt debug is disabled.
      */
     public function build_prompt_debug_payload(int $attachment_id): array|\WP_Error|null {
@@ -1061,29 +1264,109 @@ class DocumentAnalyzer {
             return new \WP_Error('file_not_found', __('File path not found.', 'tainacan-ai'));
         }
 
-        $file_path = $this->normalize_file_path($file_path);
+        return $this->build_prompt_debug_payload_for_file(
+            $this->normalize_file_path($file_path),
+            (string) $mime_type,
+            $attachment_id
+        );
+    }
+
+    /**
+     * Attach resolved prompt + document preview to a failed analysis WP_Error.
+     */
+    private function attach_prompt_debug_to_error(
+        \WP_Error $error,
+        string $file_path,
+        string $mime_type,
+        int $attachment_id = 0
+    ): \WP_Error {
+        if (!self::should_include_prompt_in_response()) {
+            return $error;
+        }
+
+        if (!is_readable($file_path)) {
+            return $error;
+        }
+
+        $payload = $this->build_prompt_debug_payload_for_file(
+            $this->normalize_file_path($file_path),
+            $mime_type,
+            $attachment_id
+        );
+
+        if ($payload === null) {
+            return $error;
+        }
+
+        $error_data = $error->get_error_data();
+        if (!is_array($error_data)) {
+            $error_data = [];
+        }
+
+        if (is_wp_error($payload)) {
+            $error_data['prompt_debug'] = [
+                'error' => $payload->get_error_message(),
+            ];
+        } else {
+            $error_data['prompt_debug'] = $payload;
+        }
+
+        return new \WP_Error(
+            (string) $error->get_error_code(),
+            $error->get_error_message(),
+            $error_data
+        );
+    }
+
+    /**
+     * @return array{
+     *     prompt: string,
+     *     instruction_prompt: string,
+     *     parts: array{user: string, task: string, rules: string, fields: string, schema: string, evidence: string, output: string},
+     *     analysis_mode: string,
+     *     attachment_note: string,
+     *     document_body: array{type: string, content: string, truncated: bool}
+     * }|\WP_Error|null
+     */
+    private function build_prompt_debug_payload_for_file(
+        string $file_path,
+        string $mime_type,
+        int $attachment_id = 0
+    ): array|\WP_Error|null {
+        if (!self::should_include_prompt_in_response()) {
+            return null;
+        }
 
         if (!$this->collection_id && $this->item_id) {
             $this->collection_id = $this->get_item_collection($this->item_id);
         }
 
-        $analysis_mode = $this->guess_analysis_mode($file_path, (string) $mime_type);
+        $analysis_mode = $this->guess_analysis_mode($file_path, $mime_type);
         $context = $this->resolve_analysis_prompt_context($analysis_mode);
 
         if (is_wp_error($context)) {
             return $context;
         }
 
-        $attachment_note = $this->get_prompt_attachment_note($file_path, (string) $mime_type, $analysis_mode);
-        $prompt = $context['prompt'];
+        $attachment_note = $this->get_prompt_attachment_note($file_path, $mime_type, $analysis_mode);
+        $instruction_prompt = $context['prompt'];
         $sections = $context['sections'];
+        $prompt = $instruction_prompt;
 
         if ($attachment_note !== '') {
             $prompt .= "\n\n" . $attachment_note;
         }
 
+        $document_body = $this->get_prompt_document_body_preview(
+            $file_path,
+            $mime_type,
+            $analysis_mode,
+            $attachment_id
+        );
+
         return [
             'prompt' => $prompt,
+            'instruction_prompt' => $instruction_prompt,
             'parts' => [
                 'user' => $sections['user'],
                 'task' => $sections['task'],
@@ -1095,7 +1378,89 @@ class DocumentAnalyzer {
             ],
             'analysis_mode' => $analysis_mode,
             'attachment_note' => $attachment_note,
+            'document_body' => $document_body,
         ];
+    }
+
+    /**
+     * Text that is appended or described for the model (debug preview only).
+     *
+     * @return array{type: string, content: string, truncated: bool}
+     */
+    private function get_prompt_document_body_preview(
+        string $file_path,
+        string $mime_type,
+        string $analysis_mode,
+        int $attachment_id = 0
+    ): array {
+        if ($analysis_mode === EvidenceInstructions::MODE_IMAGE) {
+            return [
+                'type' => EvidenceInstructions::MODE_IMAGE,
+                'content' => $this->get_visual_attachment_debug_summary($attachment_id),
+                'truncated' => false,
+            ];
+        }
+
+        if ($analysis_mode === EvidenceInstructions::MODE_PDF_VISUAL) {
+            return [
+                'type' => EvidenceInstructions::MODE_PDF_VISUAL,
+                'content' => $this->get_visual_attachment_debug_summary($attachment_id),
+                'truncated' => false,
+            ];
+        }
+
+        $text = '';
+
+        if (is_readable($file_path)) {
+            if ($mime_type === 'application/pdf') {
+                $extracted = $this->extract_pdf_text($file_path);
+                $text = is_wp_error($extracted) ? '' : $extracted;
+            } else {
+                $raw = file_get_contents($file_path);
+                $text = $raw === false ? '' : $raw;
+            }
+        }
+
+        $text = $this->sanitize_utf8_string($text);
+        $max_chars = 32000;
+        $length = mb_strlen($text, 'UTF-8');
+        $truncated = $length > $max_chars;
+
+        if ($truncated) {
+            $text = mb_substr($text, 0, $max_chars, 'UTF-8');
+            $text .= "\n\n[Document truncated due to size]";
+        }
+
+        return [
+            'type' => $analysis_mode === EvidenceInstructions::MODE_PDF_TEXT
+                ? EvidenceInstructions::MODE_PDF_TEXT
+                : EvidenceInstructions::MODE_TEXT,
+            'content' => $text,
+            'truncated' => $truncated,
+        ];
+    }
+
+    private function get_visual_attachment_debug_summary(int $attachment_id): string {
+        if ($attachment_id <= 0) {
+            return '';
+        }
+
+        $title = trim((string) get_the_title($attachment_id));
+        $url = (string) wp_get_attachment_url($attachment_id);
+        $mime_type = (string) get_post_mime_type($attachment_id);
+        $lines = [];
+
+        if ($title !== '') {
+            $lines[] = 'Title: ' . $title;
+        }
+        if ($mime_type !== '') {
+            $lines[] = 'MIME: ' . $mime_type;
+        }
+        if ($url !== '') {
+            $lines[] = 'URL: ' . $url;
+        }
+
+        return implode("\n", $lines);
     }
 
     private function guess_analysis_mode(string $file_path, string $mime_type): string {
@@ -1171,8 +1536,12 @@ class DocumentAnalyzer {
      * Extract text from PDF using multiple methods
      */
     private function extract_pdf_text(string $file_path): string|\WP_Error {
+        $methods_tried = array();
+        $last_error = '';
+
         // Method 1: smalot/pdfparser (best quality for digital PDFs)
         if (class_exists('\Smalot\PdfParser\Parser')) {
+            $methods_tried[] = 'smalot/pdfparser';
             try {
                 $parser = new \Smalot\PdfParser\Parser();
                 $pdf = $parser->parseFile($file_path);
@@ -1182,11 +1551,13 @@ class DocumentAnalyzer {
                     return $text;
                 }
             } catch (\Throwable $e) {
-                $this->debug_log('Smalot PdfParser error: ' . $e->getMessage());
+                $last_error = $e->getMessage();
+                $this->debug_log('Smalot PdfParser error: ' . $last_error);
             }
         }
 
         // Method 2: Built-in plugin parser (fallback)
+        $methods_tried[] = 'tainacan/pdfparser';
         try {
             $parser = new PdfParser();
             $text = $parser->parseFile($file_path)->getText();
@@ -1195,11 +1566,13 @@ class DocumentAnalyzer {
                 return $text;
             }
         } catch (\Throwable $e) {
-            $this->debug_log('PdfParser error: ' . $e->getMessage());
+            $last_error = $e->getMessage();
+            $this->debug_log('PdfParser error: ' . $last_error);
         }
 
         // Method 3: pdftotext (poppler-utils) - Linux/Mac
         if (function_exists('shell_exec') && !$this->is_windows()) {
+            $methods_tried[] = 'pdftotext (unix)';
             $escaped_path = escapeshellarg($file_path);
             $output = @shell_exec("pdftotext {$escaped_path} - 2>/dev/null");
 
@@ -1210,6 +1583,7 @@ class DocumentAnalyzer {
 
         // Method 4: pdftotext on Windows
         if ($this->is_windows() && function_exists('shell_exec')) {
+            $methods_tried[] = 'pdftotext (windows)';
             $escaped_path = escapeshellarg($file_path);
             $paths = [
                 'pdftotext',
@@ -1226,6 +1600,7 @@ class DocumentAnalyzer {
         }
 
         // Method 5: Basic extraction via regex
+        $methods_tried[] = 'regex';
         $text = $this->basic_pdf_text_extract($file_path);
         if (!empty(trim($text))) {
             return $text;
@@ -1234,7 +1609,21 @@ class DocumentAnalyzer {
         $message = __('Could not extract text from PDF. The document may be a scanned image.', 'tainacan-ai');
         $this->debug_log('PDF text extraction failed: ' . $message);
 
-        return new \WP_Error('pdf_extract_failed', $message);
+        $debug_fields = array(
+            'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+            'file_size' => is_readable($file_path) ? (string) filesize($file_path) : 'unknown',
+            'extraction_methods_tried' => implode(', ', $methods_tried),
+        );
+
+        if ($last_error !== '') {
+            $debug_fields['last_parser_error'] = $last_error;
+        }
+
+        return new \WP_Error(
+            'pdf_extract_failed',
+            $message,
+            AnalysisErrorDebug::data($debug_fields, 422)
+        );
     }
 
     /**

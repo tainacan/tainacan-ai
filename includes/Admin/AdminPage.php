@@ -150,7 +150,7 @@ class AdminPage extends \Tainacan\Pages {
         }
 
         // Checkboxes
-        $checkbox_fields = ['extract_exif', 'consent_required'];
+        $checkbox_fields = ['extract_exif', 'consent_required', 'advanced_debug'];
         foreach ($checkbox_fields as $field) {
             $options[$field] = !empty($input[$field]);
         }
