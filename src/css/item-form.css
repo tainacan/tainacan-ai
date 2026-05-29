@@ -250,9 +250,6 @@
     align-items: center;
     gap: 16px;
     padding: 20px;
-    background: var(--tainacan-ai-white);
-    border-radius: 8px;
-    border: 1px solid var(--tainacan-ai-border);
 }
 
 .tainacan-ai-loading-text {
@@ -264,12 +261,12 @@
 .tainacan-ai-loading-title {
     font-weight: 600;
     color: var(--tainacan-ai-primary);
-    font-size: 14px;
+    font-size: 16px;
 }
 
 .tainacan-ai-loading-subtitle {
     color: var(--tainacan-ai-text-light);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 /* Spinner */
@@ -951,6 +948,7 @@
     min-height: 260px;
     max-height: 40vh;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    border-radius: var(--tainacan-input-border-radius);
     font-size: 11px;
     line-height: 1.45;
     padding: 8px 10px;
