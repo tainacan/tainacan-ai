@@ -3,7 +3,7 @@
  * Plugin Name: Tainacan AI
  * Plugin URI: https://github.com/tainacan/tainacan-ai
  * Description: Automated metadata extraction for Tainacan using WordPress AI and Connectors. Images, PDFs, and custom prompts.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Author: Sigismundo
  * Author URI: https://seu-site.com
  * Text Domain: tainacan-ai
@@ -25,7 +25,7 @@ if ( ! defined( 'TAINACAN_AI_PLUGIN_FILE' ) ) {
 	define( 'TAINACAN_AI_PLUGIN_FILE', __FILE__ );
 }
 if ( ! defined( 'TAINACAN_AI_VERSION' ) ) {
-	define( 'TAINACAN_AI_VERSION', '0.1.0' );
+	define( 'TAINACAN_AI_VERSION', '0.2.0' );
 }
 if ( ! defined( 'TAINACAN_AI_PLUGIN_DIR' ) ) {
 	define( 'TAINACAN_AI_PLUGIN_DIR', plugin_dir_path( TAINACAN_AI_PLUGIN_FILE ) );
