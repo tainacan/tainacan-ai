@@ -203,8 +203,28 @@ let hasTainacanAiNonceMiddleware = false;
                             <div class="tainacan-ai-sidebar-tab-panel-scroll">
                                 <dl class="tainacan-ai-detail-list tainacan-ai-request-details">
                                     <div class="tainacan-ai-detail-row">
-                                        <dt>${ TainacanAI.texts?.requestTokens || 'Tokens used' }</dt>
+                                        <dt>${ TainacanAI.texts?.requestTokens || 'Tokens' }</dt>
                                         <dd id="tainacan-ai-request-tokens">-</dd>
+                                    </div>
+                                    <div class="tainacan-ai-detail-row">
+                                        <dt>${ TainacanAI.texts?.requestCharacters || 'Prompt text (characters)' }</dt>
+                                        <dd id="tainacan-ai-request-characters">-</dd>
+                                    </div>
+                                    <div class="tainacan-ai-detail-row">
+                                        <dt>${ TainacanAI.texts?.requestResponseCharacters || 'Response (characters)' }</dt>
+                                        <dd id="tainacan-ai-request-response-characters">-</dd>
+                                    </div>
+                                    <div class="tainacan-ai-detail-row">
+                                        <dt>${ TainacanAI.texts?.requestAnalysisMode || 'Analysis mode' }</dt>
+                                        <dd id="tainacan-ai-request-analysis-mode">-</dd>
+                                    </div>
+                                    <div class="tainacan-ai-detail-row">
+                                        <dt>${ TainacanAI.texts?.requestFinishReason || 'Finish reason' }</dt>
+                                        <dd id="tainacan-ai-request-finish-reason">-</dd>
+                                    </div>
+                                    <div class="tainacan-ai-detail-row">
+                                        <dt>${ TainacanAI.texts?.requestDuration || 'Duration' }</dt>
+                                        <dd id="tainacan-ai-request-duration">-</dd>
                                     </div>
                                     <div class="tainacan-ai-detail-row">
                                         <dt>${ TainacanAI.texts?.requestConnector || 'Connector' }</dt>
@@ -743,6 +763,52 @@ let hasTainacanAiNonceMiddleware = false;
 		},
 
 		/**
+		 * Render user-visible processing warnings (truncation, filtering, limits).
+		 */
+		renderProcessingWarningsHtml( warnings ) {
+			if ( ! Array.isArray( warnings ) || warnings.length === 0 ) {
+				return '';
+			}
+
+			const items = warnings
+				.map( ( warning ) => {
+					const severity =
+						warning?.severity === 'info' ? 'info' : 'warning';
+					const message =
+						typeof warning?.message === 'string'
+							? warning.message
+							: '';
+
+					if ( ! message ) {
+						return '';
+					}
+
+					return `<li class="tainacan-ai-processing-warning is-${ severity }">${ this.escapeHtml(
+						message
+					) }</li>`;
+				} )
+				.filter( Boolean )
+				.join( '' );
+
+			if ( ! items ) {
+				return '';
+			}
+
+			return `
+                <div class="tainacan-ai-processing-warnings" role="status">
+                    <p class="tainacan-ai-processing-warnings-title">
+                        <span class="dashicons dashicons-info-outline" aria-hidden="true"></span>
+                        ${ this.escapeHtml(
+							TainacanAI.texts?.processingWarningsTitle ||
+								'Some content was not fully processed'
+						) }
+                    </p>
+                    <ul class="tainacan-ai-processing-warnings-list">${ items }</ul>
+                </div>
+            `;
+		},
+
+		/**
 		 * Display results
 		 */
 		displayResults( result, fromCache ) {
@@ -758,7 +824,12 @@ let hasTainacanAiNonceMiddleware = false;
 
 			// AI metadata - render in sidebar panel
 			if ( result.ai_metadata ) {
-				this.renderMetadataInPanel( result.ai_metadata );
+				this.renderMetadataInPanel(
+					result.ai_metadata,
+					result.processing?.warnings || []
+				);
+			} else {
+				this.renderEmptyResultsPanel( result.processing?.warnings || [] );
 			}
 
 			this.updateImageDataTab( result.exif );
@@ -898,31 +969,215 @@ let hasTainacanAiNonceMiddleware = false;
 				return null;
 			}
 
-			const tokensUsed = Number(
-				meta.tokens_used ?? meta.total_tokens ?? 0
-			);
-			const provider =
-				typeof meta.provider_used === 'string'
-					? meta.provider_used.trim()
-					: typeof meta.provider === 'string'
-						? meta.provider.trim()
-						: '';
-			const model =
-				typeof meta.model_used === 'string'
-					? meta.model_used.trim()
-					: typeof meta.model === 'string'
-						? meta.model.trim()
-						: '';
+			return this.normalizeRequestDetails( meta );
+		},
 
-			if ( ! tokensUsed && ! provider && ! model ) {
+		normalizeRequestDetails( source ) {
+			if ( ! source || typeof source !== 'object' ) {
 				return null;
 			}
 
-			return {
-				tokens_used: tokensUsed,
-				provider_used: provider,
-				model_used: model,
+			const nested =
+				source.request_meta && typeof source.request_meta === 'object'
+					? source.request_meta
+					: {};
+			const pick = ( key ) => {
+				if ( source[ key ] !== undefined && source[ key ] !== null ) {
+					return source[ key ];
+				}
+				return nested[ key ];
 			};
+
+			const details = {
+				tokens_used: Number( pick( 'tokens_used' ) ?? pick( 'total_tokens' ) ?? 0 ),
+				prompt_tokens: Number( pick( 'prompt_tokens' ) ?? 0 ),
+				completion_tokens: Number( pick( 'completion_tokens' ) ?? 0 ),
+				request_characters: Number( pick( 'request_characters' ) ?? 0 ),
+				response_characters: Number( pick( 'response_characters' ) ?? 0 ),
+				duration_ms: Number( pick( 'duration_ms' ) ?? 0 ),
+				provider_used: String( pick( 'provider_used' ) ?? pick( 'provider' ) ?? '' ).trim(),
+				provider_name: String( pick( 'provider_name' ) ?? '' ).trim(),
+				model_used: String( pick( 'model_used' ) ?? pick( 'model' ) ?? '' ).trim(),
+				model_name: String( pick( 'model_name' ) ?? '' ).trim(),
+				finish_reason: String( pick( 'finish_reason' ) ?? '' ).trim(),
+				analysis_mode: String( pick( 'analysis_mode' ) ?? '' ).trim(),
+			};
+
+			if ( ! this.requestDetailsHasData( details ) ) {
+				return null;
+			}
+
+			return details;
+		},
+
+		requestDetailsHasData( details ) {
+			if ( ! details || typeof details !== 'object' ) {
+				return false;
+			}
+
+			return Boolean(
+				details.tokens_used > 0 ||
+					details.prompt_tokens > 0 ||
+					details.completion_tokens > 0 ||
+					details.request_characters > 0 ||
+					details.response_characters > 0 ||
+					details.duration_ms > 0 ||
+					details.provider_used ||
+					details.model_used ||
+					details.finish_reason ||
+					details.analysis_mode
+			);
+		},
+
+		formatTokensBreakdown( details ) {
+			const prompt = Number( details?.prompt_tokens ?? 0 );
+			const completion = Number( details?.completion_tokens ?? 0 );
+			const total = Number( details?.tokens_used ?? 0 );
+
+			if ( ! prompt && ! completion && ! total ) {
+				return '-';
+			}
+
+			if ( prompt || completion ) {
+				const promptLabel = TainacanAI.texts?.tokensPrompt || 'prompt';
+				const completionLabel =
+					TainacanAI.texts?.tokensCompletion || 'completion';
+				const totalLabel = TainacanAI.texts?.tokensTotal || 'total';
+				const shownTotal = total || prompt + completion;
+
+				return `${ prompt.toLocaleString() } ${ promptLabel } + ${ completion.toLocaleString() } ${ completionLabel } = ${ shownTotal.toLocaleString() } ${ totalLabel }`;
+			}
+
+			return `${ total.toLocaleString() } ${ TainacanAI.texts?.tokens || 'tokens' }`;
+		},
+
+		formatNamedIdentifier( displayName, id, unknownFallback = '-' ) {
+			const name = String( displayName ?? '' ).trim();
+			const identifier = String( id ?? '' ).trim();
+
+			if ( name && identifier && name !== identifier ) {
+				return `${ name } (${ identifier })`;
+			}
+
+			return name || identifier || unknownFallback;
+		},
+
+		formatFinishReason( value ) {
+			const reason = String( value ?? '' ).trim();
+			if ( ! reason ) {
+				return '-';
+			}
+
+			const labels = {
+				stop: TainacanAI.texts?.finishReasonStop || 'Completed normally',
+				length:
+					TainacanAI.texts?.finishReasonLength ||
+					'Stopped at max length',
+				content_filter:
+					TainacanAI.texts?.finishReasonContentFilter ||
+					'Blocked by content filter',
+				tool_calls:
+					TainacanAI.texts?.finishReasonToolCalls ||
+					'Stopped for tool calls',
+				error:
+					TainacanAI.texts?.finishReasonError ||
+					'Stopped due to error',
+			};
+
+			return labels[ reason ] || reason;
+		},
+
+		formatAnalysisMode( value ) {
+			const mode = String( value ?? '' ).trim();
+			if ( ! mode ) {
+				return '-';
+			}
+
+			const labels = {
+				image: TainacanAI.texts?.analysisModeImage || 'Image (vision)',
+				text: TainacanAI.texts?.analysisModeText || 'Text',
+				pdf_text: TainacanAI.texts?.analysisModePdfText || 'PDF text',
+				pdf_visual:
+					TainacanAI.texts?.analysisModePdfVisual || 'PDF visual',
+			};
+
+			return labels[ mode ] || mode.replace( /_/g, ' ' );
+		},
+
+		formatRequestDuration( durationMs ) {
+			const ms = Number( durationMs ?? 0 );
+			if ( ! ms ) {
+				return '';
+			}
+
+			const seconds = ms / 1000;
+			const label = TainacanAI.texts?.durationSeconds || 'seconds';
+
+			return `${ seconds.toLocaleString( undefined, {
+				minimumFractionDigits: 1,
+				maximumFractionDigits: 1,
+			} ) } ${ label }`;
+		},
+
+		setRequestDetailRow( $dd, text, visible ) {
+			if ( ! $dd?.length ) {
+				return;
+			}
+
+			const $row = $dd.closest( '.tainacan-ai-detail-row' );
+			if ( ! $row.length ) {
+				return;
+			}
+
+			if ( visible ) {
+				$dd.text( text );
+				$row.prop( 'hidden', false );
+			} else {
+				$dd.text( '' );
+				$row.prop( 'hidden', true );
+			}
+		},
+
+		hideAllRequestDetailRows() {
+			[
+				'#tainacan-ai-request-tokens',
+				'#tainacan-ai-request-characters',
+				'#tainacan-ai-request-response-characters',
+				'#tainacan-ai-request-analysis-mode',
+				'#tainacan-ai-request-finish-reason',
+				'#tainacan-ai-request-duration',
+				'#tainacan-ai-request-connector',
+				'#tainacan-ai-request-model',
+			].forEach( ( selector ) => {
+				this.setRequestDetailRow( $( selector ), '', false );
+			} );
+
+			$( '.tainacan-ai-request-details' ).prop( 'hidden', true );
+		},
+
+		updateRequestDetailsListVisibility() {
+			const $list = $( '.tainacan-ai-request-details' );
+			if ( ! $list.length ) {
+				return;
+			}
+
+			const hasVisibleRow = $list
+				.find( '.tainacan-ai-detail-row' )
+				.toArray()
+				.some( ( row ) => ! row.hidden );
+
+			$list.prop( 'hidden', ! hasVisibleRow );
+		},
+
+		formatRequestCharacters( value ) {
+			const count = Number( value ?? 0 );
+			if ( ! count ) {
+				return '-';
+			}
+
+			const formatted = count.toLocaleString();
+			const label = TainacanAI.texts?.characters || 'characters';
+			return `${ formatted } ${ label }`;
 		},
 
 		normalizeErrorDebugDetails( debugDetails ) {
@@ -1096,6 +1351,9 @@ let hasTainacanAiNonceMiddleware = false;
 			const debugSectionsHtml = this.renderAnalysisErrorDebugSections(
 				parsed.debugDetails
 			);
+			const processingWarningsHtml = this.renderProcessingWarningsHtml(
+				errorData?.processing?.warnings || []
+			);
 
 			const showRawResponse =
 				TainacanAI.advancedDebug &&
@@ -1116,6 +1374,7 @@ let hasTainacanAiNonceMiddleware = false;
 				: '';
 
 			this.elements.sidebarContent.html( `
+                ${ processingWarningsHtml }
                 <div class="tainacan-ai-sidebar-error">
                     <div class="tainacan-ai-error">
                         <span class="dashicons dashicons-warning"></span>
@@ -1390,10 +1649,34 @@ let hasTainacanAiNonceMiddleware = false;
             `;
 		},
 
+		renderEmptyResultsPanel( warnings = [] ) {
+			this.ensureElementsCached();
+
+			if (
+				! this.elements.sidebarContent ||
+				! this.elements.sidebarContent.length
+			) {
+				this.createSidebarPanel();
+			}
+
+			const $container = this.elements.sidebarContent;
+			if ( ! $container || ! $container.length ) {
+				return;
+			}
+
+			const warningsHtml = this.renderProcessingWarningsHtml( warnings );
+			$container.html(
+				`${ warningsHtml }<div class="tainacan-ai-panel-placeholder"><span class="dashicons dashicons-search"></span><p>${ this.escapeHtml(
+					TainacanAI.texts?.noResults || 'No results available'
+				) }</p></div>`
+			);
+			this.updatePanelMetadataSummary( {} );
+		},
+
 		/**
 		 * Render metadata in sidebar panel with evidence
 		 */
-		renderMetadataInPanel( metadata ) {
+		renderMetadataInPanel( metadata, warnings = [] ) {
 			// Ensure panel exists
 			if (
 				! this.elements.sidebarContent ||
@@ -1412,6 +1695,11 @@ let hasTainacanAiNonceMiddleware = false;
 
 			$container.empty();
 			this.updatePanelMetadataSummary( metadata );
+
+			const warningsHtml = this.renderProcessingWarningsHtml( warnings );
+			if ( warningsHtml ) {
+				$container.append( warningsHtml );
+			}
 
 			Object.entries( metadata ).forEach( ( [ key, data ], index ) => {
 				const formattedLabel = this.formatLabel( key );
@@ -1661,16 +1949,8 @@ let hasTainacanAiNonceMiddleware = false;
 		},
 
 		computeRequestTabHasData( requestMeta = null ) {
-			if ( requestMeta ) {
-				const tokens = Number( requestMeta.tokens_used ?? 0 );
-				const provider = String(
-					requestMeta.provider_used ?? ''
-				).trim();
-				const model = String( requestMeta.model_used ?? '' ).trim();
-
-				if ( tokens > 0 || provider || model ) {
-					return true;
-				}
+			if ( this.requestDetailsHasData( requestMeta ) ) {
+				return true;
 			}
 
 			if ( ! TainacanAI.advancedDebug ) {
@@ -1717,47 +1997,104 @@ let hasTainacanAiNonceMiddleware = false;
 			this.reconcileSidebarElements();
 
 			const $tokens = $( '#tainacan-ai-request-tokens' );
+			const $characters = $( '#tainacan-ai-request-characters' );
+			const $responseCharacters = $(
+				'#tainacan-ai-request-response-characters'
+			);
+			const $analysisMode = $( '#tainacan-ai-request-analysis-mode' );
+			const $finishReason = $( '#tainacan-ai-request-finish-reason' );
+			const $duration = $( '#tainacan-ai-request-duration' );
 			const $connector = $( '#tainacan-ai-request-connector' );
 			const $model = $( '#tainacan-ai-request-model' );
 
-			if ( ! $tokens.length || ! $connector.length || ! $model.length ) {
+			if (
+				! $tokens.length ||
+				! $characters.length ||
+				! $responseCharacters.length ||
+				! $analysisMode.length ||
+				! $finishReason.length ||
+				! $duration.length ||
+				! $connector.length ||
+				! $model.length
+			) {
 				return;
 			}
 
-			if ( ! result ) {
-				$tokens.text( '-' );
-				$connector.text( '-' );
-				$model.text( '-' );
+			const details = this.normalizeRequestDetails( result );
+
+			if ( ! details ) {
+				this.hideAllRequestDetailRows();
 				this.updateRequestTabAvailability( false );
 				return;
 			}
 
-			$tokens.text(
-				result.tokens_used
-					? `${ result.tokens_used } ${ TainacanAI.texts?.tokens || 'tokens' }`
-					: '-'
+			const hasTokens =
+				details.tokens_used > 0 ||
+				details.prompt_tokens > 0 ||
+				details.completion_tokens > 0;
+			const hasRequestCharacters = details.request_characters > 0;
+			const hasResponseCharacters = details.response_characters > 0;
+			const hasAnalysisMode = Boolean( details.analysis_mode );
+			const hasFinishReason = Boolean( details.finish_reason );
+			const hasDuration = details.duration_ms > 0;
+			const hasConnector = Boolean(
+				details.provider_used || details.provider_name
+			);
+			const hasModel = Boolean( details.model_used || details.model_name );
+
+			this.setRequestDetailRow(
+				$tokens,
+				this.formatTokensBreakdown( details ),
+				hasTokens
+			);
+			this.setRequestDetailRow(
+				$characters,
+				this.formatRequestCharacters( details.request_characters ),
+				hasRequestCharacters
+			);
+			this.setRequestDetailRow(
+				$responseCharacters,
+				this.formatRequestCharacters( details.response_characters ),
+				hasResponseCharacters
+			);
+			this.setRequestDetailRow(
+				$analysisMode,
+				this.formatAnalysisMode( details.analysis_mode ),
+				hasAnalysisMode
+			);
+			this.setRequestDetailRow(
+				$finishReason,
+				this.formatFinishReason( details.finish_reason ),
+				hasFinishReason
+			);
+			this.setRequestDetailRow(
+				$duration,
+				this.formatRequestDuration( details.duration_ms ),
+				hasDuration
+			);
+			this.setRequestDetailRow(
+				$connector,
+				this.formatNamedIdentifier(
+					details.provider_name,
+					details.provider_used,
+					''
+				),
+				hasConnector
+			);
+			this.setRequestDetailRow(
+				$model,
+				this.formatNamedIdentifier(
+					details.model_name,
+					details.model_used,
+					''
+				),
+				hasModel
 			);
 
-			const connector =
-				typeof result.provider_used === 'string'
-					? result.provider_used.trim()
-					: '';
-			$connector.text(
-				connector || TainacanAI.texts?.connectorUnknown || '-'
-			);
-
-			const model =
-				typeof result.model_used === 'string'
-					? result.model_used.trim()
-					: '';
-			$model.text( model || TainacanAI.texts?.modelUnknown || '-' );
+			this.updateRequestDetailsListVisibility();
 
 			this.updateRequestTabAvailability(
-				this.computeRequestTabHasData( {
-					tokens_used: result.tokens_used,
-					provider_used: result.provider_used,
-					model_used: result.model_used,
-				} )
+				this.computeRequestTabHasData( details )
 			);
 		},
 
@@ -2262,7 +2599,10 @@ let hasTainacanAiNonceMiddleware = false;
 				termLabel,
 				fieldInfo.multiple === true
 			);
-			this.renderMetadataInPanel( this.state.lastResult.ai_metadata );
+			this.renderMetadataInPanel(
+				this.state.lastResult.ai_metadata,
+				this.state.lastResult.processing?.warnings || []
+			);
 			this.showToast(
 				TainacanAI.texts?.termCreatedAndApplied || 'Term created and applied.'
 			);
@@ -2814,11 +3154,52 @@ let hasTainacanAiNonceMiddleware = false;
 				this.elements.promptDocumentPreviewContent.text( resolved.content );
 			}
 			if ( this.elements.promptDocumentPreviewTruncated?.length ) {
-				const isTruncated = Boolean( documentBody?.truncated );
-				this.elements.promptDocumentPreviewTruncated.prop(
-					'hidden',
-					! isTruncated
+				const documentWarnings = Array.isArray( documentBody?.warnings )
+					? documentBody.warnings
+					: [];
+				const truncationWarning = documentWarnings.find(
+					( warning ) => warning?.code === 'document_truncated'
 				);
+				const infoWarnings = documentWarnings.filter(
+					( warning ) => warning?.code !== 'document_truncated'
+				);
+				const isTruncated = Boolean( documentBody?.truncated );
+
+				let noticeText = '';
+				if ( truncationWarning?.message ) {
+					noticeText = truncationWarning.message;
+				} else if ( isTruncated ) {
+					const sentLength = Number( documentBody?.sent_length ?? 0 );
+					const originalLength = Number(
+						documentBody?.original_length ?? 0
+					);
+					if ( sentLength > 0 && originalLength > sentLength ) {
+						noticeText = `${
+							TainacanAI.texts?.promptDocumentTruncated ||
+							'Only part of the document was sent to the model.'
+						} (${ sentLength.toLocaleString() } / ${ originalLength.toLocaleString() } characters).`;
+					} else {
+						noticeText =
+							TainacanAI.texts?.promptDocumentTruncated ||
+							'Only part of the document was sent to the model.';
+					}
+				} else if ( infoWarnings.length > 0 ) {
+					noticeText = infoWarnings
+						.map( ( warning ) => warning.message )
+						.filter( Boolean )
+						.join( ' ' );
+				}
+
+				if ( noticeText ) {
+					this.elements.promptDocumentPreviewTruncated
+						.text( noticeText )
+						.prop( 'hidden', false );
+				} else {
+					this.elements.promptDocumentPreviewTruncated.prop(
+						'hidden',
+						true
+					);
+				}
 			}
 
 			this.elements.promptDocumentPreview.prop( 'hidden', false );

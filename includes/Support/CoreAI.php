@@ -475,6 +475,8 @@ class CoreAI {
                 self::apply_vision_model_preferences($builder);
             }
 
+            $started_at = microtime(true);
+
             // Use result object (we need usage + metadata).
             $result = self::builderGenerateTextResult($builder);
 
@@ -482,9 +484,13 @@ class CoreAI {
                 return $result;
             }
 
-            $request_meta = self::extract_request_meta_from_result($result);
-
             $raw_text = self::extract_result_text($result);
+            $request_meta = self::finalize_request_meta(
+                self::extract_request_meta_from_result($result),
+                $raw_text,
+                $started_at
+            );
+
             if ($raw_text === '') {
                 return new \WP_Error(
                     'empty_response',
@@ -521,6 +527,7 @@ class CoreAI {
                 ),
                 'model' => (string) ( $request_meta['model_used'] ?? '' ),
                 'provider' => (string) ( $request_meta['provider_used'] ?? '' ),
+                'request_meta' => $request_meta,
             ];
         } catch (\Throwable $e) {
             return AnalysisErrorDebug::from_throwable(
@@ -762,14 +769,17 @@ class CoreAI {
     }
 
     /**
-     * Tokens, model, and provider from a Core AI text result (for errors and success).
+     * Tokens, model, provider, and finish reason from a Core AI text result.
      *
      * @return array{
      *     tokens_used: int,
      *     prompt_tokens: int,
      *     completion_tokens: int,
      *     model_used: string,
-     *     provider_used: string
+     *     model_name: string,
+     *     provider_used: string,
+     *     provider_name: string,
+     *     finish_reason: string
      * }
      */
     private static function extract_request_meta_from_result(object $result): array {
@@ -777,16 +787,20 @@ class CoreAI {
         $usage = self::extract_usage_array($usage_obj);
 
         $provider = '';
+        $provider_name = '';
         $model = '';
+        $model_name = '';
 
         $provider_meta = method_exists($result, 'getProviderMetadata') ? $result->getProviderMetadata() : null;
         if ($provider_meta) {
             $provider = self::maybe_get_meta_id($provider_meta);
+            $provider_name = self::maybe_get_meta_name($provider_meta);
         }
 
         $model_meta = method_exists($result, 'getModelMetadata') ? $result->getModelMetadata() : null;
         if ($model_meta) {
             $model = self::maybe_get_meta_id($model_meta);
+            $model_name = self::maybe_get_meta_name($model_meta);
         }
 
         return [
@@ -794,8 +808,68 @@ class CoreAI {
             'prompt_tokens' => (int) ($usage['prompt_tokens'] ?? 0),
             'completion_tokens' => (int) ($usage['completion_tokens'] ?? 0),
             'model_used' => $model,
+            'model_name' => $model_name,
             'provider_used' => $provider,
+            'provider_name' => $provider_name,
+            'finish_reason' => self::extract_finish_reason($result),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $request_meta
+     * @return array<string, mixed>
+     */
+    private static function finalize_request_meta(array $request_meta, string $raw_text, float $started_at): array {
+        $duration_ms = (int) round((microtime(true) - $started_at) * 1000);
+        if ($duration_ms > 0) {
+            $request_meta['duration_ms'] = $duration_ms;
+        }
+
+        if ($raw_text !== '') {
+            $response_characters = mb_strlen($raw_text, 'UTF-8');
+            if ($response_characters > 0) {
+                $request_meta['response_characters'] = $response_characters;
+            }
+        }
+
+        return $request_meta;
+    }
+
+    private static function extract_finish_reason(object $result): string {
+        if (!method_exists($result, 'getCandidates')) {
+            return '';
+        }
+
+        try {
+            $candidates = $result->getCandidates();
+            if (!is_array($candidates) || $candidates === []) {
+                return '';
+            }
+
+            $candidate = $candidates[0];
+            if (!is_object($candidate) || !method_exists($candidate, 'getFinishReason')) {
+                return '';
+            }
+
+            $reason = $candidate->getFinishReason();
+            if ($reason instanceof \BackedEnum) {
+                return (string) $reason->value;
+            }
+
+            if (is_object($reason)) {
+                if (property_exists($reason, 'value')) {
+                    $value = $reason->value;
+                    return is_scalar($value) ? (string) $value : '';
+                }
+                if (method_exists($reason, 'getValue')) {
+                    return (string) $reason->getValue();
+                }
+            }
+
+            return is_scalar($reason) ? (string) $reason : '';
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 
     /**
@@ -844,6 +918,22 @@ class CoreAI {
         if (property_exists($meta, 'id')) {
             $id = $meta->id;
             return is_scalar($id) ? (string) $id : '';
+        }
+
+        return '';
+    }
+
+    private static function maybe_get_meta_name(object $meta): string {
+        if (method_exists($meta, 'getName')) {
+            return (string) $meta->getName();
+        }
+        if (method_exists($meta, 'get_name')) {
+            return (string) $meta->get_name();
+        }
+
+        if (property_exists($meta, 'name')) {
+            $name = $meta->name;
+            return is_scalar($name) ? (string) $name : '';
         }
 
         return '';
@@ -911,29 +1001,116 @@ class CoreAI {
      * Parses a response that should contain JSON (possibly wrapped in code blocks).
      */
     private static function parse_json_response(string $content): ?array {
-        $metadata = json_decode($content, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
-            return $metadata;
-        }
-
-        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
-            $metadata = json_decode($matches[0], true);
-            if (json_last_error() === JSON_ERROR_NONE) {
+        foreach (self::json_response_candidates($content) as $candidate) {
+            $metadata = self::decode_json_response($candidate);
+            if ($metadata !== null) {
                 return $metadata;
             }
         }
 
-        // Remove markdown code blocks.
-        $content = preg_replace('/```json?\s*/', '', $content);
-        $content = preg_replace('/```\s*/', '', $content);
-        $content = trim((string) $content);
+        return null;
+    }
 
+    /**
+     * Candidate JSON payloads extracted from a model response.
+     *
+     * @return list<string>
+     */
+    private static function json_response_candidates(string $content): array {
+        $candidates = array($content);
+
+        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+            $candidates[] = $matches[0];
+        }
+
+        $stripped = preg_replace('/```json?\s*/', '', $content);
+        $stripped = preg_replace('/```\s*/', '', (string) $stripped);
+        $stripped = trim((string) $stripped);
+
+        if ($stripped !== $content) {
+            $candidates[] = $stripped;
+
+            if (preg_match('/\{[\s\S]*\}/', $stripped, $matches)) {
+                $candidates[] = $matches[0];
+            }
+        }
+
+        return array_values(array_unique($candidates));
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function decode_json_response(string $content): ?array {
         $metadata = json_decode($content, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
+        if (json_last_error() === JSON_ERROR_NONE && is_array($metadata)) {
+            return $metadata;
+        }
+
+        $repaired = self::repair_json_string_literals($content);
+        if ($repaired === $content) {
+            return null;
+        }
+
+        $metadata = json_decode($repaired, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($metadata)) {
             return $metadata;
         }
 
         return null;
+    }
+
+    /**
+     * Escapes raw control characters inside JSON string literals.
+     *
+     * Smaller local models often copy tabs/newlines from source text into values
+     * without JSON escaping, which makes json_decode() fail.
+     */
+    private static function repair_json_string_literals(string $json): string {
+        $out       = '';
+        $length    = strlen($json);
+        $in_string = false;
+        $escape    = false;
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $json[$i];
+            $ord  = ord($char);
+
+            if ($escape) {
+                $out    .= $char;
+                $escape  = false;
+                continue;
+            }
+
+            if ($in_string && $char === '\\') {
+                $out    .= $char;
+                $escape  = true;
+                continue;
+            }
+
+            if ($char === '"') {
+                $in_string = ! $in_string;
+                $out      .= $char;
+                continue;
+            }
+
+            if ($in_string && $ord < 0x20) {
+                if ($char === "\t") {
+                    $out .= '\\t';
+                } elseif ($char === "\n") {
+                    $out .= '\\n';
+                } elseif ($char === "\r") {
+                    $out .= '\\r';
+                } else {
+                    $out .= sprintf('\\u%04x', $ord);
+                }
+                continue;
+            }
+
+            $out .= $char;
+        }
+
+        return $out;
     }
 
     /**
@@ -949,16 +1126,14 @@ class CoreAI {
             $last_json_error = json_last_error_msg();
         };
 
-        $record_attempt($content);
+        foreach (self::json_response_candidates($content) as $candidate) {
+            $record_attempt($candidate);
 
-        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
-            $record_attempt($matches[0]);
+            $repaired = self::repair_json_string_literals($candidate);
+            if ($repaired !== $candidate) {
+                $record_attempt($repaired);
+            }
         }
-
-        $stripped = preg_replace('/```json?\s*/', '', $content);
-        $stripped = preg_replace('/```\s*/', '', (string) $stripped);
-        $stripped = trim((string) $stripped);
-        $record_attempt($stripped);
 
         $truncated = AnalysisErrorDebug::truncate($content);
 

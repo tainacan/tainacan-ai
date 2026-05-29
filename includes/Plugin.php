@@ -85,6 +85,9 @@ final class Plugin {
 			'extract_exif'     => true,
 			'consent_required' => true,
 			'advanced_debug'   => false,
+			'document_max_chars' => \Tainacan\AI\Support\AnalysisLimits::DEFAULT_DOCUMENT_MAX_CHARS,
+			'pdf_visual_max_pages' => \Tainacan\AI\Support\AnalysisLimits::DEFAULT_PDF_VISUAL_MAX_PAGES,
+			'taxonomy_allowed_values_limit' => \Tainacan\AI\Support\AnalysisLimits::DEFAULT_TAXONOMY_ALLOWED_VALUES_LIMIT,
 		);
 
 		$existing = get_option( 'tainacan_ai_options', array() );

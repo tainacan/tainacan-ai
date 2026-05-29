@@ -4,9 +4,11 @@ namespace Tainacan\AI\Extraction;
 use Tainacan\AI\Plugin;
 use Tainacan\AI\Hooks\CollectionFormHook;
 use Tainacan\AI\Support\AnalysisErrorDebug;
+use Tainacan\AI\Support\AnalysisLimits;
 use Tainacan\AI\Support\CoreAI;
 use Tainacan\AI\Support\CoreAIRequestLogging;
 use Tainacan\AI\Support\DebugLog;
+use Tainacan\AI\Support\ProcessingWarnings;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -33,6 +35,8 @@ class DocumentAnalyzer {
     private ExifExtractor $exif_extractor;
     /** @var array<string, array{prompt: string, sections: array<string, string>, expected_slugs: string[], fields: array<string, array<string, mixed>>}> */
     private array $prompt_context_cache = [];
+    private ProcessingWarnings $processing_warnings;
+    private ?int $last_request_characters = null;
 
     /**
      * Supported MIME types
@@ -58,6 +62,7 @@ class DocumentAnalyzer {
     ];
 
     public function __construct() {
+        $this->processing_warnings = new ProcessingWarnings();
         $this->options = Plugin::get_options();
         $this->exif_extractor = new ExifExtractor();
     }
@@ -221,6 +226,8 @@ class DocumentAnalyzer {
         string $file_path,
         string $mime_type
     ): array|\WP_Error {
+        $this->processing_warnings = new ProcessingWarnings();
+        $this->last_request_characters = null;
         $result = [];
         $document_type = 'unknown';
         $extraction_method = null;
@@ -253,13 +260,20 @@ class DocumentAnalyzer {
 
         } elseif (in_array($mime_type, ['text/plain', 'text/html'])) {
             $document_type = 'text';
+            $prepared = $this->prepare_document_text(
+                (string) file_get_contents($file_path),
+                $mime_type
+            );
             $ai_result = $this->analyze_text(
-                file_get_contents($file_path),
+                $prepared['content'],
                 [
                     'document_type' => 'text',
                     'extraction_method' => 'text',
                 ],
-                EvidenceInstructions::MODE_TEXT
+                EvidenceInstructions::MODE_TEXT,
+                $mime_type === 'text/html'
+                    ? EvidenceInstructions::DOCUMENT_FORMAT_HTML
+                    : EvidenceInstructions::DOCUMENT_FORMAT_PLAIN
             );
             $extraction_method = 'text';
             $analysis_mode = EvidenceInstructions::MODE_TEXT;
@@ -287,7 +301,14 @@ class DocumentAnalyzer {
                 '',
                 $ai_result->get_error_message()
             );
-            return $ai_result;
+            return $this->attach_processing_to_error(
+                $this->attach_request_context_to_error(
+                    $ai_result,
+                    $this->last_request_characters,
+                    $analysis_mode
+                ),
+                $analysis_mode
+            );
         }
 
         // Combine results
@@ -323,10 +344,9 @@ class DocumentAnalyzer {
         }
         $result['document_type'] = $document_type;
         $result['extraction_method'] = $extraction_method;
-        $result['tokens_used'] = $ai_result['usage']['total_tokens'] ?? 0;
-        $result['model_used'] = (string) ($ai_result['model'] ?? '');
-        $result['provider_used'] = (string) ($ai_result['provider'] ?? '');
+        $this->apply_request_details_to_result($result, $ai_result, $analysis_mode);
         $result['analyzed_at'] = current_time('mysql');
+        $this->attach_processing_to_result($result, $analysis_mode);
 
         $this->debug_log_analysis_outcome(
             $document_type,
@@ -599,7 +619,8 @@ class DocumentAnalyzer {
         $text = $this->extract_pdf_text($file_path);
 
         if (!is_wp_error($text) && !empty(trim($text)) && strlen(trim($text)) > 100) {
-            $result = $this->analyze_text($text, [
+            $prepared = $this->prepare_document_text((string) $text, 'text/plain');
+            $result = $this->analyze_text($prepared['content'], [
                 'document_type' => 'pdf',
                 'extraction_method' => 'text_extraction',
             ], EvidenceInstructions::MODE_PDF_TEXT);
@@ -707,12 +728,13 @@ class DocumentAnalyzer {
      */
     private function analyze_pdf_visually(string $file_path): array|\WP_Error {
         $images = [];
+        $max_pages = AnalysisLimits::get_pdf_visual_max_pages();
 
         try {
             $converter = new PdfToImage();
             $converter->setDpi(150)
                       ->setQuality(85)
-                      ->setMaxPages(3);
+                      ->setMaxPages($max_pages);
 
             $images = $converter->convert($file_path);
 
@@ -738,6 +760,22 @@ class DocumentAnalyzer {
             }
 
             $pageCount = count($images);
+            if ($pageCount >= $max_pages) {
+                $this->processing_warnings->add(
+                    'pdf_pages_limited',
+                    'warning',
+                    sprintf(
+                        /* translators: %d: maximum number of PDF pages sent for visual analysis */
+                        __('Only the first %d PDF page(s) were sent for visual analysis. Later pages were not processed.', 'tainacan-ai'),
+                        $max_pages
+                    ),
+                    array(
+                        'max_pages' => $max_pages,
+                        'sent_pages' => $pageCount,
+                    )
+                );
+            }
+
             $promptWithContext = $prompt . "\n\n" . sprintf(
                 'The document has %d page(s). Analyze the visual content of all provided pages.',
                 $pageCount
@@ -751,6 +789,8 @@ class DocumentAnalyzer {
                     'mime' => $image['mime'],
                 ];
             }
+
+            $this->record_request_characters( $promptWithContext );
 
             $ai_result = CoreAI::generate_json_from_text_and_files(
                 $promptWithContext,
@@ -864,6 +904,8 @@ class DocumentAnalyzer {
             return $prompt;
         }
 
+        $this->record_request_characters( $prompt );
+
         return CoreAI::generate_json_from_text_and_files(
             $prompt,
             [
@@ -884,17 +926,12 @@ class DocumentAnalyzer {
      *
      * @param array<string, mixed> $log_extra
      */
-    private function analyze_text(string $text, array $log_extra = [], string $analysis_mode = EvidenceInstructions::MODE_TEXT): array|\WP_Error {
-        // Sanitize text to valid UTF-8
-        $text = $this->sanitize_utf8_string($text);
-
-        // Limit text size
-        $max_chars = 32000;
-        if (mb_strlen($text, 'UTF-8') > $max_chars) {
-            $text = mb_substr($text, 0, $max_chars, 'UTF-8');
-            $text .= "\n\n[Document truncated due to size]";
-        }
-
+    private function analyze_text(
+        string $text,
+        array $log_extra = [],
+        string $analysis_mode = EvidenceInstructions::MODE_TEXT,
+        string $document_format = EvidenceInstructions::DOCUMENT_FORMAT_PLAIN
+    ): array|\WP_Error {
         $context = $this->resolve_analysis_prompt_context($analysis_mode);
 
         if (is_wp_error($context)) {
@@ -902,10 +939,45 @@ class DocumentAnalyzer {
         }
 
         $prompt = $context['prompt'];
+        $expected_slugs = is_array($context['expected_slugs'] ?? null)
+            ? $context['expected_slugs']
+            : [];
 
-        $full_prompt = $prompt . "\n\n---\n\n**Document:**\n\n" . $text;
+        $full_prompt = $this->build_text_analysis_prompt(
+            $prompt,
+            $text,
+            $document_format,
+            $expected_slugs
+        );
 
-        return CoreAI::generate_json_from_text($full_prompt, $this->generation_options($log_extra));
+        $this->record_request_characters( $full_prompt );
+
+        return CoreAI::generate_json_from_text( $full_prompt, $this->generation_options( $log_extra ) );
+    }
+
+    /**
+     * @param string[] $expected_slugs
+     */
+    private function build_text_analysis_prompt(
+        string $instruction_prompt,
+        string $document_body,
+        string $document_format,
+        array $expected_slugs
+    ): string {
+        $parts = array(
+            $instruction_prompt,
+            '---',
+            '**Document:**',
+            EvidenceInstructions::get_document_format_guidance($document_format),
+            $document_body,
+            '---',
+            ExtractionMetadata::get_instance()->build_response_closing_reminder($expected_slugs),
+        );
+
+        return trim(implode("\n\n", array_filter(
+            $parts,
+            static fn (string $part): bool => trim($part) !== ''
+        )));
     }
 
     /**
@@ -1415,20 +1487,30 @@ class DocumentAnalyzer {
             if ($mime_type === 'application/pdf') {
                 $extracted = $this->extract_pdf_text($file_path);
                 $text = is_wp_error($extracted) ? '' : $extracted;
+                if ($text !== '') {
+                    $prepared = DocumentTextPreparer::prepare($text, 'text/plain');
+                    $text = $prepared['content'];
+                    $truncated = $prepared['truncated'];
+                    $original_length = $prepared['original_length'];
+                    $sent_length = $prepared['sent_length'];
+                    $document_warnings = $prepared['warnings']->to_list();
+                }
             } else {
                 $raw = file_get_contents($file_path);
-                $text = $raw === false ? '' : $raw;
+                $prepared = DocumentTextPreparer::prepare($raw === false ? '' : $raw, $mime_type);
+                $text = $prepared['content'];
+                $truncated = $prepared['truncated'];
+                $original_length = $prepared['original_length'];
+                $sent_length = $prepared['sent_length'];
+                $document_warnings = $prepared['warnings']->to_list();
             }
         }
 
-        $text = $this->sanitize_utf8_string($text);
-        $max_chars = 32000;
-        $length = mb_strlen($text, 'UTF-8');
-        $truncated = $length > $max_chars;
-
-        if ($truncated) {
-            $text = mb_substr($text, 0, $max_chars, 'UTF-8');
-            $text .= "\n\n[Document truncated due to size]";
+        if (!isset($truncated)) {
+            $truncated = false;
+            $original_length = mb_strlen($text, 'UTF-8');
+            $sent_length = $original_length;
+            $document_warnings = [];
         }
 
         return [
@@ -1437,6 +1519,9 @@ class DocumentAnalyzer {
                 : EvidenceInstructions::MODE_TEXT,
             'content' => $text,
             'truncated' => $truncated,
+            'original_length' => $original_length,
+            'sent_length' => $sent_length,
+            'warnings' => $document_warnings,
         ];
     }
 
@@ -1498,26 +1583,20 @@ class DocumentAnalyzer {
             return '';
         }
 
-        $text = file_get_contents($file_path);
-
-        if ($text === false) {
-            return '';
-        }
-
         if ($mime_type === 'application/pdf') {
             $extracted = $this->extract_pdf_text($file_path);
             $text = is_wp_error($extracted) ? '' : $extracted;
+            $prepared = DocumentTextPreparer::prepare($text, 'text/plain');
+        } else {
+            $raw = file_get_contents($file_path);
+            $prepared = DocumentTextPreparer::prepare($raw === false ? '' : $raw, $mime_type);
         }
 
-        $text = $this->sanitize_utf8_string($text);
-        $length = mb_strlen($text, 'UTF-8');
-        $max_chars = 32000;
-        $truncated = $length > $max_chars;
-
         return sprintf(
-            '--- Document body appended (%1$d characters%2$s) ---',
-            min($length, $max_chars),
-            $truncated ? ', truncated' : ''
+            '--- Document body appended (%1$s of %2$s characters%3$s) ---',
+            number_format_i18n($prepared['sent_length']),
+            number_format_i18n($prepared['original_length']),
+            $prepared['truncated'] ? ', truncated' : ''
         );
     }
 
@@ -1779,25 +1858,179 @@ class DocumentAnalyzer {
      * Sanitize a string to valid UTF-8
      */
     private function sanitize_utf8_string(string $string): string {
-        if (mb_check_encoding($string, 'UTF-8')) {
-            $string = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $string);
-            return $string;
+        return DocumentTextPreparer::sanitize_utf8_string($string);
+    }
+
+    /**
+     * @return array{
+     *     content: string,
+     *     truncated: bool,
+     *     original_length: int,
+     *     sent_length: int,
+     *     warnings: ProcessingWarnings
+     * }
+     */
+    private function prepare_document_text(string $raw, string $mime_type): array {
+        $prepared = DocumentTextPreparer::prepare($raw, $mime_type);
+        $this->processing_warnings->merge($prepared['warnings']);
+
+        return $prepared;
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     */
+    private function attach_processing_to_result(array &$result, string $analysis_mode): void {
+        $processing = $this->build_processing_payload($analysis_mode);
+        if ($processing !== null) {
+            $result['processing'] = $processing;
+        }
+    }
+
+    private function attach_processing_to_error(\WP_Error $error, string $analysis_mode): \WP_Error {
+        $processing = $this->build_processing_payload($analysis_mode);
+        if ($processing === null) {
+            return $error;
         }
 
-        $encodings = ['ISO-8859-1', 'Windows-1252', 'ASCII'];
+        $error_data = $error->get_error_data();
+        if (!is_array($error_data)) {
+            $error_data = [];
+        }
 
-        foreach ($encodings as $encoding) {
-            $converted = @mb_convert_encoding($string, 'UTF-8', $encoding);
-            if ($converted !== false && mb_check_encoding($converted, 'UTF-8')) {
-                return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $converted);
+        $error_data['processing'] = $processing;
+
+        return new \WP_Error(
+            (string) $error->get_error_code(),
+            $error->get_error_message(),
+            $error_data
+        );
+    }
+
+    /**
+     * @return array{warnings: list<array<string, mixed>>}|null
+     */
+    private function build_processing_payload(string $analysis_mode): ?array {
+        $context = $this->resolve_analysis_prompt_context($analysis_mode);
+        if (!is_wp_error($context)) {
+            $this->merge_prompt_processing_warnings($context['fields'] ?? []);
+        }
+
+        return $this->processing_warnings->to_payload();
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $fields
+     */
+    private function merge_prompt_processing_warnings(array $fields): void {
+        $truncated_labels = [];
+
+        foreach ($fields as $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            if (!empty($field['allowed_values_truncated'])) {
+                $label = trim((string) ($field['label'] ?? $field['name'] ?? ''));
+                $truncated_labels[] = $label !== '' ? $label : (string) ($field['slug'] ?? '');
             }
         }
 
-        $string = mb_convert_encoding($string, 'UTF-8', 'UTF-8');
-        $string = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $string);
-        $string = preg_replace('/[\x80-\xFF](?![\x80-\xBF])|(?<![\xC0-\xFF])[\x80-\xBF]/', '', $string);
+        $truncated_labels = array_values(array_filter($truncated_labels));
 
-        return $string;
+        if ($truncated_labels === []) {
+            return;
+        }
+
+        $this->processing_warnings->add(
+            'prompt_allowed_values_truncated',
+            'warning',
+            sprintf(
+                /* translators: 1: comma-separated field labels, 2: configured term limit */
+                __( 'Some fields include only a subset of allowed taxonomy terms in the prompt (%1$s). The prompt lists up to %2$s terms per taxonomy field.', 'tainacan-ai' ),
+                implode(', ', $truncated_labels),
+                number_format_i18n(AnalysisLimits::get_taxonomy_allowed_values_limit())
+            ),
+            array(
+                'fields' => implode(', ', $truncated_labels),
+                'max_terms' => (string) AnalysisLimits::get_taxonomy_allowed_values_limit(),
+            )
+        );
+    }
+
+    private function attach_request_context_to_error(
+        \WP_Error $error,
+        ?int $request_characters,
+        string $analysis_mode = ''
+    ): \WP_Error {
+        $error_data = $error->get_error_data();
+        if (!is_array($error_data)) {
+            $error_data = [];
+        }
+
+        $request_meta = isset($error_data['request_meta']) && is_array($error_data['request_meta'])
+            ? $error_data['request_meta']
+            : [];
+
+        if ($request_characters !== null && $request_characters > 0) {
+            $request_meta['request_characters'] = $request_characters;
+        }
+
+        if ($analysis_mode !== '') {
+            $request_meta['analysis_mode'] = $analysis_mode;
+        }
+
+        if ($request_meta !== []) {
+            $error_data['request_meta'] = AnalysisErrorDebug::normalize_request_meta($request_meta);
+        }
+
+        return new \WP_Error(
+            (string) $error->get_error_code(),
+            $error->get_error_message(),
+            $error_data
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @param array<string, mixed> $ai_result
+     */
+    private function apply_request_details_to_result(array &$result, array $ai_result, string $analysis_mode): void {
+        $meta = is_array($ai_result['request_meta'] ?? null)
+            ? $ai_result['request_meta']
+            : [];
+
+        if ($this->last_request_characters !== null && $this->last_request_characters > 0) {
+            $meta['request_characters'] = $this->last_request_characters;
+        }
+
+        if ($analysis_mode !== '') {
+            $meta['analysis_mode'] = $analysis_mode;
+        }
+
+        if ($meta === [] && isset($ai_result['usage'])) {
+            $meta = [
+                'tokens_used' => (int) ($ai_result['usage']['total_tokens'] ?? 0),
+                'prompt_tokens' => (int) ($ai_result['usage']['prompt_tokens'] ?? 0),
+                'completion_tokens' => (int) ($ai_result['usage']['completion_tokens'] ?? 0),
+                'model_used' => (string) ($ai_result['model'] ?? ''),
+                'provider_used' => (string) ($ai_result['provider'] ?? ''),
+            ];
+        }
+
+        $normalized = AnalysisErrorDebug::normalize_request_meta($meta);
+        if ($normalized === null) {
+            return;
+        }
+
+        foreach ($normalized as $key => $value) {
+            $result[$key] = $value;
+        }
+    }
+
+    private function record_request_characters( string $text ): void {
+        $length = mb_strlen( $text, 'UTF-8' );
+        $this->last_request_characters = $length > 0 ? $length : null;
     }
 
     /**

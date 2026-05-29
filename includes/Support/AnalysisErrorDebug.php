@@ -77,7 +77,7 @@ final class AnalysisErrorDebug {
 
 	/**
 	 * @param array<string, mixed>|null $request_meta
-	 * @return array{tokens_used: int, model_used: string, provider_used: string}|null
+	 * @return array<string, int|string>|null
 	 */
 	public static function normalize_request_meta( ?array $request_meta ): ?array {
 		if ( $request_meta === null || $request_meta === array() ) {
@@ -85,16 +85,34 @@ final class AnalysisErrorDebug {
 		}
 
 		$tokens = $request_meta['tokens_used'] ?? $request_meta['total_tokens'] ?? 0;
-
-		return array(
-			'tokens_used'    => (int) $tokens,
-			'model_used'     => (string) ( $request_meta['model_used'] ?? $request_meta['model'] ?? '' ),
-			'provider_used'  => (string) ( $request_meta['provider_used'] ?? $request_meta['provider'] ?? '' ),
+		$normalized = array(
+			'tokens_used'         => (int) $tokens,
+			'prompt_tokens'       => (int) ( $request_meta['prompt_tokens'] ?? 0 ),
+			'completion_tokens'   => (int) ( $request_meta['completion_tokens'] ?? 0 ),
+			'model_used'          => (string) ( $request_meta['model_used'] ?? $request_meta['model'] ?? '' ),
+			'model_name'          => (string) ( $request_meta['model_name'] ?? '' ),
+			'provider_used'       => (string) ( $request_meta['provider_used'] ?? $request_meta['provider'] ?? '' ),
+			'provider_name'       => (string) ( $request_meta['provider_name'] ?? '' ),
+			'finish_reason'       => (string) ( $request_meta['finish_reason'] ?? '' ),
+			'analysis_mode'       => (string) ( $request_meta['analysis_mode'] ?? '' ),
 		);
+
+		foreach ( array( 'request_characters', 'response_characters', 'duration_ms' ) as $numeric_key ) {
+			if ( ! isset( $request_meta[ $numeric_key ] ) ) {
+				continue;
+			}
+
+			$value = (int) $request_meta[ $numeric_key ];
+			if ( $value > 0 ) {
+				$normalized[ $numeric_key ] = $value;
+			}
+		}
+
+		return $normalized;
 	}
 
 	/**
-	 * @return array{tokens_used: int, model_used: string, provider_used: string}|null
+	 * @return array{tokens_used: int, model_used: string, provider_used: string, request_characters?: int}|null
 	 */
 	public static function request_meta_from_wp_error( ?\WP_Error $error ): ?array {
 		if ( ! $error instanceof \WP_Error ) {

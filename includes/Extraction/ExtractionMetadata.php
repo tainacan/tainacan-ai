@@ -1,6 +1,8 @@
 <?php
 namespace Tainacan\AI\Extraction;
 
+use Tainacan\AI\Support\AnalysisLimits;
+
 use Tainacan\AI\Support\DebugLog;
 
 if (!defined('ABSPATH')) {
@@ -18,7 +20,8 @@ class ExtractionMetadata {
 
     public const META_KEY = 'tainacan_ai_exclude';
     public const POST_TYPE = 'tainacan-metadatum';
-    public const TAXONOMY_ALLOWED_VALUES_LIMIT = 100;
+    /** @deprecated Use AnalysisLimits::DEFAULT_TAXONOMY_ALLOWED_VALUES_LIMIT */
+    public const TAXONOMY_ALLOWED_VALUES_LIMIT = AnalysisLimits::DEFAULT_TAXONOMY_ALLOWED_VALUES_LIMIT;
 
     private static ?self $instance = null;
 
@@ -701,7 +704,7 @@ class ExtractionMetadata {
     private function get_ranked_taxonomy_allowed_value_options(int $taxonomy_id): array {
         $limit = (int) apply_filters(
             'tainacan_ai_allowed_value_options_limit',
-            self::TAXONOMY_ALLOWED_VALUES_LIMIT,
+            AnalysisLimits::get_taxonomy_allowed_values_limit(),
             $taxonomy_id
         );
         $limit = max(1, $limit);
@@ -934,6 +937,24 @@ class ExtractionMetadata {
             'Use label only when a human-readable display differs from value (for example taxonomy names for term IDs).' . "\n" .
             'When evidence is insufficient or ambiguous: set value to null, evidence to null or omitted.' . "\n" .
             'Output must be ONLY JSON (no markdown, no comments, no prose).';
+    }
+
+    /**
+     * Final reminder appended after the document body in text analysis prompts.
+     *
+     * @param string[] $slugs
+     */
+    public function build_response_closing_reminder(array $slugs): string {
+        if ($slugs === []) {
+            return 'RESPONSE FORMAT (mandatory)' . "\n" .
+                'Return ONLY one JSON object using the FIELD FORMAT rules above.' . "\n" .
+                'No markdown, no code fences, no prose summary, and no explanations.';
+        }
+
+        return 'RESPONSE FORMAT (mandatory — after reading the document above)' . "\n" .
+            'Return ONLY one JSON object with exactly these keys:' . "\n" .
+            implode(', ', $slugs) . "\n" .
+            'Follow the FIELD FORMAT rules already given. No markdown, no code fences, no prose summary, and no explanations.';
     }
 
 }

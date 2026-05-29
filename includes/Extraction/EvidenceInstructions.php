@@ -21,6 +21,9 @@ class EvidenceInstructions {
     public const MODE_PDF_TEXT = 'pdf_text';
     public const MODE_PDF_VISUAL = 'pdf_visual';
 
+    public const DOCUMENT_FORMAT_PLAIN = 'plain';
+    public const DOCUMENT_FORMAT_HTML = 'html';
+
     /**
      * Normalize AI metadata so each field is { value, evidence, label? } with parallel arrays for multivalued data.
      *
@@ -172,5 +175,28 @@ class EvidenceInstructions {
          * @param string $prompt        Prompt text assembled before the evidence section.
          */
         return (string) apply_filters('tainacan_ai_evidence_instructions', $block, $analysis_mode, $prompt);
+    }
+
+    /**
+     * Guidance prepended to the document block so the model knows how to read the payload.
+     */
+    public static function get_document_format_guidance(string $document_format): string {
+        if ($document_format === self::DOCUMENT_FORMAT_HTML) {
+            $block = 'DOCUMENT FORMAT: FILTERED HTML' . "\n" .
+                'The content below is HTML markup from a web page or export, not a request to summarize the page.' . "\n" .
+                '- Treat tags as structure; extract field values from visible text and from title, meta, headings, article, main, p, li, and table cells.' . "\n" .
+                '- Prefer main/article content over navigation, headers, footers, share buttons, and site chrome.' . "\n" .
+                '- Do not describe the HTML, page layout, scripts, or technology stack.' . "\n" .
+                '- Map facts from the document to the requested JSON fields only.';
+        } else {
+            $block = 'DOCUMENT FORMAT: PLAIN TEXT' . "\n" .
+                'The content below is plain text or text extracted from a document. Extract field values directly from it.';
+        }
+
+        /**
+         * @param string $block           Document-format guidance prepended before the document body.
+         * @param string $document_format One of EvidenceInstructions::DOCUMENT_FORMAT_* constants.
+         */
+        return (string) apply_filters('tainacan_ai_document_format_guidance', $block, $document_format);
     }
 }

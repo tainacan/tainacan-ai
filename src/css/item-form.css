@@ -972,10 +972,60 @@
 }
 
 .tainacan-ai-prompt-document-preview-truncated {
-    margin: 8px 0 0;
-    font-size: 11px;
-    color: var(--tainacan-ai-text-light);
-    font-style: italic;
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #fff8e5;
+    border: 1px solid #f0dba8;
+    color: #6b4f1d;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.tainacan-ai-processing-warnings {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #f0dba8;
+    background: #fffaf0;
+    color: #5c4a1f;
+}
+
+.tainacan-ai-processing-warnings-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.tainacan-ai-processing-warnings-title .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.tainacan-ai-processing-warnings-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.tainacan-ai-processing-warning {
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.tainacan-ai-processing-warning + .tainacan-ai-processing-warning {
+    margin-top: 4px;
+}
+
+.tainacan-ai-processing-warning.is-info {
+    color: #3f4c5a;
+}
+
+.tainacan-ai-processing-warning.is-warning {
+    color: #6b4f1d;
 }
 
 .tainacan-ai-prompt-document-preview-content {
