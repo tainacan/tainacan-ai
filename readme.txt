@@ -4,7 +4,7 @@ Tags: tainacan, ai, cataloging, museums, image-analysis
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -131,6 +131,12 @@ You can configure multiple connectors in WordPress; this plugin does not maintai
 4. Document analysis in the item edit form
 
 == Changelog ==
+
+= 0.2.0 =
+* Redesigned sidebar interface with improved loading state, error handling, and debug information
+* Advanced debugging mode for prompt visibility and per-run overrides
+* Document HTML content filtering
+* Settings for maximum document characters and PDF visual pages
 
 = 0.1.0 =
 * WordPress AI client and Connectors integration
