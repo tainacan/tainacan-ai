@@ -127,6 +127,7 @@ class AnalysisPromptComposer {
             '- Use value: null when there is no support in the document.' . "\n" .
             '- If field_guidance is missing, infer field intent from label and type.' . "\n" .
             '- Write evidence as a short, objective source note (quote, page, region, heading, or label).' . "\n" .
-            '- Process internally: analyze, match fields, validate, output JSON only.' . "\n";
+            '- Process internally: analyze, match fields, validate, output JSON only.' . "\n" .
+            '- Never summarize, explain, or comment on the document; return the JSON object only.' . "\n";
     }
 }

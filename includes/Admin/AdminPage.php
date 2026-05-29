@@ -2,6 +2,7 @@
 namespace Tainacan\AI\Admin;
 
 use Tainacan\AI\Extraction\PromptTemplates;
+use Tainacan\AI\Support\AnalysisLimits;
 use Tainacan\AI\Support\CoreAI;
 
 if (!defined('ABSPATH')) {
@@ -146,6 +147,24 @@ class AdminPage extends \Tainacan\Pages {
             $options['temperature'] = max(
                 $temperature_bounds['min'],
                 min($temperature_bounds['max'], (float) $input['temperature'])
+            );
+        }
+
+        if (isset($input['document_max_chars'])) {
+            $options['document_max_chars'] = AnalysisLimits::sanitize_document_max_chars(
+                (int) $input['document_max_chars']
+            );
+        }
+
+        if (isset($input['pdf_visual_max_pages'])) {
+            $options['pdf_visual_max_pages'] = AnalysisLimits::sanitize_pdf_visual_max_pages(
+                (int) $input['pdf_visual_max_pages']
+            );
+        }
+
+        if (isset($input['taxonomy_allowed_values_limit'])) {
+            $options['taxonomy_allowed_values_limit'] = AnalysisLimits::sanitize_taxonomy_allowed_values_limit(
+                (int) $input['taxonomy_allowed_values_limit']
             );
         }
 

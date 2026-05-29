@@ -29,6 +29,15 @@ $tainacan_ai_temperature_value = max(
         (float) ($options['temperature'] ?? 0.1)
     )
 );
+$tainacan_ai_document_max_chars_value = \Tainacan\AI\Support\AnalysisLimits::sanitize_document_max_chars(
+    (int) ($options['document_max_chars'] ?? \Tainacan\AI\Support\AnalysisLimits::DEFAULT_DOCUMENT_MAX_CHARS)
+);
+$tainacan_ai_pdf_visual_max_pages_value = \Tainacan\AI\Support\AnalysisLimits::sanitize_pdf_visual_max_pages(
+    (int) ($options['pdf_visual_max_pages'] ?? \Tainacan\AI\Support\AnalysisLimits::DEFAULT_PDF_VISUAL_MAX_PAGES)
+);
+$tainacan_ai_taxonomy_allowed_values_limit_value = \Tainacan\AI\Support\AnalysisLimits::sanitize_taxonomy_allowed_values_limit(
+    (int) ($options['taxonomy_allowed_values_limit'] ?? \Tainacan\AI\Support\AnalysisLimits::DEFAULT_TAXONOMY_ALLOWED_VALUES_LIMIT)
+);
 
 // Check dependencies
 $tainacan_ai_has_exif = function_exists('exif_read_data');
@@ -272,6 +281,65 @@ $tainacan_ai_prompt_templates = \Tainacan\AI\Extraction\PromptTemplates::get_tem
                                     max="604800"
                                 />
                                 <p class="description"><?php esc_html_e('0 to disable.', 'tainacan-ai'); ?></p>
+                            </div>
+
+                            <div class="tainacan-ai-field">
+                                <label for="document_max_chars">
+                                    <?php esc_html_e('Document text limit (characters)', 'tainacan-ai'); ?>
+                                </label>
+                                <input
+                                    type="number"
+                                    id="document_max_chars"
+                                    name="tainacan_ai_options[document_max_chars]"
+                                    value="<?php echo esc_attr((string) $tainacan_ai_document_max_chars_value); ?>"
+                                    min="<?php echo esc_attr((string) \Tainacan\AI\Support\AnalysisLimits::DOCUMENT_MAX_CHARS_MIN); ?>"
+                                    max="<?php echo esc_attr((string) \Tainacan\AI\Support\AnalysisLimits::DOCUMENT_MAX_CHARS_MAX); ?>"
+                                    step="1000"
+                                />
+                                <p class="description">
+                                    <?php
+                                    printf(
+                                        /* translators: 1: minimum non-zero value, 2: maximum value */
+                                        esc_html__('Applies to plain text, HTML, and PDF text extraction. Use 0 for no limit, or %1$s–%2$s characters.', 'tainacan-ai'),
+                                        esc_html(number_format_i18n(1000)),
+                                        esc_html(number_format_i18n(\Tainacan\AI\Support\AnalysisLimits::DOCUMENT_MAX_CHARS_MAX))
+                                    );
+                                    ?>
+                                </p>
+                            </div>
+
+                            <div class="tainacan-ai-field">
+                                <label for="pdf_visual_max_pages">
+                                    <?php esc_html_e('PDF visual analysis page limit', 'tainacan-ai'); ?>
+                                </label>
+                                <input
+                                    type="number"
+                                    id="pdf_visual_max_pages"
+                                    name="tainacan_ai_options[pdf_visual_max_pages]"
+                                    value="<?php echo esc_attr((string) $tainacan_ai_pdf_visual_max_pages_value); ?>"
+                                    min="<?php echo esc_attr((string) \Tainacan\AI\Support\AnalysisLimits::PDF_VISUAL_MAX_PAGES_MIN); ?>"
+                                    max="<?php echo esc_attr((string) \Tainacan\AI\Support\AnalysisLimits::PDF_VISUAL_MAX_PAGES_MAX); ?>"
+                                />
+                                <p class="description">
+                                    <?php esc_html_e('Maximum number of PDF pages converted to images for scanned-document analysis.', 'tainacan-ai'); ?>
+                                </p>
+                            </div>
+
+                            <div class="tainacan-ai-field">
+                                <label for="taxonomy_allowed_values_limit">
+                                    <?php esc_html_e('Taxonomy terms in prompt (per field)', 'tainacan-ai'); ?>
+                                </label>
+                                <input
+                                    type="number"
+                                    id="taxonomy_allowed_values_limit"
+                                    name="tainacan_ai_options[taxonomy_allowed_values_limit]"
+                                    value="<?php echo esc_attr((string) $tainacan_ai_taxonomy_allowed_values_limit_value); ?>"
+                                    min="<?php echo esc_attr((string) \Tainacan\AI\Support\AnalysisLimits::TAXONOMY_ALLOWED_VALUES_LIMIT_MIN); ?>"
+                                    max="<?php echo esc_attr((string) \Tainacan\AI\Support\AnalysisLimits::TAXONOMY_ALLOWED_VALUES_LIMIT_MAX); ?>"
+                                />
+                                <p class="description">
+                                    <?php esc_html_e('Maximum taxonomy terms listed in the prompt for each field. Larger vocabularies may be truncated.', 'tainacan-ai'); ?>
+                                </p>
                             </div>
                         </div>
 
