@@ -21,6 +21,10 @@ let hasTainacanAiNonceMiddleware = false;
 			lastResult: null,
 			lastPrompt: null,
 			lastDocumentBody: null,
+			lastPromptDebug: null,
+			lastRunId: null,
+			lastRunStartedAt: null,
+			lastFromCache: false,
 			activeSidebarTab: 'results',
 			panelOpen: false,
 			isItemEditContext: false,
@@ -146,6 +150,24 @@ let hasTainacanAiNonceMiddleware = false;
                     `
 				: '';
 
+			const requestExportsBlock = TainacanAI.advancedDebug
+				? `
+                            <div class="tainacan-ai-sidebar-actions">
+                                <div class="tainacan-ai-sidebar-meta-summary">${ TainacanAI.texts?.exportSubheader || 'Export' }</div>
+                                <div class="tainacan-ai-sidebar-actions-right">
+                                    <button type="button" class="button button-secondary" id="tainacan-ai-download-analysis-csv" disabled>
+                                        <span class="dashicons dashicons-download"></span>
+                                        ${ TainacanAI.texts?.downloadAnalysisCsv || 'Download analysis.csv' }
+                                    </button>
+                                    <button type="button" class="button button-secondary" id="tainacan-ai-download-prompt-txt" disabled>
+                                        <span class="dashicons dashicons-download"></span>
+                                        ${ TainacanAI.texts?.downloadPromptTxt || 'Download prompt.txt' }
+                                    </button>
+                                </div>
+                            </div>
+                    `
+				: '';
+
 			const panelHtml = `
                 <div class="tainacan-ai-sidebar-panel">
                     <div class="tainacan-ai-sidebar-header">
@@ -183,12 +205,16 @@ let hasTainacanAiNonceMiddleware = false;
 										TainacanAI.texts?.fillAllTooltip ||
 										'Automatically fills Tainacan fields with extracted values'
 									}">
-                                        <span class="dashicons dashicons-download"></span>
+                                        <span class="dashicons dashicons-yes"></span>
                                         ${ TainacanAI.texts?.fillAll || 'Fill all' }
                                     </button>
                                     <button type="button" class="button button-secondary" id="tainacan-ai-panel-copy-all">
                                         <span class="dashicons dashicons-admin-page"></span>
                                         ${ TainacanAI.texts?.copyAll || 'Copy all' }
+                                    </button>
+                                    <button type="button" class="button button-secondary" id="tainacan-ai-panel-download-results-csv" disabled title="${ TainacanAI.texts?.downloadResultsCsv || 'Download results.csv' }">
+                                        <span class="dashicons dashicons-download"></span>
+                                        ${ TainacanAI.texts?.downloadResultsCsvShort || 'results.csv' }
                                     </button>
                                 </div>
                             </div>
@@ -200,6 +226,7 @@ let hasTainacanAiNonceMiddleware = false;
                             </div>
                         </div>
                         <div class="tainacan-ai-sidebar-tab-panel" id="tainacan-ai-tab-panel-request" data-tab-panel="request" role="tabpanel" hidden>
+                            ${ requestExportsBlock }
                             <div class="tainacan-ai-sidebar-tab-panel-scroll">
                                 <dl class="tainacan-ai-detail-list tainacan-ai-request-details">
                                     <div class="tainacan-ai-detail-row">
@@ -261,6 +288,9 @@ let hasTainacanAiNonceMiddleware = false;
 			this.elements.promptDocumentPreviewSummary = $( '#tainacan-ai-prompt-document-preview-summary' );
 			this.elements.promptDocumentPreviewTruncated = $( '#tainacan-ai-prompt-document-preview-truncated' );
 			this.elements.promptDocumentPreviewContent = $( '#tainacan-ai-prompt-document-preview-content' );
+			this.elements.downloadResultsCsv = $( '#tainacan-ai-panel-download-results-csv' );
+			this.elements.downloadAnalysisCsv = $( '#tainacan-ai-download-analysis-csv' );
+			this.elements.downloadPromptTxt = $( '#tainacan-ai-download-prompt-txt' );
 		},
 
 		/**
@@ -297,8 +327,36 @@ let hasTainacanAiNonceMiddleware = false;
 			$( document ).on(
 				'click',
 				'#tainacan-ai-copy-all, #tainacan-ai-panel-copy-all',
-				() => {
+				( e ) => {
+					e.preventDefault();
 					this.copyAllValues();
+				}
+			);
+
+			$( document ).on(
+				'click',
+				'#tainacan-ai-panel-download-results-csv',
+				( e ) => {
+					e.preventDefault();
+					this.downloadResultsCsv();
+				}
+			);
+
+			$( document ).on(
+				'click',
+				'#tainacan-ai-download-analysis-csv',
+				( e ) => {
+					e.preventDefault();
+					this.downloadAnalysisCsv();
+				}
+			);
+
+			$( document ).on(
+				'click',
+				'#tainacan-ai-download-prompt-txt',
+				( e ) => {
+					e.preventDefault();
+					this.downloadPromptTxt();
 				}
 			);
 
@@ -433,6 +491,10 @@ let hasTainacanAiNonceMiddleware = false;
 			this.state.lastAnalysisError = null;
 			this.state.lastPrompt = null;
 			this.state.lastDocumentBody = null;
+			this.state.lastPromptDebug = null;
+			this.state.lastRunId = null;
+			this.state.lastRunStartedAt = null;
+			this.state.lastFromCache = false;
 			this.state.activeSidebarTab = 'results';
 			this.state.attachmentId = null;
 			this.state.documentInfo = null;
@@ -443,6 +505,7 @@ let hasTainacanAiNonceMiddleware = false;
 			this.updateRequestTabDetails( null );
 			this.updateRequestTabAvailability( false );
 			this.updateImageDataTab( null );
+			this.updateExportButtonsState();
 
 			// Hide indicator
 			if ( this.elements.panelIndicator ) {
@@ -706,6 +769,7 @@ let hasTainacanAiNonceMiddleware = false;
 				String( overridePrompt ).trim() !== '';
 
 			this.state.isAnalyzing = true;
+			this.beginAnalysisRun();
 			this.showLoading();
 
 			try {
@@ -727,6 +791,8 @@ let hasTainacanAiNonceMiddleware = false;
 				} );
 
 				this.state.lastResult = response.result;
+				this.state.lastFromCache = Boolean( response.from_cache );
+				this.state.lastRunId = this.resolveRunId( response.result );
 				if ( response.prompt_debug && ! hasOverride ) {
 					this.applyPromptDebugFromPayload( response.prompt_debug );
 				}
@@ -753,9 +819,11 @@ let hasTainacanAiNonceMiddleware = false;
 						console.groupEnd();
 				}
 				this.displayResults( response.result, response.from_cache );
+				this.updateExportButtonsState();
 			} catch ( error ) {
 				console.error( '[TainacanAI] Analysis error:', error );
 				this.displayAnalysisError( error );
+				this.updateExportButtonsState();
 			} finally {
 				this.state.isAnalyzing = false;
 				this.hideLoading();
@@ -845,6 +913,7 @@ let hasTainacanAiNonceMiddleware = false;
 
 			// Open sidebar panel automatically
 			this.openSidebarPanel();
+			this.updateExportButtonsState();
 		},
 
 		/**
@@ -884,6 +953,7 @@ let hasTainacanAiNonceMiddleware = false;
 					detailRows: [],
 					debugDetails: null,
 					requestMeta: null,
+					processingWarnings: [],
 					raw: null,
 				};
 			}
@@ -948,6 +1018,10 @@ let hasTainacanAiNonceMiddleware = false;
 				appendDetail( this.formatLabel( key ), value );
 			} );
 
+			const processingWarnings = Array.isArray( data.processing?.warnings )
+				? data.processing.warnings
+				: [];
+
 			return {
 				message,
 				status,
@@ -955,6 +1029,7 @@ let hasTainacanAiNonceMiddleware = false;
 				detailRows,
 				debugDetails,
 				requestMeta,
+				processingWarnings,
 				raw: response || error || null,
 			};
 		},
@@ -964,12 +1039,16 @@ let hasTainacanAiNonceMiddleware = false;
 				return null;
 			}
 
-			const meta = data.request_meta;
-			if ( ! meta || typeof meta !== 'object' ) {
-				return null;
-			}
+			const nested =
+				data.request_meta && typeof data.request_meta === 'object'
+					? data.request_meta
+					: {};
 
-			return this.normalizeRequestDetails( meta );
+			return this.normalizeRequestDetails( {
+				...nested,
+				...data,
+				request_meta: nested,
+			} );
 		},
 
 		normalizeRequestDetails( source ) {
@@ -1311,6 +1390,7 @@ let hasTainacanAiNonceMiddleware = false;
 			this.updateRequestTabAvailability(
 				this.computeRequestTabHasData( parsed.requestMeta )
 			);
+			this.updateExportButtonsState();
 
 			const detailHtml = parsed.detailRows
 				.map(
@@ -1824,7 +1904,7 @@ let hasTainacanAiNonceMiddleware = false;
 												TainacanAI.texts?.fillField ||
 												'Fill metadatum'
 											}">
-                                        <span class="dashicons dashicons-download"></span>
+                                        <span class="dashicons dashicons-yes"></span>
                                     </button>
                                     `
 											: ''
@@ -3066,6 +3146,492 @@ let hasTainacanAiNonceMiddleware = false;
 			}
 		},
 
+		beginAnalysisRun() {
+			this.state.lastRunId = String( Date.now() );
+			this.state.lastRunStartedAt = new Date().toISOString();
+			this.state.lastFromCache = false;
+			this.state.lastAnalysisError = null;
+		},
+
+		resolveRunId( result ) {
+			if ( result?.run_id !== null && result?.run_id !== undefined ) {
+				const runId = String( result.run_id ).trim();
+				if ( runId !== '' ) {
+					return runId;
+				}
+			}
+
+			const analyzedAt = result?.analyzed_at;
+			if ( typeof analyzedAt === 'string' && analyzedAt.trim() !== '' ) {
+				const digits = analyzedAt.replace( /\D/g, '' );
+				if ( digits !== '' ) {
+					return digits;
+				}
+			}
+
+			return String( Date.now() );
+		},
+
+		buildAnalysisExportRow() {
+			const emptyRow = {
+				outcome: '',
+				error_code: '',
+				error_message: '',
+				http_status: '',
+				run_id: this.state.lastRunId || '',
+				analyzed_at: '',
+				from_cache: this.state.lastFromCache ? 'true' : 'false',
+				item_id: this.state.itemId ?? '',
+				attachment_id: this.state.attachmentId ?? '',
+				collection_id: this.state.collectionId ?? '',
+				document_type: this.state.documentInfo?.type || '',
+				extraction_method: '',
+				analysis_mode: '',
+				provider_used: '',
+				provider_name: '',
+				model_used: '',
+				model_name: '',
+				finish_reason: '',
+				tokens_used: '',
+				prompt_tokens: '',
+				completion_tokens: '',
+				request_characters: '',
+				response_characters: '',
+				duration_ms: '',
+				processing_warnings: '',
+			};
+
+			const applyRequestMeta = ( row, metaSource ) => {
+				const meta = this.normalizeRequestDetails( metaSource );
+				if ( ! meta ) {
+					return row;
+				}
+
+				return {
+					...row,
+					analysis_mode: meta.analysis_mode || row.analysis_mode,
+					provider_used: meta.provider_used || row.provider_used,
+					provider_name: meta.provider_name || row.provider_name,
+					model_used: meta.model_used || row.model_used,
+					model_name: meta.model_name || row.model_name,
+					finish_reason: meta.finish_reason || row.finish_reason,
+					tokens_used:
+						meta.tokens_used > 0
+							? String( meta.tokens_used )
+							: row.tokens_used,
+					prompt_tokens:
+						meta.prompt_tokens > 0
+							? String( meta.prompt_tokens )
+							: row.prompt_tokens,
+					completion_tokens:
+						meta.completion_tokens > 0
+							? String( meta.completion_tokens )
+							: row.completion_tokens,
+					request_characters:
+						meta.request_characters > 0
+							? String( meta.request_characters )
+							: row.request_characters,
+					response_characters:
+						meta.response_characters > 0
+							? String( meta.response_characters )
+							: row.response_characters,
+					duration_ms:
+						meta.duration_ms > 0
+							? String( meta.duration_ms )
+							: row.duration_ms,
+				};
+			};
+
+			if ( this.state.lastResult ) {
+				const result = this.state.lastResult;
+				let row = {
+					...emptyRow,
+					outcome: 'success',
+					run_id: this.state.lastRunId || this.resolveRunId( result ),
+					analyzed_at: result.analyzed_at || this.state.lastRunStartedAt || '',
+					from_cache: this.state.lastFromCache ? 'true' : 'false',
+					document_type: result.document_type || emptyRow.document_type,
+					extraction_method: result.extraction_method || '',
+					processing_warnings: this.formatProcessingWarningsForExport(
+						result.processing?.warnings
+					),
+				};
+				row = applyRequestMeta( row, result );
+				return row;
+			}
+
+			const parsedError = this.state.lastAnalysisError;
+			if ( parsedError ) {
+				let row = {
+					...emptyRow,
+					outcome: 'error',
+					error_code: parsedError.code || '',
+					error_message: parsedError.message || '',
+					http_status:
+						parsedError.status !== null &&
+						parsedError.status !== undefined
+							? String( parsedError.status )
+							: '',
+					analyzed_at: this.state.lastRunStartedAt || '',
+					from_cache: 'false',
+					analysis_mode:
+						this.state.lastPromptDebug?.analysis_mode || '',
+				};
+				row = applyRequestMeta( row, parsedError.requestMeta );
+				if ( parsedError.processingWarnings ) {
+					row.processing_warnings =
+						this.formatProcessingWarningsForExport(
+							parsedError.processingWarnings
+						);
+				}
+				return row;
+			}
+
+			return emptyRow;
+		},
+
+		updateExportButtonsState() {
+			this.reconcileSidebarElements();
+
+			const runId = this.state.lastRunId;
+			const hasRun = Boolean( runId && String( runId ).trim() );
+			const hasMetadata = Boolean(
+				this.state.lastResult?.ai_metadata &&
+					typeof this.state.lastResult.ai_metadata === 'object'
+			);
+
+			if ( this.elements.downloadResultsCsv?.length ) {
+				this.elements.downloadResultsCsv.prop(
+					'disabled',
+					! ( hasRun && hasMetadata )
+				);
+			}
+
+			if ( this.elements.downloadAnalysisCsv?.length ) {
+				const canExportAnalysis = Boolean(
+					hasRun &&
+						( this.state.lastResult || this.state.lastAnalysisError )
+				);
+				this.elements.downloadAnalysisCsv.prop(
+					'disabled',
+					! canExportAnalysis
+				);
+			}
+
+			if ( this.elements.downloadPromptTxt?.length ) {
+				const hasPromptSource = Boolean(
+					( this.state.lastPromptDebug &&
+						! this.state.lastPromptDebug.error ) ||
+						( this.state.lastPrompt &&
+							String( this.state.lastPrompt ).trim() )
+				);
+				this.elements.downloadPromptTxt.prop(
+					'disabled',
+					! ( hasRun && hasPromptSource )
+				);
+			}
+		},
+
+		escapeCsvCell( value ) {
+			const text =
+				value === null || value === undefined ? '' : String( value );
+			if (
+				text.includes( '"' ) ||
+				text.includes( ',' ) ||
+				text.includes( '\n' ) ||
+				text.includes( '\r' )
+			) {
+				return `"${ text.replace( /"/g, '""' ) }"`;
+			}
+			return text;
+		},
+
+		formatExportScalar( value ) {
+			if ( value === null || value === undefined ) {
+				return '';
+			}
+			if ( typeof value === 'boolean' ) {
+				return value ? 'true' : 'false';
+			}
+			if ( typeof value === 'object' ) {
+				return JSON.stringify( value );
+			}
+			return String( value );
+		},
+
+		formatExportFieldValue( value ) {
+			if ( Array.isArray( value ) ) {
+				return value
+					.map( ( entry ) => this.formatExportScalar( entry ) )
+					.filter( ( entry ) => entry !== '' )
+					.join( '|' );
+			}
+			return this.formatExportScalar( value );
+		},
+
+		formatExportEvidence( evidence ) {
+			if ( evidence === null || evidence === undefined ) {
+				return '';
+			}
+			if ( Array.isArray( evidence ) ) {
+				return evidence
+					.map( ( entry ) => this.formatExportScalar( entry ) )
+					.filter( ( entry ) => entry !== '' )
+					.join( '|' );
+			}
+			return this.formatExportScalar( evidence );
+		},
+
+		getExtractionFieldSlugs() {
+			const fromConfig = Object.keys( TainacanAI.extractionFields || {} );
+			if ( fromConfig.length > 0 ) {
+				return fromConfig;
+			}
+
+			return Object.keys( this.state.lastResult?.ai_metadata || {} );
+		},
+
+		buildResultsCsv() {
+			const slugs = this.getExtractionFieldSlugs();
+			const metadata = this.state.lastResult?.ai_metadata || {};
+			const headers = [];
+			const cells = [];
+
+			slugs.forEach( ( slug ) => {
+				headers.push( slug, `${ slug }_evidence` );
+				const entry = metadata[ slug ];
+				if ( entry === undefined || entry === null ) {
+					cells.push( '', '' );
+					return;
+				}
+				const { value, evidence } = this.parseFieldEntry( entry );
+				cells.push(
+					this.formatExportFieldValue( value ),
+					this.formatExportEvidence( evidence )
+				);
+			} );
+
+			return `${ headers.map( ( h ) => this.escapeCsvCell( h ) ).join( ',' ) }\n${ cells.map( ( c ) => this.escapeCsvCell( c ) ).join( ',' ) }`;
+		},
+
+		formatProcessingWarningsForExport( warnings ) {
+			if ( ! Array.isArray( warnings ) || warnings.length === 0 ) {
+				return '';
+			}
+
+			return warnings
+				.map( ( warning ) => {
+					const code =
+						typeof warning?.code === 'string' ? warning.code : '';
+					const message =
+						typeof warning?.message === 'string'
+							? warning.message
+							: '';
+					if ( code && message ) {
+						return `${ code }: ${ message }`;
+					}
+					return code || message;
+				} )
+				.filter( Boolean )
+				.join( '|' );
+		},
+
+		buildAnalysisCsv() {
+			const columns = [
+				'outcome',
+				'error_code',
+				'error_message',
+				'http_status',
+				'run_id',
+				'analyzed_at',
+				'from_cache',
+				'item_id',
+				'attachment_id',
+				'collection_id',
+				'document_type',
+				'extraction_method',
+				'analysis_mode',
+				'provider_used',
+				'provider_name',
+				'model_used',
+				'model_name',
+				'finish_reason',
+				'tokens_used',
+				'prompt_tokens',
+				'completion_tokens',
+				'request_characters',
+				'response_characters',
+				'duration_ms',
+				'processing_warnings',
+			];
+
+			const row = this.buildAnalysisExportRow();
+			const values = columns.map( ( column ) => row[ column ] ?? '' );
+
+			return `${ columns.map( ( c ) => this.escapeCsvCell( c ) ).join( ',' ) }\n${ values.map( ( v ) => this.escapeCsvCell( v ) ).join( ',' ) }`;
+		},
+
+		buildPromptTxt() {
+			const sections = [];
+			const promptDebug = this.state.lastPromptDebug;
+			const runId = this.state.lastRunId || '';
+
+			if ( promptDebug && ! promptDebug.error ) {
+				const systemInstruction =
+					promptDebug.system_instruction ||
+					promptDebug.instruction_prompt ||
+					'';
+				if ( systemInstruction ) {
+					sections.push(
+						'=== System instruction ===',
+						String( systemInstruction )
+					);
+				}
+
+				const userPrompt = promptDebug.user_prompt || '';
+				if ( userPrompt ) {
+					sections.push( '=== User message ===', String( userPrompt ) );
+				}
+
+				const documentBody = promptDebug.document_body;
+				const docType = String( documentBody?.type || '' );
+				const docContent =
+					documentBody?.content === null ||
+					documentBody?.content === undefined
+						? ''
+						: String( documentBody.content );
+
+				if ( docType === 'image' || docType === 'pdf_visual' ) {
+					const attachmentLines = [
+						'=== Attachment ===',
+						promptDebug.attachment_note ||
+							'[Binary content attached to the API request]',
+					];
+					if ( docContent.trim() !== '' ) {
+						attachmentLines.push( docContent.trim() );
+					}
+					sections.push( attachmentLines.join( '\n\n' ) );
+				} else if ( docContent.trim() !== '' ) {
+					const userText = String( userPrompt );
+					if ( ! userText.includes( docContent.trim() ) ) {
+						sections.push(
+							'=== Document ===',
+							docContent.trim()
+						);
+					}
+				}
+			} else if ( this.state.lastPrompt ) {
+				sections.push(
+					'=== System instruction ===',
+					String( this.state.lastPrompt ),
+					'',
+					'[Prompt debug payload was not available for this run.]'
+				);
+				if ( this.elements.promptTextarea?.length ) {
+					const override = this.elements.promptTextarea.val();
+					if ( override && String( override ).trim() ) {
+						sections.push(
+							'=== Prompt editor (current) ===',
+							String( override )
+						);
+					}
+				}
+			}
+
+			const footer = [
+				'---',
+				`run_id: ${ runId }`,
+				`from_cache: ${ this.state.lastFromCache ? 'true' : 'false' }`,
+				`analysis_mode: ${
+					this.state.lastResult?.analysis_mode ||
+					promptDebug?.analysis_mode ||
+					this.state.lastAnalysisError?.requestMeta?.analysis_mode ||
+					''
+				}`,
+				`outcome: ${
+					this.state.lastResult
+						? 'success'
+						: this.state.lastAnalysisError
+							? 'error'
+							: ''
+				}`,
+			];
+			if ( this.state.lastAnalysisError?.code ) {
+				footer.push(
+					`error_code: ${ this.state.lastAnalysisError.code }`
+				);
+			}
+			sections.push( footer.join( '\n' ) );
+
+			return sections.filter( ( part ) => part !== '' ).join( '\n\n' );
+		},
+
+		downloadTextFile( filename, content, mime = 'text/plain;charset=utf-8' ) {
+			const bom = mime.startsWith( 'text/csv' ) ? '\uFEFF' : '';
+			const blob = new Blob( [ bom + content ], { type: mime } );
+			const url = URL.createObjectURL( blob );
+			const link = document.createElement( 'a' );
+			link.href = url;
+			link.download = filename;
+			link.style.display = 'none';
+			document.body.appendChild( link );
+			link.click();
+			link.remove();
+			URL.revokeObjectURL( url );
+		},
+
+		downloadResultsCsv() {
+			if ( ! this.state.lastResult?.ai_metadata ) {
+				this.showToast(
+					TainacanAI.texts?.exportNoData ||
+						'No analysis data to export.'
+				);
+				return;
+			}
+
+			const runId = this.state.lastRunId || this.resolveRunId( this.state.lastResult );
+			this.downloadTextFile(
+				`results-${ runId }.csv`,
+				this.buildResultsCsv(),
+				'text/csv;charset=utf-8'
+			);
+		},
+
+		downloadAnalysisCsv() {
+			if ( ! this.state.lastResult && ! this.state.lastAnalysisError ) {
+				this.showToast(
+					TainacanAI.texts?.exportNoData ||
+						'No analysis data to export.'
+				);
+				return;
+			}
+
+			const runId =
+				this.state.lastRunId ||
+				( this.state.lastResult
+					? this.resolveRunId( this.state.lastResult )
+					: String( Date.now() ) );
+			this.downloadTextFile(
+				`analysis-${ runId }.csv`,
+				this.buildAnalysisCsv(),
+				'text/csv;charset=utf-8'
+			);
+		},
+
+		downloadPromptTxt() {
+			const content = this.buildPromptTxt();
+			if ( ! content.trim() ) {
+				this.showToast(
+					TainacanAI.texts?.exportNoData ||
+						'No analysis data to export.'
+				);
+				return;
+			}
+
+			const runId = this.state.lastRunId || String( Date.now() );
+			this.downloadTextFile( `prompt-${ runId }.txt`, content, 'text/plain;charset=utf-8' );
+		},
+
 		applyPromptDebugFromPayload( promptDebug ) {
 			if ( ! promptDebug || typeof promptDebug !== 'object' ) {
 				return;
@@ -3074,6 +3640,8 @@ let hasTainacanAiNonceMiddleware = false;
 			if ( promptDebug.error ) {
 				return;
 			}
+
+			this.state.lastPromptDebug = promptDebug;
 
 			const instructionPrompt =
 				this.resolveInstructionPromptFromDebug( promptDebug );
@@ -3089,6 +3657,7 @@ let hasTainacanAiNonceMiddleware = false;
 			}
 
 			this.updateRequestTabAvailability();
+			this.updateExportButtonsState();
 		},
 
 		resolveInstructionPromptFromDebug( promptDebug ) {
