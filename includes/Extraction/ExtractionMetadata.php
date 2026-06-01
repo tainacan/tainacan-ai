@@ -43,9 +43,16 @@ class ExtractionMetadata {
             self::POST_TYPE,
             self::META_KEY,
             [
-                'type' => 'string',
+                'type' => 'array',
                 'single' => true,
-                'show_in_rest' => true,
+                'show_in_rest' => [
+                    'schema' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'string',
+                        ],
+                    ],
+                ],
                 'auth_callback' => static function (): bool {
                     return current_user_can('edit_posts');
                 },
@@ -64,8 +71,39 @@ class ExtractionMetadata {
             return true;
         }
 
-        return metadata_exists('post', $id, self::META_KEY)
-            && rest_sanitize_boolean(get_post_meta($id, self::META_KEY, true));
+        if (!metadata_exists('post', $id, self::META_KEY)) {
+            return false;
+        }
+
+        return self::stored_value_is_exclude_flag(get_post_meta($id, self::META_KEY, true));
+    }
+
+    /**
+     * Stored as a single-item array (checkbox REST shape). Legacy rows may still be scalar "1".
+     */
+    public static function stored_value_is_exclude_flag(mixed $stored): bool {
+        if (is_array($stored)) {
+            if ($stored === []) {
+                return false;
+            }
+
+            $stored = reset($stored);
+        }
+
+        if ($stored === '' || $stored === false || $stored === null || $stored === 0 || $stored === '0') {
+            return false;
+        }
+
+        return (bool) rest_sanitize_boolean($stored);
+    }
+
+    /**
+     * Value for post meta and Tainacan admin form hooks (array checks the checkbox).
+     *
+     * @return list<string>
+     */
+    public static function exclude_flag_storage_value(): array {
+        return ['1'];
     }
 
     public function is_enabled(\Tainacan\Entities\Metadatum $metadatum): bool {
