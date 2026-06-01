@@ -449,6 +449,8 @@ class CoreAI {
             $log_scope = CoreAIRequestLogging::begin($log_context);
         }
 
+        $planned_request_meta = [];
+
         try {
             $builder = wp_ai_client_prompt($prompt_text);
 
@@ -485,20 +487,30 @@ class CoreAI {
                 self::apply_vision_model_preferences($builder);
             }
 
+            // Model/provider the SDK will use for the upcoming HTTP request (before generate).
+            $planned_request_meta = self::extract_planned_request_meta_from_builder(
+                $builder,
+                $has_image_input
+            );
+
             $started_at = microtime(true);
 
             // Use result object (we need usage + metadata).
             $result = self::builderGenerateTextResult($builder);
 
             if (is_wp_error($result)) {
-                return $result;
+                return self::enrich_wp_error_request_meta($result, $planned_request_meta);
             }
 
             $raw_text = self::extract_result_text($result);
-            $request_meta = self::finalize_request_meta(
+            $response_meta = self::finalize_request_meta(
                 self::extract_request_meta_from_result($result),
                 $raw_text,
                 $started_at
+            );
+            $request_meta = self::merge_request_meta_prefer_overlay(
+                $planned_request_meta,
+                $response_meta
             );
 
             if ($raw_text === '') {
@@ -540,11 +552,14 @@ class CoreAI {
                 'request_meta' => $request_meta,
             ];
         } catch (\Throwable $e) {
-            return AnalysisErrorDebug::from_throwable(
-                $e,
-                'ai_generation_error',
-                null,
-                500
+            return self::enrich_wp_error_request_meta(
+                AnalysisErrorDebug::from_throwable(
+                    $e,
+                    'ai_generation_error',
+                    null,
+                    500
+                ),
+                $planned_request_meta
             );
         } finally {
             if ($log_scope !== null) {
@@ -786,6 +801,304 @@ class CoreAI {
         }
 
         return '';
+    }
+
+    /**
+     * Resolve provider/model from the prompt builder state (same selection the SDK will use).
+     *
+     * @return array{provider_used?: string, provider_name?: string, model_used?: string, model_name?: string}
+     */
+    private static function extract_planned_request_meta_from_builder(
+        object $builder,
+        bool $prefer_vision
+    ): array {
+        $from_builder = self::extract_request_meta_from_prompt_builder($builder);
+        if ($from_builder !== []) {
+            return $from_builder;
+        }
+
+        return self::resolve_configured_request_meta($prefer_vision);
+    }
+
+    /**
+     * @return array{provider_used?: string, provider_name?: string, model_used?: string, model_name?: string}
+     */
+    private static function extract_request_meta_from_prompt_builder(object $builder): array {
+        $inner = self::unwrap_wp_ai_prompt_builder($builder);
+        if ($inner === null) {
+            return [];
+        }
+
+        if (!class_exists(\WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::class)) {
+            return [];
+        }
+
+        try {
+            $capability = \WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::textGeneration();
+            $reflection = new \ReflectionClass($inner);
+            if (!$reflection->hasMethod('getConfiguredModel')) {
+                return [];
+            }
+
+            $method = $reflection->getMethod('getConfiguredModel');
+            $method->setAccessible(true);
+            $model = $method->invoke($inner, $capability);
+
+            if (!is_object($model)) {
+                return [];
+            }
+
+            return self::extract_request_meta_from_model($model);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    private static function unwrap_wp_ai_prompt_builder(object $builder): ?object {
+        if (class_exists('\WP_AI_Client_Prompt_Builder', false)
+            && $builder instanceof \WP_AI_Client_Prompt_Builder
+        ) {
+            try {
+                $reflection = new \ReflectionClass($builder);
+                if (!$reflection->hasProperty('builder')) {
+                    return null;
+                }
+
+                $property = $reflection->getProperty('builder');
+                $property->setAccessible(true);
+                $inner = $property->getValue($builder);
+
+                return is_object($inner) ? $inner : null;
+            } catch (\ReflectionException $e) {
+                return null;
+            }
+        }
+
+        if ($builder instanceof \WordPress\AiClient\Builders\PromptBuilder) {
+            return $builder;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{provider_used?: string, provider_name?: string, model_used?: string, model_name?: string}
+     */
+    private static function extract_request_meta_from_model(object $model): array {
+        if (!method_exists($model, 'metadata') || !method_exists($model, 'providerMetadata')) {
+            return [];
+        }
+
+        try {
+            $model_meta = $model->metadata();
+            $provider_meta = $model->providerMetadata();
+
+            return self::filter_configured_request_meta(
+                array(
+                    'model_used' => self::maybe_get_meta_id($model_meta),
+                    'model_name' => self::maybe_get_meta_name($model_meta),
+                    'provider_used' => self::maybe_get_meta_id($provider_meta),
+                    'provider_name' => self::maybe_get_meta_name($provider_meta),
+                )
+            );
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Catalog / vision-preference fallback when the builder cannot be introspected.
+     *
+     * @return array{provider_used?: string, provider_name?: string, model_used?: string, model_name?: string}
+     */
+    private static function resolve_configured_request_meta(bool $prefer_vision): array {
+        if ($prefer_vision) {
+            $preferences = self::get_vision_model_preferences();
+            if ($preferences !== []) {
+                $first = $preferences[0];
+                if (is_array($first) && isset($first[0], $first[1])) {
+                    return self::filter_configured_request_meta(
+                        array(
+                            'provider_used' => (string) $first[0],
+                            'model_used' => (string) $first[1],
+                        )
+                    );
+                }
+            }
+        }
+
+        return self::resolve_text_catalog_request_meta();
+    }
+
+    /**
+     * @return array{provider_used?: string, provider_name?: string, model_used?: string, model_name?: string}
+     */
+    private static function resolve_text_catalog_request_meta(): array {
+        if (
+            !class_exists(\WordPress\AiClient\AiClient::class)
+            || !class_exists(\WordPress\AiClient\Providers\Models\DTO\ModelRequirements::class)
+            || !class_exists(\WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::class)
+            || !interface_exists(\WordPress\AiClient\Providers\Models\Contracts\TextGenerationModelInterface::class)
+        ) {
+            return [];
+        }
+
+        try {
+            $registry = \WordPress\AiClient\AiClient::defaultRegistry();
+            $requirements = new \WordPress\AiClient\Providers\Models\DTO\ModelRequirements(
+                [
+                    \WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::textGeneration(),
+                ],
+                []
+            );
+
+            $connector_ids = self::get_active_ai_connector_ids();
+            foreach ($connector_ids as $connector_id) {
+                $models = $registry->findProviderModelsMetadataForSupport($connector_id, $requirements);
+                foreach ($models as $model_meta) {
+                    try {
+                        $model = $registry->getProviderModel($connector_id, $model_meta->getId());
+                        if ($model instanceof \WordPress\AiClient\Providers\Models\Contracts\TextGenerationModelInterface) {
+                            return self::filter_configured_request_meta(
+                                array(
+                                    'provider_used' => (string) $connector_id,
+                                    'provider_name' => self::resolve_connector_display_name($connector_id),
+                                    'model_used' => (string) $model_meta->getId(),
+                                    'model_name' => self::maybe_get_meta_name($model_meta),
+                                )
+                            );
+                        }
+                    } catch (\Throwable $e) {
+                        continue;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<string, string> $meta
+     * @return array{provider_used?: string, provider_name?: string, model_used?: string, model_name?: string}
+     */
+    private static function filter_configured_request_meta(array $meta): array {
+        $filtered = array();
+
+        foreach (array('provider_used', 'provider_name', 'model_used', 'model_name') as $key) {
+            if (!isset($meta[$key])) {
+                continue;
+            }
+
+            $value = trim((string) $meta[$key]);
+            if ($value !== '') {
+                $filtered[$key] = $value;
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Fill empty identity fields in $primary from $fallback (used for error enrichment).
+     *
+     * @param array<string, mixed> $primary
+     * @param array<string, mixed> $fallback
+     * @return array<string, mixed>
+     */
+    private static function merge_request_meta(array $primary, array $fallback): array {
+        if ($fallback === []) {
+            return $primary;
+        }
+
+        $merged = $primary;
+        foreach (array('provider_used', 'provider_name', 'model_used', 'model_name') as $key) {
+            $current = isset($merged[$key]) ? trim((string) $merged[$key]) : '';
+            if ($current === '' && isset($fallback[$key]) && trim((string) $fallback[$key]) !== '') {
+                $merged[$key] = (string) $fallback[$key];
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * Start from planned request metadata; overlay non-empty values from the API result.
+     *
+     * @param array<string, mixed> $planned
+     * @param array<string, mixed> $response
+     * @return array<string, mixed>
+     */
+    private static function merge_request_meta_prefer_overlay(array $planned, array $response): array {
+        if ($response === []) {
+            return $planned;
+        }
+
+        if ($planned === []) {
+            return $response;
+        }
+
+        $merged = array_merge($planned, $response);
+
+        foreach (array('provider_used', 'provider_name', 'model_used', 'model_name', 'finish_reason', 'analysis_mode') as $key) {
+            $overlay = isset($response[$key]) ? trim((string) $response[$key]) : '';
+            if ($overlay !== '') {
+                $merged[$key] = $overlay;
+            }
+        }
+
+        foreach (array('tokens_used', 'prompt_tokens', 'completion_tokens', 'request_characters', 'response_characters', 'duration_ms') as $key) {
+            if (!isset($response[$key])) {
+                continue;
+            }
+
+            $value = (int) $response[$key];
+            if ($value > 0) {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged;
+    }
+
+    private static function enrich_wp_error_request_meta(\WP_Error $error, array $configured_meta): \WP_Error {
+        if ($configured_meta === []) {
+            return $error;
+        }
+
+        $data = $error->get_error_data();
+        if (!is_array($data)) {
+            $data = array();
+        }
+
+        $existing = isset($data['request_meta']) && is_array($data['request_meta'])
+            ? $data['request_meta']
+            : array();
+
+        $merged = self::merge_request_meta($existing, $configured_meta);
+        $normalized = AnalysisErrorDebug::normalize_request_meta($merged);
+        if ($normalized !== null) {
+            $data['request_meta'] = $normalized;
+        }
+
+        return new \WP_Error(
+            (string) $error->get_error_code(),
+            $error->get_error_message(),
+            $data
+        );
+    }
+
+    private static function resolve_connector_display_name(string $connector_id): string {
+        if (function_exists('\WordPress\AI\get_ai_connectors')) {
+            $connectors = \WordPress\AI\get_ai_connectors();
+            if (is_array($connectors) && isset($connectors[$connector_id]['name'])) {
+                return (string) $connectors[$connector_id]['name'];
+            }
+        }
+
+        return $connector_id;
     }
 
     /**

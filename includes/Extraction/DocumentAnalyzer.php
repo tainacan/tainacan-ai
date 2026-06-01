@@ -346,6 +346,7 @@ class DocumentAnalyzer {
         $result['extraction_method'] = $extraction_method;
         $this->apply_request_details_to_result($result, $ai_result, $analysis_mode);
         $result['analyzed_at'] = current_time('mysql');
+        $result['run_id'] = (string) (int) round(microtime(true) * 1000);
         $this->attach_processing_to_result($result, $analysis_mode);
 
         $this->debug_log_analysis_outcome(

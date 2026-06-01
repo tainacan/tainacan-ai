@@ -289,6 +289,12 @@ class ItemFormHook {
                 'promptDocumentTruncated' => __('Only part of the document was sent to the model. See processing notes for details.', 'tainacan-ai'),
                 'promptDocumentEmpty' => __('No extractable text was found in this document.', 'tainacan-ai'),
                 'processingWarningsTitle' => __('Some content was not fully processed', 'tainacan-ai'),
+                'exportSubheader' => __('Export', 'tainacan-ai'),
+                'downloadResultsCsv' => __('Download results.csv', 'tainacan-ai'),
+                'downloadResultsCsvShort' => __('results.csv', 'tainacan-ai'),
+                'downloadAnalysisCsv' => __('analysis.csv', 'tainacan-ai'),
+                'downloadPromptTxt' => __('prompt.txt', 'tainacan-ai'),
+                'exportNoData' => __('No analysis data to export.', 'tainacan-ai'),
             ]
         ]);
     }
