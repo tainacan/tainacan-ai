@@ -385,16 +385,6 @@ class ExtractionMetadata {
      *     allowed_values: string[]
      * } $field
      */
-    public function get_field_extraction_mode(array $field): string {
-        $type = $this->format_metadata_type((string) ($field['type'] ?? ''));
-
-        if (str_contains($type, 'taxonomy') || str_contains($type, 'relationship')) {
-            return 'exploratory';
-        }
-
-        return 'strict';
-    }
-
     /**
      * @param array<string, array{
      *     id: int,
@@ -432,7 +422,6 @@ class ExtractionMetadata {
             $lines[] = '- type: ' . $this->format_metadata_type((string) $field['type']);
             $lines[] = '- label: ' . $field['name'];
             $lines[] = '- multivalued: ' . ($field['multiple'] ? 'true' : 'false');
-            $lines[] = '- mode: ' . $this->get_field_extraction_mode($field);
 
             $field_prompt_hints = $this->build_field_prompt_hints($field);
             unset($field_prompt_hints['allowed_value_options']);

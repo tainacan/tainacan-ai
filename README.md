@@ -15,7 +15,7 @@ AI routing and credentials are managed by WordPress; this plugin focuses on prom
 - **Per-metadata extraction opt-out**: All collection metadata is included by default; check **Exclude from AI extraction** on the metadatum form to omit a field
 - **Evidence per field**: Every analysis appends standardized instructions so each metadata key returns `{ "value", "evidence" }`
 - **EXIF extraction**: Optional EXIF extraction from images (when enabled and supported by the server)
-- **PDF support**: Text extraction and optional visual analysis for PDFs (depends on server extensions and the configured connector)
+- **PDF support**: Text extraction (with a language-agnostic quality gate that rejects corrupted parser output, PDF internal metadata streams, and non-prose garbage so the pipeline can fall through to `pdftotext` or visual analysis) and optional visual analysis for PDFs (depends on server extensions and the configured connector)
 
 ### Observability
 
@@ -132,7 +132,7 @@ At analysis time, the plugin composes the final prompt in a fixed order (single 
 3. **Global rules**  
    Non-fabrication boundaries, JSON-only output requirement.
 4. **Field blocks**  
-   Built from extraction-enabled metadata in the collection, using metadata **slug** as JSON key and including type, label, mode (`strict`/`exploratory`), plus optional constraints (for example `required`, `max_items`, `min/max/step`, `max_length`, `allowed_values`, taxonomy and relationship hints). For taxonomy fields, `allowed_values` can include a ranked list of existing terms.
+   Built from extraction-enabled metadata in the collection, using metadata **slug** as JSON key and including type, label, plus optional constraints (for example `required`, `max_items`, `min/max/step`, `max_length`, `allowed_values`, taxonomy and relationship hints). Per-field `field_guidance` comes from the metadatum description. For taxonomy fields, `allowed_values` can include a ranked list of existing terms.
 5. **Field format contract**  
    Compact `{ "value", "evidence" }` format rules, including multivalue parallel arrays.
 6. **Output language**

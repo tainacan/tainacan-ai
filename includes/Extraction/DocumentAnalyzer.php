@@ -621,7 +621,7 @@ class DocumentAnalyzer {
         // Method 1: Text extraction (faster and cheaper)
         $text = $this->extract_pdf_text($file_path);
 
-        if (!is_wp_error($text) && !empty(trim($text)) && strlen(trim($text)) > 100) {
+        if (!is_wp_error($text) && PdfExtractedTextQuality::is_usable($text)) {
             $prepared = $this->prepare_document_text((string) $text, 'text/plain');
             $result = $this->analyze_text($prepared['content'], [
                 'document_type' => 'pdf',
@@ -1672,7 +1672,7 @@ class DocumentAnalyzer {
         if ($mime_type === 'application/pdf') {
             $text = $this->extract_pdf_text($file_path);
 
-            if (!is_wp_error($text) && strlen(trim($text)) > 100) {
+            if (!is_wp_error($text) && PdfExtractedTextQuality::is_usable($text)) {
                 return EvidenceInstructions::MODE_PDF_TEXT;
             }
 
@@ -1728,53 +1728,65 @@ class DocumentAnalyzer {
      */
     private function extract_pdf_text(string $file_path): string|\WP_Error {
         $methods_tried = array();
+        $quality_rejections = array();
         $last_error = '';
 
         // Method 1: smalot/pdfparser (best quality for digital PDFs)
         if (class_exists('\Smalot\PdfParser\Parser')) {
-            $methods_tried[] = 'smalot/pdfparser';
             try {
                 $parser = new \Smalot\PdfParser\Parser();
                 $pdf = $parser->parseFile($file_path);
-                $text = $pdf->getText();
-
-                if (!empty(trim($text))) {
-                    return $text;
+                $accepted = $this->accept_pdf_extracted_text(
+                    (string) $pdf->getText(),
+                    'smalot/pdfparser',
+                    $methods_tried,
+                    $quality_rejections
+                );
+                if ($accepted !== null) {
+                    return $accepted;
                 }
             } catch (\Throwable $e) {
                 $last_error = $e->getMessage();
+                $methods_tried[] = 'smalot/pdfparser';
                 $this->debug_log('Smalot PdfParser error: ' . $last_error);
             }
         }
 
         // Method 2: Built-in plugin parser (fallback)
-        $methods_tried[] = 'tainacan/pdfparser';
         try {
             $parser = new PdfParser();
-            $text = $parser->parseFile($file_path)->getText();
-
-            if (!empty(trim($text))) {
-                return $text;
+            $accepted = $this->accept_pdf_extracted_text(
+                $parser->parseFile($file_path)->getText(),
+                'tainacan/pdfparser',
+                $methods_tried,
+                $quality_rejections
+            );
+            if ($accepted !== null) {
+                return $accepted;
             }
         } catch (\Throwable $e) {
             $last_error = $e->getMessage();
+            $methods_tried[] = 'tainacan/pdfparser';
             $this->debug_log('PdfParser error: ' . $last_error);
         }
 
         // Method 3: pdftotext (poppler-utils) - Linux/Mac
         if (function_exists('shell_exec') && !$this->is_windows()) {
-            $methods_tried[] = 'pdftotext (unix)';
             $escaped_path = escapeshellarg($file_path);
             $output = @shell_exec("pdftotext {$escaped_path} - 2>/dev/null");
-
-            if (!empty($output)) {
-                return $output;
+            $accepted = $this->accept_pdf_extracted_text(
+                is_string($output) ? $output : '',
+                'pdftotext (unix)',
+                $methods_tried,
+                $quality_rejections
+            );
+            if ($accepted !== null) {
+                return $accepted;
             }
         }
 
         // Method 4: pdftotext on Windows
         if ($this->is_windows() && function_exists('shell_exec')) {
-            $methods_tried[] = 'pdftotext (windows)';
             $escaped_path = escapeshellarg($file_path);
             $paths = [
                 'pdftotext',
@@ -1784,17 +1796,27 @@ class DocumentAnalyzer {
 
             foreach ($paths as $pdftotext) {
                 $output = @shell_exec("\"{$pdftotext}\" {$escaped_path} - 2>nul");
-                if (!empty($output)) {
-                    return $output;
+                $accepted = $this->accept_pdf_extracted_text(
+                    is_string($output) ? $output : '',
+                    'pdftotext (windows)',
+                    $methods_tried,
+                    $quality_rejections
+                );
+                if ($accepted !== null) {
+                    return $accepted;
                 }
             }
         }
 
         // Method 5: Basic extraction via regex
-        $methods_tried[] = 'regex';
-        $text = $this->basic_pdf_text_extract($file_path);
-        if (!empty(trim($text))) {
-            return $text;
+        $accepted = $this->accept_pdf_extracted_text(
+            $this->basic_pdf_text_extract($file_path),
+            'regex',
+            $methods_tried,
+            $quality_rejections
+        );
+        if ($accepted !== null) {
+            return $accepted;
         }
 
         $message = __('Could not extract text from PDF. The document may be a scanned image.', 'tainacan-ai');
@@ -1806,6 +1828,10 @@ class DocumentAnalyzer {
             'extraction_methods_tried' => implode(', ', $methods_tried),
         );
 
+        if ($quality_rejections !== []) {
+            $debug_fields['low_quality_rejections'] = implode(', ', $quality_rejections);
+        }
+
         if ($last_error !== '') {
             $debug_fields['last_parser_error'] = $last_error;
         }
@@ -1815,6 +1841,32 @@ class DocumentAnalyzer {
             $message,
             AnalysisErrorDebug::data($debug_fields, 422)
         );
+    }
+
+    /**
+     * @param list<string> $methods_tried
+     * @param list<string> $quality_rejections
+     */
+    private function accept_pdf_extracted_text(
+        string $text,
+        string $method,
+        array &$methods_tried,
+        array &$quality_rejections
+    ): ?string {
+        $methods_tried[] = $method;
+
+        if (trim($text) === '') {
+            return null;
+        }
+
+        if (!PdfExtractedTextQuality::is_usable($text)) {
+            $quality_rejections[] = $method;
+            $this->debug_log('PDF text rejected (low quality) from ' . $method);
+
+            return null;
+        }
+
+        return $text;
     }
 
     /**
