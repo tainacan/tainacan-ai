@@ -1074,14 +1074,16 @@
 .tainacan-ai-metadata-item-with-evidence {
     background: var(--tainacan-ai-bg-light);
     border-radius: 10px;
-    margin-bottom: 12px;
+    margin-block: 8px;
     border: 1px solid var(--tainacan-ai-border);
     overflow: hidden;
     transition: all 0.2s ease;
     animation: tainacan-ai-fadeIn 0.3s ease forwards;
     opacity: 0;
 }
-
+.tainacan-ai-metadata-item-with-evidence:first-child {
+    margin-top: 0;
+}
 .tainacan-ai-metadata-item-with-evidence:last-child {
     margin-bottom: 0;
 }
