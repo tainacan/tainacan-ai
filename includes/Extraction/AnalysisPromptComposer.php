@@ -117,7 +117,9 @@ class AnalysisPromptComposer {
 
     private static function build_global_rules_section(): string {
         return 'GLOBAL RULES' . "\n" .
-            '- For strict factual fields, never fabricate dates, personal names, authors, locations, identifiers, or coordinates.' . "\n" .
+            '- Non-null values must be grounded in the document. Provide evidence (quote, heading, page, or region).' . "\n" .
+            '- Follow field_guidance and label for each field (transcription, summary, classification, or format). field_guidance may normalize surface form (capitalization, punctuation, cataloging rules) even when the source looks different.' . "\n" .
+            '- Never fabricate dates, personal names, authors, locations, identifiers, or coordinates.' . "\n" .
             '- For taxonomy and relationship fields, suggest values only when evidence in the document supports them.' . "\n" .
             '- For any field with allowed_values, return only exact strings from that list or null.' . "\n" .
             '- Never use metadatum placeholder text, form control labels, or instructional sentences as field values unless that exact string appears in allowed_values.' . "\n" .
@@ -128,6 +130,6 @@ class AnalysisPromptComposer {
             '- If field_guidance is missing, infer field intent from label and type.' . "\n" .
             '- Write evidence as a short, objective source note (quote, page, region, heading, or label).' . "\n" .
             '- Process internally: analyze, match fields, validate, output JSON only.' . "\n" .
-            '- Never summarize, explain, or comment on the document; return the JSON object only.' . "\n";
+            '- Return only the JSON object (no markdown fences, no commentary about the analysis).' . "\n";
     }
 }

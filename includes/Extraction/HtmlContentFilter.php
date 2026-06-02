@@ -62,6 +62,8 @@ final class HtmlContentFilter {
 		$html = self::strip_presentation_attributes( $html );
 		$html = preg_replace( '/<!--[\s\S]*?-->/', '', $html ) ?? $html;
 		$html = self::remove_noise_link_tags( $html );
+		$html = self::normalize_non_breaking_spaces( $html );
+		$html = self::collapse_repeated_whitespace( $html );
 		$html = preg_replace( '/>\s+</', '><', $html ) ?? $html;
 		$html = preg_replace( "/[ \t]+\n/", "\n", $html ) ?? $html;
 		$html = preg_replace( "/\n{3,}/", "\n\n", $html ) ?? $html;
@@ -173,5 +175,19 @@ final class HtmlContentFilter {
 			},
 			$html
 		) ?? $html;
+	}
+
+	/**
+	 * Normalize common non-breaking-space entities to regular spaces.
+	 */
+	private static function normalize_non_breaking_spaces( string $html ): string {
+		return (string) preg_replace( '/&(nbsp|#160|#xA0);/i', ' ', $html );
+	}
+
+	/**
+	 * Collapse repeated in-line spaces and tabs to reduce prompt noise.
+	 */
+	private static function collapse_repeated_whitespace( string $html ): string {
+		return (string) preg_replace( '/[ \t]{2,}/', ' ', $html );
 	}
 }
