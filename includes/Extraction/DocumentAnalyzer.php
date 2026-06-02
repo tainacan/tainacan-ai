@@ -667,6 +667,31 @@ class DocumentAnalyzer {
     }
 
     /**
+     * Keep vision-specific errors intact; wrap generic failures for debug context.
+     */
+    private function wrap_visual_analysis_error(
+        \WP_Error $error,
+        int $page_count,
+        string $file_path
+    ): \WP_Error {
+        $code = (string) $error->get_error_code();
+        if (in_array($code, ['vision_text_model_refusal', 'vision_images_not_forwarded'], true)) {
+            return $error;
+        }
+
+        return AnalysisErrorDebug::wrap(
+            $error,
+            'visual_analysis_error',
+            $error->get_error_message(),
+            array(
+                'pdf_pages_converted' => (string) $page_count,
+                'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
+            ),
+            502
+        );
+    }
+
+    /**
      * Aggregate PDF text + vision failures into one WP_Error with debug context.
      */
     private function build_pdf_analysis_failed_error(
@@ -686,7 +711,7 @@ class DocumentAnalyzer {
             $error_msg .= $text->get_error_message() . ' ';
             $debug_fields = array_merge(
                 $debug_fields,
-                AnalysisErrorDebug::export_wp_error_context($text, 'text_extraction')
+                AnalysisErrorDebug::export_wp_error_context($text, 'text_extraction', false)
             );
         } else {
             $error_msg .= __('PDF does not contain extractable text.', 'tainacan-ai') . ' ';
@@ -710,7 +735,7 @@ class DocumentAnalyzer {
             $error_msg .= $visual_result->get_error_message();
             $debug_fields = array_merge(
                 $debug_fields,
-                AnalysisErrorDebug::export_wp_error_context($visual_result, 'visual_analysis')
+                AnalysisErrorDebug::export_wp_error_context($visual_result, 'visual_analysis', false)
             );
             $debug_fields['visual_analysis_status'] = 'failed';
         } else {
@@ -739,6 +764,7 @@ class DocumentAnalyzer {
                       ->setQuality(85)
                       ->setMaxPages($max_pages);
 
+            $total_pages = $converter->getDocumentPageCount($file_path);
             $images = $converter->convert($file_path);
 
             if (empty($images)) {
@@ -769,7 +795,33 @@ class DocumentAnalyzer {
             $system_instruction = $prompt;
 
             $pageCount = count($images);
-            if ($pageCount >= $max_pages) {
+
+            if ($total_pages > 0 && $pageCount > $total_pages) {
+                $images = array_slice($images, 0, $total_pages);
+                $pageCount = count($images);
+            }
+
+            if ($total_pages > $max_pages) {
+                $this->processing_warnings->add(
+                    'pdf_pages_limited',
+                    'warning',
+                    sprintf(
+                        /* translators: 1: maximum pages sent, 2: total pages in the document */
+                        __(
+                            'Only the first %1$d of %2$d PDF page(s) were sent for visual analysis. Later pages were not processed.',
+                            'tainacan-ai'
+                        ),
+                        $max_pages,
+                        $total_pages
+                    ),
+                    array(
+                        'max_pages' => $max_pages,
+                        'sent_pages' => $pageCount,
+                        'total_pages' => $total_pages,
+                    )
+                );
+            } elseif ($total_pages <= 0 && $pageCount >= $max_pages) {
+                // Page count unknown but conversion hit the cap — may have been truncated.
                 $this->processing_warnings->add(
                     'pdf_pages_limited',
                     'warning',
@@ -781,6 +833,7 @@ class DocumentAnalyzer {
                     array(
                         'max_pages' => $max_pages,
                         'sent_pages' => $pageCount,
+                        'total_pages' => null,
                     )
                 );
             }
@@ -819,15 +872,10 @@ class DocumentAnalyzer {
             );
 
             if (is_wp_error($ai_result)) {
-                return AnalysisErrorDebug::wrap(
+                return $this->wrap_visual_analysis_error(
                     $ai_result,
-                    'visual_analysis_error',
-                    $ai_result->get_error_message(),
-                    array(
-                        'pdf_pages_converted' => (string) $pageCount,
-                        'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
-                    ),
-                    502
+                    $pageCount,
+                    $file_path
                 );
             }
 
@@ -1823,8 +1871,6 @@ class DocumentAnalyzer {
         $this->debug_log('PDF text extraction failed: ' . $message);
 
         $debug_fields = array(
-            'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
-            'file_size' => is_readable($file_path) ? (string) filesize($file_path) : 'unknown',
             'extraction_methods_tried' => implode(', ', $methods_tried),
         );
 

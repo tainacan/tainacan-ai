@@ -252,6 +252,98 @@ class CoreAI {
     }
 
     /**
+     * Whether connector catalog metadata lists image among input modalities for a model.
+     *
+     * @return bool|null True when the model is cataloged as vision-capable; false when the model
+     *                     is known on that connector but not vision-capable; null when unknown.
+     */
+    public static function connector_model_supports_image_input(string $connector_id, string $model_id): ?bool {
+        $connector_id = trim($connector_id);
+        $model_id = trim($model_id);
+
+        if ($connector_id === '' || $model_id === '') {
+            return null;
+        }
+
+        if (!class_exists(\WordPress\AiClient\AiClient::class)) {
+            return null;
+        }
+
+        $vision_requirements = self::build_vision_model_requirements();
+        if ($vision_requirements === null) {
+            return null;
+        }
+
+        if (
+            !class_exists(\WordPress\AiClient\Providers\Models\DTO\ModelRequirements::class)
+            || !class_exists(\WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::class)
+        ) {
+            return null;
+        }
+
+        try {
+            $registry = \WordPress\AiClient\AiClient::defaultRegistry();
+
+            if (self::connector_catalog_has_model_for_requirements(
+                $registry,
+                $connector_id,
+                $model_id,
+                $vision_requirements
+            )) {
+                return true;
+            }
+
+            $text_requirements = new \WordPress\AiClient\Providers\Models\DTO\ModelRequirements(
+                [
+                    \WordPress\AiClient\Providers\Models\Enums\CapabilityEnum::textGeneration(),
+                ],
+                []
+            );
+
+            if (self::connector_catalog_has_model_for_requirements(
+                $registry,
+                $connector_id,
+                $model_id,
+                $text_requirements
+            )) {
+                return false;
+            }
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param object $registry WordPress AI model registry.
+     */
+    private static function connector_catalog_has_model_for_requirements(
+        object $registry,
+        string $connector_id,
+        string $model_id,
+        object $requirements
+    ): bool {
+        if (!method_exists($registry, 'findProviderModelsMetadataForSupport')) {
+            return false;
+        }
+
+        $models = $registry->findProviderModelsMetadataForSupport($connector_id, $requirements);
+
+        foreach ($models as $model_meta) {
+            if (!method_exists($model_meta, 'getId')) {
+                continue;
+            }
+
+            if (strcasecmp((string) $model_meta->getId(), $model_id) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Admin UI label and status class for image analysis via connector.
      *
      * @return array{class: string, label: string}
@@ -469,6 +561,7 @@ class CoreAI {
             }
 
             $has_image_input = false;
+            $image_attachment_count = 0;
             foreach ($files as $file) {
                 if (empty($file['data']) || empty($file['mime'])) {
                     continue;
@@ -476,6 +569,7 @@ class CoreAI {
                 self::add_file_to_builder($builder, $file['data'], $file['mime']);
                 if (str_starts_with((string) $file['mime'], 'image/')) {
                     $has_image_input = true;
+                    ++$image_attachment_count;
                 }
             }
 
@@ -527,8 +621,30 @@ class CoreAI {
                 );
             }
 
+            if ($has_image_input) {
+                $vision_issue = VisionInputDiagnostics::assess_image_request_response(
+                    $request_meta,
+                    $raw_text,
+                    $image_attachment_count
+                );
+                if ($vision_issue instanceof \WP_Error) {
+                    return $vision_issue;
+                }
+            }
+
             $metadata = self::parse_json_response($raw_text);
             if ($metadata === null) {
+                if ($has_image_input) {
+                    $vision_issue = VisionInputDiagnostics::assess_image_request_response(
+                        $request_meta,
+                        $raw_text,
+                        $image_attachment_count
+                    );
+                    if ($vision_issue instanceof \WP_Error) {
+                        return $vision_issue;
+                    }
+                }
+
                 return new \WP_Error(
                     'json_parse_error',
                     __('AI returned invalid JSON.', 'tainacan-ai'),

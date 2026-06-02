@@ -47,6 +47,41 @@ class PdfToImage {
     }
 
     /**
+     * Returns the document page count when it can be determined (0 if unknown).
+     */
+    public function getDocumentPageCount(string $pdfPath): int {
+        if (!is_readable($pdfPath)) {
+            return 0;
+        }
+
+        if (extension_loaded('imagick')) {
+            try {
+                $imagick = new \Imagick();
+                $imagick->pingImage($pdfPath);
+                $count = (int) $imagick->getNumberImages();
+                $imagick->clear();
+                $imagick->destroy();
+
+                if ($count > 0) {
+                    return $count;
+                }
+            } catch (\Throwable $e) {
+                // Fall through to parser estimate.
+            }
+        }
+
+        try {
+            $parser = new PdfParser();
+            $parser->parseFile($pdfPath);
+            $count = (int) $parser->getPageCount();
+
+            return $count > 0 ? $count : 0;
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
      * Converts PDF to images
      *
      * @param string $pdfPath PDF file path

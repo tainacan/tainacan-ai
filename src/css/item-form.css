@@ -410,6 +410,7 @@
     gap: 8px;
 }
 
+.tainacan-ai-debug-details,
 .tainacan-ai-error-debug-group .tainacan-ai-detail-list {
     margin-top: 0;
 }

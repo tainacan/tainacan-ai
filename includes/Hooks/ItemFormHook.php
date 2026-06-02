@@ -237,6 +237,8 @@ class ItemFormHook {
                 'analysisModeText' => __('Text', 'tainacan-ai'),
                 'analysisModePdfText' => __('PDF text', 'tainacan-ai'),
                 'analysisModePdfVisual' => __('PDF visual', 'tainacan-ai'),
+                'errorVisionTextModelRefusal' => __('Images were sent, but the model reported by the connector is not cataloged as accepting image input. In WordPress Connectors, select a vision-capable model for image and scanned-PDF analysis.', 'tainacan-ai'),
+                'errorVisionImagesNotForwarded' => __('Images were sent from Tainacan, but the connector request looks text-only (very low prompt tokens). The vision model may not be selected, or the connector may not forward image input.', 'tainacan-ai'),
                 'durationSeconds' => __('seconds', 'tainacan-ai'),
                 'tokensPrompt' => __('prompt', 'tainacan-ai'),
                 'tokensCompletion' => __('completion', 'tainacan-ai'),

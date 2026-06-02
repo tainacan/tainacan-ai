@@ -18,6 +18,60 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class AnalysisErrorDebug {
 	public const MAX_RAW_LENGTH = 12000;
 
+	/**
+	 * Debug field ids mirrored on the Request tab (request_meta) — omit from debug_details when both are present.
+	 *
+	 * @var list<string>
+	 */
+	private const REQUEST_TAB_DEBUG_FIELD_IDS = array(
+		'model_used',
+		'model',
+		'model_name',
+		'provider_used',
+		'provider',
+		'provider_name',
+		'prompt_tokens',
+		'completion_tokens',
+		'tokens_used',
+		'total_tokens',
+		'finish_reason',
+		'analysis_mode',
+		'request_characters',
+		'response_characters',
+		'duration_ms',
+		'http_status',
+	);
+
+	/**
+	 * Shown in the error banner — omit from debug_details when the outer message already includes them.
+	 *
+	 * @var list<string>
+	 */
+	private const PRIMARY_ERROR_DEBUG_FIELD_IDS = array(
+		'error_code',
+		'error_message',
+		'http_status',
+	);
+
+	/**
+	 * Document context repeated by composite errors — omit from prefixed exports.
+	 *
+	 * @var list<string>
+	 */
+	private const SHARED_CONTEXT_DEBUG_FIELD_IDS = array(
+		'file_path',
+		'file_size',
+	);
+
+	/**
+	 * @var list<string>
+	 */
+	private const CONTEXT_EXPORT_PREFIXES = array(
+		'text_extraction_',
+		'visual_analysis_',
+		'underlying_',
+	);
+
 	public static function should_include_in_response(): bool {
 		$include = current_user_can( 'edit_posts' ) && Plugin::is_advanced_debug();
 
@@ -69,10 +123,119 @@ final class AnalysisErrorDebug {
 		}
 
 		if ( self::should_include_in_response() && $debug_fields !== array() ) {
-			$data['debug_details'] = self::normalize_debug_details( $debug_fields );
+			$debug_fields = self::deduplicate_overlapping_debug_fields( $debug_fields );
+			$debug_fields = self::deduplicate_debug_fields_against_request_meta(
+				$debug_fields,
+				$normalized_request_meta
+			);
+			if ( $debug_fields !== array() ) {
+				$data['debug_details'] = self::normalize_debug_details( $debug_fields );
+			}
 		}
 
 		return $data;
+	}
+
+	/**
+	 * @param array<string, string|array{label?: string, content: string, truncated?: bool}> $debug_fields
+	 * @param array<string, int|string>|null $request_meta
+	 * @return array<string, string|array{label?: string, content: string, truncated?: bool}>
+	 */
+	public static function deduplicate_debug_fields_against_request_meta(
+		array $debug_fields,
+		?array $request_meta
+	): array {
+		if ( $request_meta === null || $request_meta === array() ) {
+			return $debug_fields;
+		}
+
+		$filtered = array();
+		foreach ( $debug_fields as $id => $value ) {
+			if ( self::is_request_tab_debug_field( (string) $id ) ) {
+				continue;
+			}
+			$filtered[ $id ] = $value;
+		}
+
+		return $filtered;
+	}
+
+	public static function is_request_tab_debug_field( string $field_id ): bool {
+		return in_array( self::resolve_debug_field_base_id( $field_id ), self::REQUEST_TAB_DEBUG_FIELD_IDS, true );
+	}
+
+	public static function is_primary_error_debug_field( string $field_id ): bool {
+		return in_array( self::resolve_debug_field_base_id( $field_id ), self::PRIMARY_ERROR_DEBUG_FIELD_IDS, true );
+	}
+
+	public static function resolve_debug_field_base_id( string $field_id ): string {
+		foreach ( self::CONTEXT_EXPORT_PREFIXES as $prefix ) {
+			if ( str_starts_with( $field_id, $prefix ) ) {
+				return substr( $field_id, strlen( $prefix ) );
+			}
+		}
+
+		return $field_id;
+	}
+
+	/**
+	 * Drop prefixed debug fields when an unprefixed field already carries the same value.
+	 *
+	 * @param array<string, string|array{label?: string, content: string, truncated?: bool}> $fields
+	 * @return array<string, string|array{label?: string, content: string, truncated?: bool}>
+	 */
+	public static function deduplicate_overlapping_debug_fields( array $fields ): array {
+		$canonical_values = array();
+
+		foreach ( $fields as $id => $value ) {
+			$id = (string) $id;
+			if ( self::is_prefixed_debug_field_id( $id ) ) {
+				continue;
+			}
+
+			$canonical_values[ $id ] = self::debug_field_content( $value );
+		}
+
+		$filtered = array();
+
+		foreach ( $fields as $id => $value ) {
+			$id = (string) $id;
+
+			if ( self::is_prefixed_debug_field_id( $id ) ) {
+				$base_id = self::resolve_debug_field_base_id( $id );
+				if (
+					isset( $canonical_values[ $base_id ] )
+					&& $canonical_values[ $base_id ] === self::debug_field_content( $value )
+				) {
+					continue;
+				}
+			}
+
+			$filtered[ $id ] = $value;
+		}
+
+		return $filtered;
+	}
+
+	private static function is_prefixed_debug_field_id( string $field_id ): bool {
+		foreach ( self::CONTEXT_EXPORT_PREFIXES as $prefix ) {
+			if ( str_starts_with( $field_id, $prefix ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param string|array{label?: string, content: string, truncated?: bool} $value
+	 */
+	private static function debug_field_content( $value ): string {
+		if ( is_array( $value ) ) {
+			return (string) ( $value['content'] ?? '' );
+		}
+
+		return (string) $value;
 	}
 
 	/**
@@ -169,7 +332,7 @@ final class AnalysisErrorDebug {
 		}
 
 		$fields = array_merge(
-			self::export_wp_error_context( $inner, 'underlying' ),
+			self::export_wp_error_context( $inner, 'underlying', false ),
 			$extra_fields
 		);
 
@@ -183,20 +346,26 @@ final class AnalysisErrorDebug {
 	/**
 	 * @return array<string, string|array{label: string, content: string, truncated: bool}>
 	 */
-	public static function export_wp_error_context( \WP_Error $error, string $prefix = '' ): array {
+	public static function export_wp_error_context(
+		\WP_Error $error,
+		string $prefix = '',
+		bool $include_primary_identifiers = true
+	): array {
 		$key_prefix = $prefix !== '' ? $prefix . '_' : '';
 
-		$fields = array(
-			$key_prefix . 'error_code'    => $error->get_error_code(),
-			$key_prefix . 'error_message' => $error->get_error_message(),
-		);
+		$fields = array();
+
+		if ( $include_primary_identifiers ) {
+			$fields[ $key_prefix . 'error_code' ]    = $error->get_error_code();
+			$fields[ $key_prefix . 'error_message' ] = $error->get_error_message();
+		}
 
 		$data = $error->get_error_data();
 		if ( ! is_array( $data ) ) {
 			return $fields;
 		}
 
-		if ( isset( $data['status'] ) ) {
+		if ( $include_primary_identifiers && isset( $data['status'] ) ) {
 			$fields[ $key_prefix . 'http_status' ] = (string) $data['status'];
 		}
 
@@ -213,6 +382,17 @@ final class AnalysisErrorDebug {
 			}
 
 			$section_id = (string) ( $section['id'] ?? 'detail' );
+			if ( self::is_request_tab_debug_field( $section_id ) ) {
+				continue;
+			}
+
+			if (
+				$prefix !== ''
+				&& in_array( $section_id, self::SHARED_CONTEXT_DEBUG_FIELD_IDS, true )
+			) {
+				continue;
+			}
+
 			$fields[ $key_prefix . $section_id ] = array(
 				'label'     => $section_prefix . (string) ( $section['label'] ?? self::label_for( $section_id ) ),
 				'content'   => (string) ( $section['content'] ?? '' ),
@@ -367,6 +547,10 @@ final class AnalysisErrorDebug {
 				return __( 'HTTP status', 'tainacan-ai' );
 			case 'pdf_pages_converted':
 				return __( 'PDF pages sent to vision', 'tainacan-ai' );
+			case 'image_attachments':
+				return __( 'Image attachments', 'tainacan-ai' );
+			case 'detection':
+				return __( 'Detection', 'tainacan-ai' );
 			default:
 				return ucwords( str_replace( '_', ' ', $id ) );
 		}

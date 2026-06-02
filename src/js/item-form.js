@@ -941,6 +941,24 @@ let hasTainacanAiNonceMiddleware = false;
 			return { response, data };
 		},
 
+		resolveAnalysisErrorMessage( code, fallbackMessage ) {
+			if ( code === 'vision_text_model_refusal' ) {
+				return (
+					TainacanAI.texts?.errorVisionTextModelRefusal ||
+					fallbackMessage
+				);
+			}
+
+			if ( code === 'vision_images_not_forwarded' ) {
+				return (
+					TainacanAI.texts?.errorVisionImagesNotForwarded ||
+					fallbackMessage
+				);
+			}
+
+			return fallbackMessage;
+		},
+
 		/**
 		 * Normalize analysis failures (REST error object or plain message).
 		 */
@@ -959,11 +977,6 @@ let hasTainacanAiNonceMiddleware = false;
 			}
 
 			const { response, data } = this.resolveRestErrorPayload( error );
-			const message =
-				( typeof data.message === 'string' && data.message ) ||
-				( typeof response?.message === 'string' && response.message ) ||
-				( typeof error?.message === 'string' && error.message ) ||
-				TainacanAI.texts.error;
 			const status =
 				error?.status ||
 				error?.statusCode ||
@@ -974,6 +987,13 @@ let hasTainacanAiNonceMiddleware = false;
 				( typeof error?.code === 'string' && error.code ) ||
 				( typeof data.code === 'string' && data.code ) ||
 				null;
+			const message = this.resolveAnalysisErrorMessage(
+				code,
+				( typeof data.message === 'string' && data.message ) ||
+					( typeof response?.message === 'string' && response.message ) ||
+					( typeof error?.message === 'string' && error.message ) ||
+					TainacanAI.texts.error
+			);
 
 			// Server only includes debug_details when advanced debug is allowed.
 			const debugDetails = this.normalizeErrorDebugDetails(
@@ -991,6 +1011,8 @@ let hasTainacanAiNonceMiddleware = false;
 				'debug_details',
 				'request_meta',
 				'prompt_debug',
+				'processing',
+				...this.requestTabDebugFieldIds(),
 			] );
 
 			const appendDetail = ( label, value ) => {
@@ -1276,6 +1298,138 @@ let hasTainacanAiNonceMiddleware = false;
 			return null;
 		},
 
+		requestTabDebugFieldIds() {
+			return [
+				'model_used',
+				'model',
+				'model_name',
+				'provider_used',
+				'provider',
+				'provider_name',
+				'prompt_tokens',
+				'completion_tokens',
+				'tokens_used',
+				'total_tokens',
+				'finish_reason',
+				'analysis_mode',
+				'request_characters',
+				'response_characters',
+				'duration_ms',
+				'http_status',
+			];
+		},
+
+		resolveDebugFieldBaseId( fieldId ) {
+			const id = String( fieldId ?? '' );
+			const prefixes = [
+				'underlying_',
+				'visual_analysis_',
+				'text_extraction_',
+			];
+
+			for ( const prefix of prefixes ) {
+				if ( id.startsWith( prefix ) ) {
+					return id.slice( prefix.length );
+				}
+			}
+
+			return id;
+		},
+
+		isRequestTabDebugField( fieldId ) {
+			const baseId = this.resolveDebugFieldBaseId( fieldId );
+			return this.requestTabDebugFieldIds().includes( baseId );
+		},
+
+		primaryErrorDebugFieldIds() {
+			return [ 'error_code', 'error_message', 'http_status' ];
+		},
+
+		isPrimaryErrorDebugField( fieldId ) {
+			const baseId = this.resolveDebugFieldBaseId( fieldId );
+			return this.primaryErrorDebugFieldIds().includes( baseId );
+		},
+
+		deduplicateDebugSectionsByCanonicalContent( sections ) {
+			const canonical = new Map();
+
+			sections.forEach( ( section ) => {
+				const sectionId = String( section?.id ?? '' );
+				const baseId = this.resolveDebugFieldBaseId( sectionId );
+				if ( baseId === sectionId ) {
+					canonical.set(
+						baseId,
+						String( section?.content ?? '' ).trim()
+					);
+				}
+			} );
+
+			return sections.filter( ( section ) => {
+				const sectionId = String( section?.id ?? '' );
+				const baseId = this.resolveDebugFieldBaseId( sectionId );
+				if ( baseId === sectionId ) {
+					return true;
+				}
+
+				const content = String( section?.content ?? '' ).trim();
+				return ! (
+					canonical.has( baseId ) && canonical.get( baseId ) === content
+				);
+			} );
+		},
+
+		filterDebugSectionsForDisplay( debugDetails, requestMeta, parsed ) {
+			const normalized = this.normalizeErrorDebugDetails( debugDetails );
+			if ( ! normalized?.sections?.length ) {
+				return null;
+			}
+
+			let sections = this.deduplicateDebugSectionsByCanonicalContent(
+				normalized.sections
+			);
+
+			sections = sections.filter( ( section ) => {
+				const sectionId = section?.id;
+				if (
+					this.requestDetailsHasData( requestMeta ) &&
+					this.isRequestTabDebugField( sectionId )
+				) {
+					return false;
+				}
+
+				if ( ! this.isPrimaryErrorDebugField( sectionId ) ) {
+					return true;
+				}
+
+				const content = String( section?.content ?? '' ).trim();
+				const baseId = this.resolveDebugFieldBaseId( sectionId );
+
+				if (
+					baseId === 'error_code' &&
+					parsed?.code &&
+					content === parsed.code
+				) {
+					return false;
+				}
+
+				if (
+					baseId === 'http_status' &&
+					parsed?.status &&
+					content === String( parsed.status )
+				) {
+					return false;
+				}
+
+				if ( baseId === 'error_message' && content && parsed?.message ) {
+					return ! parsed.message.includes( content );
+				}
+
+				return true;
+			} );
+
+			return sections.length ? { sections } : null;
+		},
+
 		debugDetailInlineMaxLength() {
 			return 240;
 		},
@@ -1320,8 +1474,20 @@ let hasTainacanAiNonceMiddleware = false;
             `;
 		},
 
-		renderAnalysisErrorDebugSections( debugDetails ) {
-			const normalized = this.normalizeErrorDebugDetails( debugDetails );
+		renderAnalysisErrorDebugSections(
+			debugDetails,
+			requestMeta = null,
+			parsed = null
+		) {
+			if ( ! TainacanAI.advancedDebug ) {
+				return '';
+			}
+
+			const normalized = this.filterDebugSectionsForDisplay(
+				debugDetails,
+				requestMeta,
+				parsed
+			);
 			if ( ! normalized?.sections?.length ) {
 				return '';
 			}
@@ -1339,7 +1505,7 @@ let hasTainacanAiNonceMiddleware = false;
 			} );
 
 			const inlineHtml = inlineRows.length
-				? `<dl class="tainacan-ai-detail-list tainacan-ai-error-details">${ inlineRows.join(
+				? `<dl class="tainacan-ai-detail-list tainacan-ai-debug-details">${ inlineRows.join(
 						''
 				  ) }</dl>`
 				: '';
@@ -1392,25 +1558,35 @@ let hasTainacanAiNonceMiddleware = false;
 			);
 			this.updateExportButtonsState();
 
-			const detailHtml = parsed.detailRows
-				.map(
-					( row ) => `
+			const debugSectionsHtml = this.renderAnalysisErrorDebugSections(
+				parsed.debugDetails,
+				parsed.requestMeta,
+				parsed
+			);
+
+			const showInlineErrorDetails = ! debugSectionsHtml;
+
+			const detailHtml = showInlineErrorDetails
+				? parsed.detailRows
+						.map(
+							( row ) => `
                 <div class="tainacan-ai-detail-row">
                     <dt>${ this.escapeHtml( row.label ) }</dt>
                     <dd>${ this.escapeHtml( row.value ) }</dd>
                 </div>
             `
-				)
-				.join( '' );
+						)
+						.join( '' )
+				: '';
 
 			const metaRows = [];
-			if ( parsed.status ) {
+			if ( showInlineErrorDetails && parsed.status ) {
 				metaRows.push( {
 					label: TainacanAI.texts?.errorHttpStatus || 'HTTP status',
 					value: String( parsed.status ),
 				} );
 			}
-			if ( parsed.code ) {
+			if ( showInlineErrorDetails && parsed.code ) {
 				metaRows.push( {
 					label: TainacanAI.texts?.errorCode || 'Error code',
 					value: parsed.code,
@@ -1427,10 +1603,6 @@ let hasTainacanAiNonceMiddleware = false;
             `
 				)
 				.join( '' );
-
-			const debugSectionsHtml = this.renderAnalysisErrorDebugSections(
-				parsed.debugDetails
-			);
 			const processingWarningsHtml = this.renderProcessingWarningsHtml(
 				errorData?.processing?.warnings || []
 			);
