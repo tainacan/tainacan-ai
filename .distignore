@@ -1,3 +1,6 @@
+# Local dev/audit scripts
+scripts/
+
 # Development files
 .git/
 .gitignore

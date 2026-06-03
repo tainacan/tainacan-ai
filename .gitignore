@@ -44,3 +44,6 @@ composer.phar
 # Temporary files
 *.tmp
 *.temp
+
+# Local dev/audit scripts (not shipped)
+scripts/
