@@ -186,10 +186,12 @@ class ItemFormHook {
             'extractionFields' => [],
             'texts' => [
                 'analyzing' => __('Analyzing...', 'tainacan-ai'),
+                'extracting' => __('Extracting document...', 'tainacan-ai'),
                 'analyzeBtn' => __('Analyze Document', 'tainacan-ai'),
                 'error' => __('Error analyzing. Please try again.', 'tainacan-ai'),
                 'errorLabel' => __('Error', 'tainacan-ai'),
                 'analysisFailedSummary' => __('Analysis failed', 'tainacan-ai'),
+                'extractionFailedSummary' => __('Extraction failed', 'tainacan-ai'),
                 'errorHttpStatus' => __('HTTP status', 'tainacan-ai'),
                 'errorCode' => __('Error code', 'tainacan-ai'),
                 'errorDetails' => __('Details', 'tainacan-ai'),

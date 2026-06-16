@@ -28,7 +28,35 @@ class API {
      * Register API routes
      */
     public function register_routes(): void {
-        // Analyze document.
+        register_rest_route($this->namespace, '/extract', [
+            'methods' => 'POST',
+            'callback' => [$this, 'extract_document'],
+            'permission_callback' => [$this, 'check_permission'],
+            'args' => [
+                'attachment_id' => [
+                    'required' => false,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ],
+                'force_refresh' => [
+                    'required' => false,
+                    'type' => 'boolean',
+                    'default' => false,
+                ],
+                'item_id' => [
+                    'required' => false,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ],
+                'collection_id' => [
+                    'required' => false,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ],
+            ],
+        ]);
+
+        // Analyze document metadata from a cached extraction payload.
         register_rest_route($this->namespace, '/analyze', [
             'methods' => 'POST',
             'callback' => [$this, 'analyze_attachment'],
@@ -112,86 +140,133 @@ class API {
     }
 
     /**
-     * Analyze attachment
+     * Extract document content locally (no AI call).
+     */
+    public function extract_document(\WP_REST_Request $request): \WP_REST_Response|\WP_Error {
+        try {
+            $context = $this->resolve_document_request_context($request);
+            if (is_wp_error($context)) {
+                return $context;
+            }
+
+            $extract_cache_key = (string) $context['extract_cache_key'];
+            $force_refresh = (bool) $context['force_refresh'];
+
+            if (!$force_refresh) {
+                $cached = get_transient($extract_cache_key);
+                if (is_array($cached) && $cached !== []) {
+                    return new \WP_REST_Response(
+                        $this->build_extract_api_data($cached, true),
+                        200
+                    );
+                }
+            }
+
+            $analyzer = new DocumentAnalyzer();
+            $analyzer->set_context((int) $context['collection_id'], (int) $context['item_id']);
+
+            $extraction = $context['is_remote_url_document']
+                ? $analyzer->extract_document_url((string) $context['document_url'])
+                : $analyzer->extract((int) $context['attachment_id']);
+
+            if (is_wp_error($extraction)) {
+                return $this->rest_error_from_wp_error($extraction);
+            }
+
+            $options = Plugin::get_options();
+            $cache_duration = (int) ($options['cache_duration'] ?? 3600);
+            if ($cache_duration > 0) {
+                set_transient($extract_cache_key, $extraction, $cache_duration);
+            }
+
+            return new \WP_REST_Response(
+                $this->build_extract_api_data($extraction, false),
+                200
+            );
+        } catch (\Throwable $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                DebugLog::log('Error in extract_document REST: ' . $e->getMessage());
+                DebugLog::log('Stack trace: ' . $e->getTraceAsString());
+            }
+
+            return AnalysisErrorDebug::from_throwable(
+                $e,
+                'extract_exception',
+                sprintf(
+                    /* translators: %s: error message */
+                    __('Error extracting document: %s', 'tainacan-ai'),
+                    $e->getMessage()
+                ),
+                500
+            );
+        }
+    }
+
+    /**
+     * Analyze attachment metadata from a previously extracted payload.
      */
     public function analyze_attachment(\WP_REST_Request $request): \WP_REST_Response|\WP_Error {
         try {
-            $item_id = (int) ($request->get_param('item_id') ?? 0);
-            $attachment_id = (int) ($request->get_param('attachment_id') ?? 0);
-            $collection_id = (int) ($request->get_param('collection_id') ?? 0);
-            $force_refresh = (bool) ($request->get_param('force_refresh') ?? false);
+            $context = $this->resolve_document_request_context($request);
+            if (is_wp_error($context)) {
+                return $context;
+            }
+
             $override_prompt = trim((string) ($request->get_param('override_prompt') ?? ''));
             $use_prompt_override = (
                 $override_prompt !== ''
                 && DocumentAnalyzer::should_include_prompt_in_response()
             );
+            $force_refresh = (bool) $context['force_refresh'] || $use_prompt_override;
 
-            if ($item_id <= 0 && $attachment_id <= 0) {
+            $extract_cache_key = (string) $context['extract_cache_key'];
+            $analyze_cache_key = (string) $context['analyze_cache_key'];
+            $extraction = get_transient($extract_cache_key);
+
+            if (!is_array($extraction) || $extraction === []) {
                 return new \WP_Error(
-                    'missing_item_or_attachment',
-                    __('Item or attachment ID not provided.', 'tainacan-ai'),
+                    'extraction_required',
+                    __('Document extraction is required before analysis. Run extraction first.', 'tainacan-ai'),
                     ['status' => 400]
                 );
             }
 
-            $document_data = null;
-
-            if ($attachment_id <= 0 && $item_id > 0) {
-                $document_data = $this->get_item_document($item_id);
-                if (!$document_data) {
-                    return new \WP_Error(
-                        'no_item_document',
-                        __('No document found in this item.', 'tainacan-ai'),
-                        ['status' => 404]
-                    );
-                }
-
-                if (!empty($document_data['id'])) {
-                    $attachment_id = (int) $document_data['id'];
-                }
-            }
-
-            if ($collection_id <= 0 && $item_id > 0) {
-                $collection_id = $this->get_item_collection_id($item_id) ?? 0;
+            if (
+                $context['is_remote_url_document']
+                && empty($extraction['document_url'])
+                && !empty($context['document_url'])
+            ) {
+                $extraction['document_url'] = (string) $context['document_url'];
             }
 
             $analyzer = new DocumentAnalyzer();
-            $analyzer->set_context($collection_id, $item_id);
+            $analyzer->set_context((int) $context['collection_id'], (int) $context['item_id']);
 
             if ($use_prompt_override) {
                 $analyzer->set_prompt_override($override_prompt);
                 $force_refresh = true;
             }
 
-            $is_remote_url_document = (
-                is_array($document_data)
-                && ($document_data['source'] ?? '') === 'url'
-                && !empty($document_data['document_url'])
-            );
-            $document_url = $is_remote_url_document ? (string) $document_data['document_url'] : '';
-
-            $cache_key = $is_remote_url_document
-                ? 'tainacan_ai_url_' . md5($document_url)
-                : 'tainacan_ai_' . $attachment_id;
-
-            if (!$force_refresh && !$use_prompt_override) {
-                $cached = get_transient($cache_key);
+            if (!$force_refresh) {
+                $cached = get_transient($analyze_cache_key);
                 if ($cached !== false) {
                     return new \WP_REST_Response(
                         $this->build_analyze_api_data(
                             $analyzer,
-                            $is_remote_url_document ? null : $attachment_id,
+                            $context['is_remote_url_document'] ? null : (int) $context['attachment_id'],
                             $cached,
-                            true
+                            true,
+                            is_array($extraction) ? $extraction : null
                         ),
                         200
                     );
                 }
             }
 
-            $result = $is_remote_url_document
-                ? $analyzer->analyze_document_url($document_url)
-                : $analyzer->analyze($attachment_id);
+            $result = $analyzer->analyze_from_extraction(
+                $extraction,
+                (int) $context['attachment_id']
+            );
 
             if (is_wp_error($result)) {
                 return $this->rest_error_from_wp_error($result);
@@ -202,15 +277,16 @@ class API {
             if ($cache_duration > 0 && !$use_prompt_override) {
                 $result_to_cache = $result;
                 unset($result_to_cache['prompt_debug']);
-                set_transient($cache_key, $result_to_cache, $cache_duration);
+                set_transient($analyze_cache_key, $result_to_cache, $cache_duration);
             }
 
             return new \WP_REST_Response(
                 $this->build_analyze_api_data(
                     $analyzer,
-                    $is_remote_url_document ? null : $attachment_id,
+                    $context['is_remote_url_document'] ? null : (int) $context['attachment_id'],
                     $result,
-                    false
+                    false,
+                    is_array($extraction) ? $extraction : null
                 ),
                 200
             );
@@ -231,6 +307,93 @@ class API {
                 500
             );
         }
+    }
+
+    /**
+     * @return array<string, mixed>|\WP_Error
+     */
+    private function resolve_document_request_context(\WP_REST_Request $request): array|\WP_Error {
+        $item_id = (int) ($request->get_param('item_id') ?? 0);
+        $attachment_id = (int) ($request->get_param('attachment_id') ?? 0);
+        $collection_id = (int) ($request->get_param('collection_id') ?? 0);
+        $force_refresh = (bool) ($request->get_param('force_refresh') ?? false);
+        $document_data = null;
+
+        if ($item_id <= 0 && $attachment_id <= 0) {
+            return new \WP_Error(
+                'missing_item_or_attachment',
+                __('Item or attachment ID not provided.', 'tainacan-ai'),
+                ['status' => 400]
+            );
+        }
+
+        if ($attachment_id <= 0 && $item_id > 0) {
+            $document_data = $this->get_item_document($item_id);
+            if (!$document_data) {
+                return new \WP_Error(
+                    'no_item_document',
+                    __('No document found in this item.', 'tainacan-ai'),
+                    ['status' => 404]
+                );
+            }
+
+            if (!empty($document_data['id'])) {
+                $attachment_id = (int) $document_data['id'];
+            }
+        }
+
+        if ($collection_id <= 0 && $item_id > 0) {
+            $collection_id = $this->get_item_collection_id($item_id) ?? 0;
+        }
+
+        $is_remote_url_document = (
+            is_array($document_data)
+            && ($document_data['source'] ?? '') === 'url'
+            && !empty($document_data['document_url'])
+        );
+        $document_url = $is_remote_url_document ? (string) $document_data['document_url'] : '';
+
+        $extract_cache_key = $is_remote_url_document
+            ? 'tainacan_ai_extract_url_' . md5($document_url)
+            : 'tainacan_ai_extract_' . $attachment_id;
+        $analyze_cache_key = $is_remote_url_document
+            ? 'tainacan_ai_url_' . md5($document_url)
+            : 'tainacan_ai_' . $attachment_id;
+
+        return [
+            'item_id' => $item_id,
+            'attachment_id' => $attachment_id,
+            'collection_id' => $collection_id,
+            'force_refresh' => $force_refresh,
+            'document_data' => $document_data,
+            'is_remote_url_document' => $is_remote_url_document,
+            'document_url' => $document_url,
+            'extract_cache_key' => $extract_cache_key,
+            'analyze_cache_key' => $analyze_cache_key,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $extraction
+     * @return array<string, mixed>
+     */
+    private function build_extract_api_data(array $extraction, bool $from_cache): array {
+        return [
+            'extraction' => $this->sanitize_extraction_for_client($extraction),
+            'from_cache' => $from_cache,
+        ];
+    }
+
+    /**
+     * Omit large binary payloads from the REST response while keeping them in the server cache.
+     *
+     * @param array<string, mixed> $extraction
+     * @return array<string, mixed>
+     */
+    private function sanitize_extraction_for_client(array $extraction): array {
+        unset($extraction['vision_images'], $extraction['vision_image'], $extraction['file_path']);
+
+        return $extraction;
     }
 
     private function rest_error_from_wp_error(\WP_Error $error): \WP_Error {
@@ -260,13 +423,15 @@ class API {
 
     /**
      * @param array<string, mixed> $metadata
+     * @param array<string, mixed>|null $extraction
      * @return array<string, mixed>
      */
     private function build_analyze_api_data(
         DocumentAnalyzer $analyzer,
         ?int $attachment_id,
         array $metadata,
-        bool $from_cache
+        bool $from_cache,
+        ?array $extraction = null
     ): array {
         $prompt_debug = null;
         if (
@@ -275,6 +440,11 @@ class API {
             && $metadata['prompt_debug'] !== []
         ) {
             $prompt_debug = $metadata['prompt_debug'];
+        } elseif (is_array($extraction) && $extraction !== []) {
+            $prompt_debug = $analyzer->build_prompt_debug_payload_from_extraction(
+                $extraction,
+                (int) ($attachment_id ?? 0)
+            );
         } elseif ($attachment_id && $attachment_id > 0) {
             $prompt_debug = $analyzer->build_prompt_debug_payload($attachment_id);
         }
@@ -375,7 +545,7 @@ class API {
                 if ($document_type === 'url' && !empty($document)) {
                     $attachment_id = attachment_url_to_postid($document);
                     if ($attachment_id) {
-                        return $this->get_attachment_info($attachment_id);
+                        return $this->get_attachment_info((int) $attachment_id);
                     }
 
                     return $this->get_remote_url_document_info((string) $document);

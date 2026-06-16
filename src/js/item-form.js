@@ -25,6 +25,8 @@ let hasTainacanAiNonceMiddleware = false;
 			lastRunId: null,
 			lastRunStartedAt: null,
 			lastFromCache: false,
+			lastExtraction: null,
+			analysisPhase: null,
 			activeSidebarTab: 'results',
 			panelOpen: false,
 			isItemEditContext: false,
@@ -780,14 +782,29 @@ let hasTainacanAiNonceMiddleware = false;
 					force_refresh: forceRefresh || hasOverride,
 				};
 
+				this.setAnalysisLoadingPhase( 'extracting' );
+
+				const extractResponse = await apiFetch( {
+					url: `${ TainacanAI.restUrl }extract`,
+					method: 'POST',
+					data: requestData,
+				} );
+
+				this.state.lastExtraction = extractResponse.extraction || null;
+				this.updateImageDataTab( extractResponse.extraction?.exif || null );
+
+				const analyzeRequestData = { ...requestData };
+
 				if ( hasOverride && TainacanAI.advancedDebug ) {
-					requestData.override_prompt = String( overridePrompt );
+					analyzeRequestData.override_prompt = String( overridePrompt );
 				}
+
+				this.setAnalysisLoadingPhase( 'analyzing' );
 
 				const response = await apiFetch( {
 					url: `${ TainacanAI.restUrl }analyze`,
 					method: 'POST',
-					data: requestData,
+					data: analyzeRequestData,
 				} );
 
 				this.state.lastResult = response.result;
@@ -822,7 +839,10 @@ let hasTainacanAiNonceMiddleware = false;
 				this.updateExportButtonsState();
 			} catch ( error ) {
 				console.error( '[TainacanAI] Analysis error:', error );
-				this.displayAnalysisError( error );
+				this.displayAnalysisError(
+					error,
+					this.state.analysisPhase === 'extracting' ? 'extraction' : 'analysis'
+				);
 				this.updateExportButtonsState();
 			} finally {
 				this.state.isAnalyzing = false;
@@ -1524,7 +1544,7 @@ let hasTainacanAiNonceMiddleware = false;
 		/**
 		 * Show analysis failure in the sidebar Analysis Results tab.
 		 */
-		displayAnalysisError( error ) {
+		displayAnalysisError( error, phase = 'analysis' ) {
 			this.ensureElementsCached();
 			this.state.lastResult = null;
 			this.state.lastAnalysisError = this.parseAnalysisError( error );
@@ -1540,7 +1560,11 @@ let hasTainacanAiNonceMiddleware = false;
 			const $summary = $( '#tainacan-ai-panel-meta-summary' );
 			if ( $summary.length ) {
 				$summary.text(
-					TainacanAI.texts?.analysisFailedSummary || 'Analysis failed'
+					phase === 'extraction'
+						? TainacanAI.texts?.extractionFailedSummary ||
+								'Extraction failed'
+						: TainacanAI.texts?.analysisFailedSummary ||
+								'Analysis failed'
 				);
 			}
 
@@ -1659,7 +1683,7 @@ let hasTainacanAiNonceMiddleware = false;
 			$actions.toggle( visible );
 		},
 
-		showSidebarAnalysisLoading() {
+		showSidebarAnalysisLoading( phase = 'analyzing' ) {
 			if (
 				! this.elements.sidebarContent ||
 				! this.elements.sidebarContent.length
@@ -1667,9 +1691,16 @@ let hasTainacanAiNonceMiddleware = false;
 				this.createSidebarPanel();
 			}
 
+			this.state.analysisPhase = phase;
+
+			const title =
+				phase === 'extracting'
+					? TainacanAI.texts?.extracting || 'Extracting document...'
+					: TainacanAI.texts?.analyzing || 'Analyzing...';
+
 			const $summary = $( '#tainacan-ai-panel-meta-summary' );
 			if ( $summary.length ) {
-				$summary.text( TainacanAI.texts?.analyzing || 'Analyzing...' );
+				$summary.text( title );
 			}
 
 			this.setSidebarResultsActionsVisible( false );
@@ -1679,7 +1710,7 @@ let hasTainacanAiNonceMiddleware = false;
                     <div class="tainacan-ai-spinner"></div>
                     <div class="tainacan-ai-loading-text">
                         <span class="tainacan-ai-loading-title">${ this.escapeHtml(
-							TainacanAI.texts?.analyzing || 'Analyzing...'
+							title
 						) }</span>
                         <span class="tainacan-ai-loading-subtitle">${ this.escapeHtml(
 							TainacanAI.texts?.loadingSubtitle ||
@@ -1691,6 +1722,10 @@ let hasTainacanAiNonceMiddleware = false;
 
 			this.switchSidebarTab( 'results' );
 			this.openSidebarPanel();
+		},
+
+		setAnalysisLoadingPhase( phase ) {
+			this.showSidebarAnalysisLoading( phase );
 		},
 
 		/**
@@ -3323,6 +3358,8 @@ let hasTainacanAiNonceMiddleware = false;
 			this.state.lastRunStartedAt = new Date().toISOString();
 			this.state.lastFromCache = false;
 			this.state.lastAnalysisError = null;
+			this.state.lastExtraction = null;
+			this.state.analysisPhase = null;
 		},
 
 		resolveRunId( result ) {
