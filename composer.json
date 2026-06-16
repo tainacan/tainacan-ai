@@ -15,11 +15,6 @@
 	"autoload": {
 		"psr-4": {
 			"Tainacan\\AI\\": "includes/",
-			"Tainacan\\AI\\Admin\\": "includes/Admin/",
-			"Tainacan\\AI\\REST\\": "includes/REST/",
-			"Tainacan\\AI\\Hooks\\": "includes/Hooks/",
-			"Tainacan\\AI\\Extraction\\": "includes/Extraction/",
-			"Tainacan\\AI\\Support\\": "includes/Support/",
 			"Tainacan\\AI\\PdfParser\\": "lib/PdfParser/"
 		}
 	},

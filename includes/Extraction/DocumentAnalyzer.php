@@ -18,10 +18,11 @@ use Tainacan\AI\PdfParser\PdfParser;
 use Tainacan\AI\PdfParser\PdfToImage;
 
 /**
- * Document analyzer using WordPress Core AI Client
+ * Document analyzer using WordPress Core AI Client.
  *
- * Analyzes images and documents extracting metadata via AI.
- * Uses `wp_ai_client_prompt()` through `CoreAI`.
+ * Pipeline is split in two steps (used by the REST API and Tainacan core integration):
+ * - **Extract** — `extract()` / `extract_document_url()`: local parsing only (PDF text, images, URL download).
+ * - **Analyze** — `analyze_from_extraction()`: AI metadata inference from a prior extraction payload.
  *
  * @since 1.0.0 - WordPress AI client via Connectors
  */
@@ -84,139 +85,6 @@ class DocumentAnalyzer {
         $trimmed = $prompt !== null ? trim($prompt) : '';
         $this->prompt_override = $trimmed !== '' ? $trimmed : null;
         return $this;
-    }
-
-    /**
-     * Analyze an attachment
-     */
-    public function analyze(int $attachment_id, bool $include_exif = true): array|\WP_Error {
-        if (!CoreAI::is_supported_text_generation()) {
-            return new \WP_Error(
-                'no_core_ai',
-                __('WordPress Core AI Client is not available or not configured.', 'tainacan-ai')
-            );
-        }
-
-        // Check consent
-        if (!Plugin::has_consent()) {
-            return new \WP_Error('no_consent', __('Consent required to use AI features.', 'tainacan-ai'));
-        }
-
-        $file_path = get_attached_file($attachment_id);
-        $mime_type = get_post_mime_type($attachment_id);
-
-        if (!$file_path) {
-            return new \WP_Error(
-                'file_not_found',
-                __('File path not found in WordPress. The attachment may have been removed.', 'tainacan-ai'),
-                AnalysisErrorDebug::data(
-                    array(
-                        'attachment_id' => (string) $attachment_id,
-                    ),
-                    404
-                )
-            );
-        }
-
-        // Normalize file path (fixes slash and _x_ issues)
-        $file_path = $this->normalize_file_path($file_path);
-
-        if (!file_exists($file_path)) {
-            return new \WP_Error(
-                'file_not_found',
-                sprintf(
-                    /* translators: %s: file path */
-                    __('Physical file does not exist on server. Expected at: %s', 'tainacan-ai'),
-                    $file_path
-                ),
-                AnalysisErrorDebug::data(
-                    array(
-                        'file_path' => AnalysisErrorDebug::basename_for_debug($file_path),
-                        'attachment_id' => (string) $attachment_id,
-                    ),
-                    404
-                )
-            );
-        }
-
-        // Detect collection if not defined
-        if (!$this->collection_id && $this->item_id) {
-            $this->collection_id = $this->get_item_collection($this->item_id);
-        }
-
-        $this->current_attachment_id = $attachment_id;
-
-        try {
-            $extraction = $this->run_extraction($attachment_id, $include_exif, $file_path, (string) $mime_type);
-
-            if (is_wp_error($extraction)) {
-                return $this->attach_prompt_debug_to_error(
-                    $extraction,
-                    $file_path,
-                    (string) $mime_type,
-                    $attachment_id
-                );
-            }
-
-            return $this->analyze_from_extraction($extraction, $attachment_id);
-        } finally {
-            $this->current_attachment_id = null;
-        }
-    }
-
-    /**
-     * Analyze a remote document URL (https only).
-     */
-    public function analyze_document_url(string $document_url): array|\WP_Error {
-        if (!CoreAI::is_supported_text_generation()) {
-            return new \WP_Error(
-                'no_core_ai',
-                __('WordPress Core AI Client is not available or not configured.', 'tainacan-ai')
-            );
-        }
-
-        if (!Plugin::has_consent()) {
-            return new \WP_Error('no_consent', __('Consent required to use AI features.', 'tainacan-ai'));
-        }
-
-        if (!$this->collection_id && $this->item_id) {
-            $this->collection_id = $this->get_item_collection($this->item_id);
-        }
-
-        $downloaded = $this->download_remote_document($document_url);
-
-        if (is_wp_error($downloaded)) {
-            return $downloaded;
-        }
-
-        $this->current_attachment_id = null;
-
-        try {
-            $extraction = $this->run_extraction(
-                0,
-                false,
-                $downloaded['file_path'],
-                $downloaded['mime_type']
-            );
-
-            if (is_wp_error($extraction)) {
-                return $this->attach_prompt_debug_to_error(
-                    $extraction,
-                    $downloaded['file_path'],
-                    $downloaded['mime_type'],
-                    0
-                );
-            }
-
-            $extraction['document_url'] = $document_url;
-
-            return $this->analyze_from_extraction($extraction, 0);
-        } finally {
-            $this->current_attachment_id = null;
-            if (file_exists($downloaded['file_path'])) {
-                wp_delete_file($downloaded['file_path']);
-            }
-        }
     }
 
     /**

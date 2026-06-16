@@ -5,6 +5,7 @@ namespace Tainacan\AI;
 
 use Tainacan\AI\Admin\AdminPage;
 use Tainacan\AI\Hooks\CollectionFormHook;
+use Tainacan\AI\Hooks\DocumentContentIndexHook;
 use Tainacan\AI\Hooks\ItemFormHook;
 use Tainacan\AI\Hooks\MetadatumFormHook;
 use Tainacan\AI\REST\API;
@@ -149,7 +150,8 @@ final class Plugin {
 			AdminPage::get_instance();
 		}
 
-		new API();
+		$document_content_index = new DocumentContentIndexHook();
+		new API( $document_content_index );
 		new ItemFormHook();
 		new CollectionFormHook();
 		new MetadatumFormHook();
