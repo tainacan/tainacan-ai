@@ -216,43 +216,44 @@ Use **Analyze Document** on a real item to confirm your connector and server con
 ## REST API
 
 ```
-POST /wp-json/tainacan-ai/v1/analyze
+POST /wp-json/tainacan-ai/v1/extract    # Local document extraction (no AI)
+POST /wp-json/tainacan-ai/v1/analyze    # AI metadata analysis (requires prior extract)
 GET  /wp-json/tainacan-ai/v1/item-document/{item_id}
 GET  /wp-json/tainacan-ai/v1/extraction-fields/{collection_id}
+POST /wp-json/tainacan-ai/v1/clear-cache
 ```
+
+Extraction reuses Tainacan's `document_content_index` when the item already has indexed text (unless `force_refresh` is set). Core's document content modal uses the same extraction logic via WordPress filters.
 
 ## Structure
 
 ```
 tainacan-ai/
-├── tainacan-ai.php         # Main plugin file
+├── tainacan-ai.php              # Bootstrap
 ├── includes/
-│   ├── Plugin.php               # Main runtime plugin class
-│   ├── Admin/
-│   │   ├── AdminPage.php          # Settings page controller
-│   │   └── settings-page.php      # Settings page template
+│   ├── Plugin.php               # Lifecycle and service wiring
+│   ├── Admin/                   # Settings screen
 │   ├── REST/
-│   │   └── API.php
+│   │   └── API.php              # Extract / analyze endpoints and caching
 │   ├── Hooks/
-│   │   ├── ItemFormHook.php
-│   │   ├── CollectionFormHook.php   # Per-collection preambles (meta + form)
+│   │   ├── DocumentContentIndexHook.php  # Core document_content_index integration
+│   │   ├── ItemFormHook.php              # Item edition UI
+│   │   ├── CollectionFormHook.php        # Per-collection preambles
 │   │   └── MetadatumFormHook.php
-│   ├── Extraction/
-│   │   ├── DocumentAnalyzer.php
-│   │   ├── ExtractionMetadata.php
-│   │   ├── PromptTemplates.php
-│   │   ├── AnalysisPromptComposer.php
+│   ├── Extraction/              # Document parsing and AI analysis
+│   │   ├── DocumentAnalyzer.php          # Extract + analyze pipeline
+│   │   ├── ExtractionMetadata.php        # Field definitions for AI output
+│   │   ├── DocumentTextPreparer.php      # Text/HTML normalization
+│   │   ├── AnalysisPromptComposer.php    # Prompt assembly
 │   │   ├── EvidenceInstructions.php
-│   │   └── ExifExtractor.php
-│   ├── Support/
-│   │   ├── CoreAI.php
-│   │   └── CoreAIRequestLogging.php
-├── lib/                    # Embedded third-party libraries
-│   └── PdfParser/
-├── src/                    # Source assets
-│   ├── css/
-│   └── js/
-└── build/                  # Compiled assets
+│   │   ├── PromptTemplates.php
+│   │   ├── ExifExtractor.php
+│   │   ├── PdfExtractedTextQuality.php
+│   │   └── HtmlContentFilter.php
+│   └── Support/                 # Shared utilities (Core AI, limits, debug, warnings)
+├── lib/PdfParser/               # Bundled PDF helpers
+├── src/                         # Frontend source (item form, admin)
+└── build/                       # Compiled assets
 ```
 
 ### Translations

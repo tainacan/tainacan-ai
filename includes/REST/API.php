@@ -4,6 +4,7 @@ namespace Tainacan\AI\REST;
 use Tainacan\AI\Plugin;
 use Tainacan\AI\Extraction\DocumentAnalyzer;
 use Tainacan\AI\Extraction\ExtractionMetadata;
+use Tainacan\AI\Hooks\DocumentContentIndexHook;
 use Tainacan\AI\Support\AnalysisErrorDebug;
 use Tainacan\AI\Support\DebugLog;
 
@@ -20,7 +21,10 @@ class API {
 
     private string $namespace = 'tainacan-ai/v1';
 
-    public function __construct() {
+    private DocumentContentIndexHook $document_content_index;
+
+    public function __construct(DocumentContentIndexHook $document_content_index) {
+        $this->document_content_index = $document_content_index;
         add_action('rest_api_init', [$this, 'register_routes']);
     }
 
@@ -151,8 +155,23 @@ class API {
 
             $extract_cache_key = (string) $context['extract_cache_key'];
             $force_refresh = (bool) $context['force_refresh'];
+            $options = Plugin::get_options();
+            $cache_duration = (int) ($options['cache_duration'] ?? 3600);
 
             if (!$force_refresh) {
+                $index_extraction = $this->document_content_index->build_extraction_from_item_index($context);
+
+                if (is_array($index_extraction) && $index_extraction !== []) {
+                    if ($cache_duration > 0) {
+                        set_transient($extract_cache_key, $index_extraction, $cache_duration);
+                    }
+
+                    return new \WP_REST_Response(
+                        $this->build_extract_api_data($index_extraction, false),
+                        200
+                    );
+                }
+
                 $cached = get_transient($extract_cache_key);
                 if (is_array($cached) && $cached !== []) {
                     return new \WP_REST_Response(
@@ -173,8 +192,8 @@ class API {
                 return $this->rest_error_from_wp_error($extraction);
             }
 
-            $options = Plugin::get_options();
-            $cache_duration = (int) ($options['cache_duration'] ?? 3600);
+            $extraction['content_source'] = DocumentContentIndexHook::SOURCE_FILE_EXTRACTION;
+
             if ($cache_duration > 0) {
                 set_transient($extract_cache_key, $extraction, $cache_duration);
             }
@@ -222,6 +241,21 @@ class API {
             $extract_cache_key = (string) $context['extract_cache_key'];
             $analyze_cache_key = (string) $context['analyze_cache_key'];
             $extraction = get_transient($extract_cache_key);
+
+            if ((!is_array($extraction) || $extraction === []) && !$force_refresh) {
+                $index_extraction = $this->document_content_index->build_extraction_from_item_index($context);
+
+                if (is_array($index_extraction) && $index_extraction !== []) {
+                    $extraction = $index_extraction;
+
+                    $options = Plugin::get_options();
+                    $cache_duration = (int) ($options['cache_duration'] ?? 3600);
+
+                    if ($cache_duration > 0) {
+                        set_transient($extract_cache_key, $extraction, $cache_duration);
+                    }
+                }
+            }
 
             if (!is_array($extraction) || $extraction === []) {
                 return new \WP_Error(
